@@ -48,6 +48,7 @@ A comprehensive pharmacy management system built with React, TypeScript, Express
    SUPABASE_URL=your_supabase_project_url
    SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
    JWT_SECRET=your_jwt_secret
    PORT=5000
    NODE_ENV=development
@@ -100,24 +101,4 @@ capstone_adminSide/
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
-### Database Schema
 
-The application uses a comprehensive database schema designed for pharmacy management, including:
-- User management with pharmacist roles
-- Product inventory with stock tracking
-- Customer management
-- Transaction processing
-- Purchase orders
-- Discount management
-
-### Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-### Support
-
-For questions or issues, please create an issue in the repository.
