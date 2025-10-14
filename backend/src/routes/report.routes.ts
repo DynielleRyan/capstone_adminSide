@@ -1,10 +1,12 @@
 // backend/src/routes/report.routes.ts
-import { getMonthlyTransactionTotals, getYearlyTransactionTotals } from "../controllers/report.controllers";
+import { getMonthlyTransactionTotals, getReorderLevelFromItems, getTopItems, getYearlyTransactionTotals } from "../controllers/report.controllers";
 import { Router } from "express";
 
 
 const router = Router();
-router.get("/transactions/monthly", getMonthlyTransactionTotals);
-router.get("/transactions/yearly", getYearlyTransactionTotals);
+router.get("/transac_monthly", getMonthlyTransactionTotals);
+router.get("/transac_yearly", getYearlyTransactionTotals);
+router.get("/top_items", getTopItems);
+router.get("/reorder", getReorderLevelFromItems);
 
 export default router;
