@@ -4,13 +4,9 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import compression from 'compression'
 import dotenv from 'dotenv'
-import { errorHandler } from './middleware/errorHandler'
-import { notFound } from './middleware/notFound'
-import productRoutes from './routes/productRoutes'
-import orderRoutes from './routes/orderRoutes'
-import customerRoutes from './routes/customerRoutes'
-import authRoutes from './routes/authRoutes'
-import { connectDB } from './config/database'
+
+import userRoutes from './routes/userRoutes'
+
 
 // Load environment variables
 dotenv.config()
@@ -19,7 +15,7 @@ const app = express()
 const PORT = process.env.PORT || 5000
 
 // Connect to database
-connectDB()
+
 
 // Middleware
 app.use(helmet())
@@ -42,14 +38,12 @@ app.get('/health', (req, res) => {
 })
 
 // API Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/products', productRoutes)
-app.use('/api/orders', orderRoutes)
-app.use('/api/customers', customerRoutes)
+
+app.use('/api/users', userRoutes)
+
 
 // Error handling middleware
-app.use(notFound)
-app.use(errorHandler)
+
 
 // Start server
 app.listen(PORT, () => {
