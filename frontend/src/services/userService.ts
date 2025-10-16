@@ -1,5 +1,8 @@
 import api from './api'
 
+// User role type based on schema constraint
+export type UserRole = 'Admin' | 'Pharmacist' | 'Clerk';
+
 // Types for user operations
 export interface User {
   UserID?: string
@@ -9,13 +12,12 @@ export interface User {
   Username: string
   Email: string
   Address?: string
-  Password: string
   ContactNumber?: string
   DateTimeLastLoggedIn?: Date
-  PharmacistYN: boolean
-  IsActive: boolean
+  Roles: UserRole
   CreatedAt?: Date
   UpdatedAt?: Date
+  AuthUserID?: string
 }
 
 export interface CreateUser {
@@ -24,10 +26,10 @@ export interface CreateUser {
   LastName: string
   Username: string
   Email: string
-  Address?: string
   Password: string
+  Address?: string
   ContactNumber?: string
-  PharmacistYN?: boolean
+  Roles?: UserRole
 }
 
 export interface UpdateUser {
@@ -38,11 +40,9 @@ export interface UpdateUser {
   Username?: string
   Email?: string
   Address?: string
-  Password?: string
   ContactNumber?: string
   DateTimeLastLoggedIn?: Date
-  PharmacistYN?: boolean
-  IsActive?: boolean
+  Roles?: UserRole
   UpdatedAt?: Date
 }
 
@@ -66,10 +66,10 @@ export interface UserResponse {
   Address?: string
   ContactNumber?: string
   DateTimeLastLoggedIn?: Date
-  PharmacistYN: boolean
-  IsActive: boolean
+  Roles: UserRole
   CreatedAt?: Date
   UpdatedAt?: Date
+  AuthUserID?: string
 }
 
 export interface UserWithPharmacist extends UserResponse {
@@ -85,8 +85,8 @@ export interface UserWithPharmacist extends UserResponse {
 
 export interface UserFilters {
   search?: string
-  isActive?: boolean
-  pharmacistYN?: boolean
+  pharmacistYN?: boolean // Keep for backwards compatibility
+  role?: UserRole // New role-based filtering
   page?: number
   limit?: number
 }
@@ -124,7 +124,7 @@ export const userService = {
       const params = new URLSearchParams()
       
       if (filters?.search) params.append('search', filters.search)
-      if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive))
+      if (filters?.role) params.append('role', filters.role)
       if (filters?.pharmacistYN !== undefined) params.append('pharmacistYN', String(filters.pharmacistYN))
       if (filters?.page) params.append('page', String(filters.page))
       if (filters?.limit) params.append('limit', String(filters.limit))

@@ -202,7 +202,7 @@ const AddUserForm = ({ isOpen, onClose, onSubmit }: AddUserFormProps) => {
                 <option value="">--SELECT--</option>
                 <option value="ADMIN">ADMIN</option>
                 <option value="PHARMACIST">PHARMACIST</option>
-                <option value="STAFF">STAFF</option>
+                <option value="CLERK">CLERK</option>
               </select>
             </div>
           </div>

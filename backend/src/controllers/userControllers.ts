@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
 import { supabase, supabaseAdmin } from '../config/database';
 import {
   User,
@@ -9,20 +8,13 @@ import {
   UserResponse,
   UserWithPharmacist,
   UserFilters,
-  PaginatedUsers
+  PaginatedUsers,
+  UserRole
 } from '../schema/users';
 
-// Helper function to hash password
-const hashPassword = async (password: string): Promise<string> => {
-  const saltRounds = 12;
-  return await bcrypt.hash(password, saltRounds);
-};
-
-
-// Helper function to remove password from user object
-const removePassword = (user: User): UserResponse => {
-  const { Password, ...userResponse } = user;
-  return userResponse;
+// Helper function to return user response (no password to remove in this schema)
+const formatUserResponse = (user: User): UserResponse => {
+  return user as UserResponse;
 };
 
 // Create a new user
@@ -30,7 +22,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const userData: CreateUser = req.body;
 
-    // Check if username or email already exists
+    // Check if username or email already exists in our User table
     const { data: existingUsers } = await supabase
       .from('User')
       .select('UserID')
@@ -44,10 +36,56 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Hash password
-    const hashedPassword = await hashPassword(userData.Password);
+    // Check if email already exists in Supabase Auth
+    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+    const emailExists = existingAuthUser?.users?.some(user => user.email === userData.Email);
+    
+    if (emailExists) {
+      res.status(400).json({
+        success: false,
+        message: 'Email already exists in authentication system'
+      });
+      return;
+    }
 
-    // Create user
+    // Create user in Supabase Auth first
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: userData.Email,
+      password: userData.Password,
+      user_metadata: {
+        first_name: userData.FirstName,
+        last_name: userData.LastName,
+        middle_initial: userData.MiddleInitial,
+        username: userData.Username,
+        contact_number: userData.ContactNumber,
+        address: userData.Address,
+        role: userData.Roles || 'Admin'
+      },
+      email_confirm: true // Auto-confirm email since admin is creating the user
+    });
+
+    if (authError) {
+      console.error('Error creating auth user:', authError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create authentication user',
+        error: authError.message
+      });
+      return;
+    }
+
+    if (!authData.user) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create authentication user - no user data returned'
+      });
+      return;
+    }
+
+    // Create user in our User table with the auth user ID
+    const userRole = userData.Roles || 'Admin';
+    console.log('Creating user with role:', userRole, 'from userData.Roles:', userData.Roles);
+    
     const { data: newUser, error } = await supabase
       .from('User')
       .insert({
@@ -57,25 +95,27 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         Username: userData.Username,
         Email: userData.Email,
         Address: userData.Address,
-        Password: hashedPassword,
         ContactNumber: userData.ContactNumber,
-        PharmacistYN: userData.PharmacistYN || false,
+        Roles: userRole,
+        AuthUserID: authData.user.id, // Store the Supabase Auth user ID in AuthUserID field
       })
       .select()
       .single();
 
     if (error) {
-      console.error('Error creating user:', error);
+      console.error('Error creating user record:', error);
+      // If creating the user record fails, we should clean up the auth user
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       res.status(500).json({
         success: false,
-        message: 'Failed to create user',
+        message: 'Failed to create user record',
         error: error.message
       });
       return;
     }
 
-    // Remove password from response
-    const userResponse = removePassword(newUser);
+    // Format user response
+    const userResponse = formatUserResponse(newUser);
 
     res.status(201).json({
       success: true,
@@ -96,8 +136,8 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
       search,
-      isActive,
       pharmacistYN,
+      role,
       page = 1,
       limit = 10
     }: UserFilters = req.query;
@@ -111,12 +151,13 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
       query = query.or(`FirstName.ilike.%${search}%,LastName.ilike.%${search}%,Username.ilike.%${search}%,Email.ilike.%${search}%`);
     }
 
-    if (isActive !== undefined) {
-      query = query.eq('IsActive', String(isActive) === 'true');
-    }
-
-    if (pharmacistYN !== undefined) {
-      query = query.eq('PharmacistYN', String(pharmacistYN) === 'true');
+    // Support both old pharmacistYN filter and new role filter
+    if (role !== undefined) {
+      query = query.eq('Roles', role);
+    } else if (pharmacistYN !== undefined) {
+      // Backwards compatibility: map pharmacistYN to role filter
+      const targetRole = String(pharmacistYN) === 'true' ? 'Pharmacist' : 'Admin';
+      query = query.eq('Roles', targetRole);
     }
 
     // Apply pagination
@@ -136,8 +177,8 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Remove passwords from response
-    const userResponses = users?.map(user => removePassword(user)) || [];
+    // Format user responses
+    const userResponses = users?.map(user => formatUserResponse(user)) || [];
 
     const paginatedUsers: PaginatedUsers = {
       users: userResponses,
@@ -188,8 +229,8 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Remove password from response
-    const userResponse = removePassword(user);
+    // Format user response
+    const userResponse = formatUserResponse(user);
 
     res.status(200).json({
       success: true,
@@ -209,11 +250,6 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const { id } = req.params;
     const updateData: UpdateUser = req.body;
-
-    // If password is being updated, hash it
-    if (updateData.Password) {
-      updateData.Password = await hashPassword(updateData.Password);
-    }
 
     // Add updated timestamp
     updateData.UpdatedAt = new Date();
@@ -242,8 +278,8 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Remove password from response
-    const userResponse = removePassword(updatedUser);
+    // Format user response
+    const userResponse = formatUserResponse(updatedUser);
 
     res.status(200).json({
       success: true,
@@ -259,31 +295,51 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// Delete user (soft delete by setting IsActive to false)
+// Delete user (hard delete)
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
+    // First check if user exists and get the AuthUserID
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('User')
+      .select('UserID, AuthUserID')
+      .eq('UserID', id)
+      .single();
+
+    if (fetchError || !existingUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Delete user from our User table
     const { error } = await supabase
       .from('User')
-      .update({ IsActive: false, UpdatedAt: new Date() })
+      .delete()
       .eq('UserID', id);
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-        return;
-      }
-      console.error('Error deleting user:', error);
+      console.error('Error deleting user from database:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to delete user',
+        message: 'Failed to delete user from database',
         error: error.message
       });
       return;
+    }
+
+    // Also delete the user from Supabase Auth using AuthUserID
+    if (existingUser.AuthUserID) {
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.AuthUserID);
+      
+      if (authError) {
+        console.error('Error deleting user from auth:', authError);
+        // Don't fail the request if auth deletion fails, but log it
+        console.warn(`User ${id} deleted from database but not from auth: ${authError.message}`);
+      }
     }
 
     res.status(200).json({
@@ -336,8 +392,8 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Remove password from response
-    const userResponse = removePassword(updatedUser);
+    // Format user response
+    const userResponse = formatUserResponse(updatedUser);
 
     res.status(200).json({
       success: true,
@@ -372,7 +428,7 @@ export const getUserWithPharmacist = async (req: Request, res: Response): Promis
         )
       `)
       .eq('UserID', id)
-      .eq('PharmacistYN', true)
+      .eq('Roles', 'Pharmacist')
       .single();
 
     if (error) {
@@ -392,8 +448,8 @@ export const getUserWithPharmacist = async (req: Request, res: Response): Promis
       return;
     }
 
-    // Remove password from response
-    const userResponse = removePassword(user) as UserWithPharmacist;
+    // Format user response
+    const userResponse = formatUserResponse(user) as UserWithPharmacist;
 
     res.status(200).json({
       success: true,

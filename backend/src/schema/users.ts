@@ -1,3 +1,6 @@
+// User role type based on schema constraint
+export type UserRole = 'Admin' | 'Pharmacist' | 'Clerk';
+
 // User interface based on the SQL User table
 export interface User {
   UserID?: string;
@@ -7,13 +10,12 @@ export interface User {
   Username: string;
   Email: string;
   Address?: string;
-  Password: string;
   ContactNumber?: string;
   DateTimeLastLoggedIn?: Date;
-  PharmacistYN: boolean;
-  IsActive: boolean;
+  Roles: UserRole;
   CreatedAt?: Date;
   UpdatedAt?: Date;
+  AuthUserID?: string;
 }
 
 // Interface for creating a new user (without auto-generated fields)
@@ -23,11 +25,10 @@ export interface CreateUser {
   LastName: string;
   Username: string;
   Email: string;
-  Address?: string;
   Password: string;
+  Address?: string;
   ContactNumber?: string;
-  PharmacistYN?: boolean;
-  IsActive?: boolean;
+  Roles?: UserRole;
 }
 
 // Interface for updating a user (all fields optional except UserID)
@@ -39,11 +40,9 @@ export interface UpdateUser {
   Username?: string;
   Email?: string;
   Address?: string;
-  Password?: string;
   ContactNumber?: string;
   DateTimeLastLoggedIn?: Date;
-  PharmacistYN?: boolean;
-  IsActive?: boolean;
+  Roles?: UserRole;
   UpdatedAt?: Date;
 }
 
@@ -71,7 +70,7 @@ export interface UpdateProfile {
   ContactNumber?: string;
 }
 
-// User response type (excluding password)
+// User response type
 export interface UserResponse {
   UserID?: string;
   FirstName: string;
@@ -82,10 +81,10 @@ export interface UserResponse {
   Address?: string;
   ContactNumber?: string;
   DateTimeLastLoggedIn?: Date;
-  PharmacistYN: boolean;
-  IsActive: boolean;
+  Roles: UserRole;
   CreatedAt?: Date;
   UpdatedAt?: Date;
+  AuthUserID?: string;
 }
 
 // User with pharmacist info
@@ -103,8 +102,8 @@ export interface UserWithPharmacist extends UserResponse {
 // Pagination and filtering types
 export interface UserFilters {
   search?: string;
-  isActive?: boolean;
-  pharmacistYN?: boolean;
+  pharmacistYN?: boolean; // Keep for backwards compatibility
+  role?: UserRole; // New role-based filtering
   page?: number;
   limit?: number;
 }

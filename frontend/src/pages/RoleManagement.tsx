@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight } from 'lucide-react'
 import AddUserForm from '../components/AddUserForm'
 import EditUserForm from '../components/EditUserForm'
-import { userService, UserResponse, CreateUser, UpdateUser, UserFilters } from '../services/userService'
+import { userService, UserResponse, CreateUser, UpdateUser, UserFilters, UserRole } from '../services/userService'
 
 const RoleManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -15,6 +15,7 @@ const RoleManagement = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalUsers, setTotalUsers] = useState(0)
+  const [editUsers, setEditUsers] = useState<UserResponse[]>([])
 
   // Fetch users from API
   const fetchUsers = useCallback(async (page = 1, search = searchTerm) => {
@@ -24,7 +25,7 @@ const RoleManagement = () => {
       
       const filters: UserFilters = {
         page,
-        limit: 10,
+        limit: 50, // Increase limit to reduce API calls
         search: search || undefined
       }
       
@@ -35,18 +36,44 @@ const RoleManagement = () => {
         setCurrentPage(response.data.page)
         setTotalPages(response.data.totalPages)
         setTotalUsers(response.data.total)
+      } else {
+        setError(response.message || 'Failed to fetch users')
       }
     } catch (err) {
+      console.error('Error fetching users:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch users')
+      // Don't clear users on error unless it's a critical error
+      if (!users.length) {
+        setUsers([])
+      }
     } finally {
       setLoading(false)
     }
   }, [searchTerm])
 
+  // Fetch all users for editing (without pagination)
+  const fetchAllUsersForEdit = useCallback(async () => {
+    try {
+      const filters: UserFilters = {
+        limit: 1000, // Large limit to get all users
+        page: 1
+      }
+      
+      const response = await userService.getUsers(filters)
+      
+      if (response.success && response.data) {
+        setEditUsers(response.data.users)
+      }
+    } catch (err) {
+      console.error('Error fetching all users for edit:', err)
+    }
+  }, [])
+
   // Load users on component mount
   useEffect(() => {
     fetchUsers()
-  }, [fetchUsers])
+    fetchAllUsersForEdit()
+  }, []) // Empty dependency array to run only on mount
 
   // Debounced search effect
   useEffect(() => {
@@ -57,38 +84,91 @@ const RoleManagement = () => {
     return () => clearTimeout(timeoutId)
   }, [searchTerm, fetchUsers])
 
-  // Filter users based on search term (client-side filtering for better UX)
-  const filteredUsers = users.filter(user => {
-    const fullName = `${user.FirstName} ${user.LastName}`.toLowerCase()
-    const searchLower = searchTerm.toLowerCase()
-    return (
-      fullName.includes(searchLower) ||
-      user.Username.toLowerCase().includes(searchLower) ||
-      (user.PharmacistYN ? 'pharmacist' : 'staff').includes(searchLower)
-    )
-  })
+  // Helper function to convert old role format to new Roles format
+  const mapStringToRole = (roleString: string): UserRole => {
+    switch (roleString?.toUpperCase()) {
+      case 'PHARMACIST': return 'Pharmacist'
+      case 'ADMIN': return 'Admin'
+      case 'CLERK': return 'Clerk'
+      case 'STAFF': return 'Clerk' // Map STAFF to Clerk for backwards compatibility
+      default: return 'Admin'
+    }
+  }
+
+  // Helper function to convert new Roles format to old format for EditUserForm
+  const mapRoleToOldFormat = (role: UserRole): 'PHARMACIST' | 'STAFF' | 'ADMIN' => {
+    switch (role) {
+      case 'Pharmacist': return 'PHARMACIST'
+      case 'Admin': return 'ADMIN'
+      case 'Clerk': return 'STAFF' // Map Clerk to STAFF for backwards compatibility
+      default: return 'ADMIN'
+    }
+  }
+
+  // Filter and sort users based on search term and sort criteria
+  const filteredUsers = useMemo(() => {
+    let filtered = users.filter(user => {
+      const fullName = `${user.FirstName} ${user.LastName}`.toLowerCase()
+      const searchLower = searchTerm.toLowerCase()
+      // Helper function for role filtering
+      const roleString = user.Roles === 'Pharmacist' ? 'pharmacist' :
+                        user.Roles === 'Admin' ? 'admin' :
+                        user.Roles === 'Clerk' ? 'clerk' : 'staff'
+      return (
+        fullName.includes(searchLower) ||
+        user.Username.toLowerCase().includes(searchLower) ||
+        roleString.includes(searchLower)
+      )
+    })
+
+    if (sortBy !== 'none') {
+      filtered = filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'name':
+            const nameA = `${a.FirstName} ${a.MiddleInitial || ''} ${a.LastName}`.trim().toLowerCase()
+            const nameB = `${b.FirstName} ${b.MiddleInitial || ''} ${b.LastName}`.trim().toLowerCase()
+            return nameA.localeCompare(nameB)
+            
+          case 'role':
+            return a.Roles.localeCompare(b.Roles)
+            
+          default:
+            return 0
+        }
+      })
+    }
+
+    return filtered
+  }, [users, searchTerm, sortBy])
 
   const handleAddUser = async (userData: any) => {
     try {
+      console.log('Raw userData.role:', userData.role);
+      const mappedRole = mapStringToRole(userData.role);
+      console.log('Mapped role:', mappedRole);
+      
       const createUserData: CreateUser = {
         FirstName: userData.firstName,
         MiddleInitial: userData.middleInitial,
         LastName: userData.lastName,
         Username: userData.username,
         Email: userData.email,
-        Address: userData.address,
         Password: userData.password,
+        Address: userData.address,
         ContactNumber: userData.contactNumber,
-        PharmacistYN: userData.role === 'PHARMACIST',
+        Roles: mappedRole,
       }
+      
+      console.log('Final createUserData:', createUserData);
 
       const response = await userService.createUser(createUserData)
       
       if (response.success) {
         alert(`User ${userData.firstName} ${userData.lastName} added successfully!`)
         setIsAddUserOpen(false)
-        // Refresh the users list
+        // Refresh both users lists
         fetchUsers()
+        fetchAllUsersForEdit()
       } else {
         alert('Failed to create user: ' + response.message)
       }
@@ -103,8 +183,8 @@ const RoleManagement = () => {
     name: `${user.FirstName} ${user.MiddleInitial || ''} ${user.LastName}`.trim(),
     contact: user.ContactNumber || '',
     username: user.Username,
-    password: '********',
-    role: (user.PharmacistYN ? 'PHARMACIST' : 'STAFF') as 'PHARMACIST' | 'STAFF' | 'ADMIN'
+    password: '', // Dummy field for EditUserForm compatibility
+    role: mapRoleToOldFormat(user.Roles)
   })
 
   const handleEditUser = async (updatedUsers: any[]) => {
@@ -112,8 +192,7 @@ const RoleManagement = () => {
       const updatePromises = updatedUsers.map(user => {
         const updateData: UpdateUser = {
           UserID: user.userId,
-          PharmacistYN: user.role === 'PHARMACIST',
-          IsActive: true
+          Roles: mapStringToRole(user.role)
         }
         return userService.updateUser(user.userId, updateData)
       })
@@ -121,8 +200,9 @@ const RoleManagement = () => {
       await Promise.all(updatePromises)
       alert('Users updated successfully!')
       setIsEditUserOpen(false)
-      // Refresh the users list
+      // Refresh both users lists
       fetchUsers()
+      fetchAllUsersForEdit()
     } catch (error) {
       alert('Error updating users: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
@@ -135,8 +215,9 @@ const RoleManagement = () => {
         
         if (response.success) {
           alert(`User ${userId} deleted successfully!`)
-          // Refresh the users list
+          // Refresh both users lists
           fetchUsers()
+          fetchAllUsersForEdit()
         } else {
           alert('Failed to delete user: ' + response.message)
         }
@@ -168,7 +249,6 @@ const RoleManagement = () => {
               <option value="none">None</option>
               <option value="name">Name</option>
               <option value="role">Role</option>
-              <option value="userId">User ID</option>
             </select>
           </div>
 
@@ -196,9 +276,18 @@ const RoleManagement = () => {
           </button>
           <button 
             onClick={() => {
+              if (loading) {
+                alert('Please wait for users to load before editing.')
+                return
+              }
+              if (editUsers.length === 0) {
+                alert('No users available to edit. Please add users first.')
+                return
+              }
               setIsEditUserOpen(true)
             }}
-            className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2"
+            disabled={loading || editUsers.length === 0}
+            className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Edit3 className="w-4 h-4" />
             EDIT USER
@@ -212,30 +301,28 @@ const RoleManagement = () => {
           <table className="w-full">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold">USER ID</th>
                 <th className="px-6 py-4 text-left font-semibold">Name</th>
                 <th className="px-6 py-4 text-left font-semibold">CONTACT</th>
                 <th className="px-6 py-4 text-left font-semibold">USERNAME</th>
-                <th className="px-6 py-4 text-left font-semibold">PASSWORD</th>
                 <th className="px-6 py-4 text-left font-semibold">ROLE</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     Loading users...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-red-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-red-500">
                     Error: {error}
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     No users found
                   </td>
                 </tr>
@@ -247,20 +334,20 @@ const RoleManagement = () => {
                       index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
                     } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900">{user.UserID}</td>
                     <td className="px-6 py-4 text-gray-700">
                       {user.FirstName} {user.MiddleInitial} {user.LastName}
                     </td>
                     <td className="px-6 py-4 text-gray-700">{user.ContactNumber || 'N/A'}</td>
                     <td className="px-6 py-4 text-gray-700">{user.Username}</td>
-                    <td className="px-6 py-4 text-gray-700">********</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        user.PharmacistYN 
+                        user.Roles === 'Pharmacist'
                           ? 'bg-green-100 text-green-800'
+                          : user.Roles === 'Admin'
+                          ? 'bg-purple-100 text-purple-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {user.PharmacistYN ? 'PHARMACIST' : 'STAFF'}
+                        {user.Roles.toUpperCase()}
                       </span>
                     </td>
                   </tr>
@@ -310,7 +397,8 @@ const RoleManagement = () => {
         onClose={() => setIsEditUserOpen(false)}
         onSubmit={handleEditUser}
         onDelete={handleDeleteUser}
-        users={filteredUsers.map(convertToEditUserFormat)}
+        users={editUsers.map(convertToEditUserFormat)}
+        loading={loading}
       />
     </div>
   )

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X, Trash2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Trash2, Loader2 } from 'lucide-react'
 
 interface User {
   userId: string
@@ -16,10 +16,20 @@ interface EditUserFormProps {
   onSubmit: (updatedUsers: User[]) => void
   onDelete: (userId: string) => void
   users: User[]
+  loading?: boolean
 }
 
-const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users }: EditUserFormProps) => {
-  const [editedUsers, setEditedUsers] = useState<User[]>(users)
+const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = false }: EditUserFormProps) => {
+  const [editedUsers, setEditedUsers] = useState<User[]>([])
+
+  // Sync editedUsers with users prop when it changes
+  useEffect(() => {
+    if (users && users.length > 0) {
+      setEditedUsers(users)
+    } else {
+      setEditedUsers([])
+    }
+  }, [users])
 
   const handleRoleChange = (userId: string, newRole: string) => {
     setEditedUsers(prev => 
@@ -73,7 +83,6 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users }: EditUserFo
               <thead className="bg-blue-900 text-white">
                 <tr>
                   <th className="px-4 py-4 text-center font-semibold w-16">DELETE</th>
-                  <th className="px-6 py-4 text-left font-semibold">USER ID</th>
                   <th className="px-6 py-4 text-left font-semibold">Name</th>
                   <th className="px-6 py-4 text-left font-semibold">CONTACT</th>
                   <th className="px-6 py-4 text-left font-semibold">USERNAME</th>
@@ -81,45 +90,61 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users }: EditUserFo
                 </tr>
               </thead>
               <tbody>
-                {editedUsers.map((user, index) => (
-                  <tr
-                    key={user.userId}
-                    className={`${
-                      index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-                    } hover:bg-blue-100 transition-colors`}
-                  >
-                    <td className="px-4 py-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(user.userId, user.name)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{user.userId}</td>
-                    <td className="px-6 py-4 text-gray-700">{user.name}</td>
-                    <td className="px-6 py-4 text-gray-700">{user.contact}</td>
-                    <td className="px-6 py-4 text-gray-700">{user.username}</td>
-                    <td className="px-6 py-4">
-                      <select 
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user.userId, e.target.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
-                          user.role === 'PHARMACIST' 
-                            ? 'bg-green-100 text-green-800'
-                            : user.role === 'ADMIN'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="PHARMACIST">PHARMACIST</option>
-                        <option value="STAFF">STAFF</option>
-                      </select>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading users...
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : editedUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      No users available to edit. Make sure users are loaded first.
+                    </td>
+                  </tr>
+                ) : (
+                  editedUsers.map((user, index) => (
+                    <tr
+                      key={user.userId}
+                      className={`${
+                        index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                      } hover:bg-blue-100 transition-colors`}
+                    >
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(user.userId, user.name)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-gray-700">{user.name}</td>
+                      <td className="px-6 py-4 text-gray-700">{user.contact}</td>
+                      <td className="px-6 py-4 text-gray-700">{user.username}</td>
+                      <td className="px-6 py-4">
+                        <select 
+                          value={user.role}
+                          onChange={(e) => handleRoleChange(user.userId, e.target.value)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
+                            user.role === 'PHARMACIST' 
+                              ? 'bg-green-100 text-green-800'
+                              : user.role === 'ADMIN'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          <option value="ADMIN">ADMIN</option>
+                          <option value="PHARMACIST">PHARMACIST</option>
+                          <option value="STAFF">CLERK</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
