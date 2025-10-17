@@ -6,6 +6,7 @@ import compression from 'compression'
 import dotenv from 'dotenv'
 
 import userRoutes from './routes/userRoutes'
+import supplierRoutes from './routes/supplierRoutes'
 
 
 // Load environment variables
@@ -40,6 +41,7 @@ app.get('/health', (req, res) => {
 // API Routes
 
 app.use('/api/users', userRoutes)
+app.use('/api/suppliers', supplierRoutes)
 
 
 // Error handling middleware

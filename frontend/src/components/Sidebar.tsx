@@ -28,8 +28,15 @@ const Sidebar = () => {
         { path: '/role-management', label: 'Role Management', icon: UserCog }
       ]
     },
-    { path: '/suppliers', label: 'Suppliers', icon: ShoppingBag },
-    { path: '/purchase-order', label: 'Purchase Order', icon: Package },
+    { 
+      path: '/suppliers', 
+      label: 'Suppliers', 
+      icon: ShoppingBag,
+      children: [
+        { path: '/suppliers', label: 'Product Source List', icon: ShoppingBag },
+        { path: '/purchase-order', label: 'Purchase Order', icon: Package }
+      ]
+    },
   ]
 
   return (
@@ -50,8 +57,14 @@ const Sidebar = () => {
                     <summary className={`flex items-center gap-3 p-3 rounded-md cursor-pointer hover:bg-blue-100 ${
                       isActive ? 'bg-blue-100 text-blue-600' : 'text-gray-700'
                     }`}>
-                      <Icon className="w-5 h-5" />
-                      {item.label}
+                      <Link 
+                        to={item.path}
+                        className="flex items-center gap-3 flex-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {item.label}
+                      </Link>
                       <ChevronDown className="w-4 h-4 ml-auto" />
                     </summary>
                     <ul className="ml-4 mt-1 space-y-1">
@@ -88,7 +101,6 @@ const Sidebar = () => {
                 >
                   <Icon className="w-5 h-5" />
                   {item.label}
-                  {item.path === '/suppliers' && <ChevronRight className="w-4 h-4 ml-auto" />}
                 </Link>
               </li>
             )

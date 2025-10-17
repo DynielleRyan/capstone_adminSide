@@ -48,44 +48,43 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Create user in Supabase Auth first
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: userData.Email,
-      password: userData.Password,
-      user_metadata: {
+    // Send invitation email first (this creates the user in Supabase Auth)
+    const userRole = userData.Roles || 'Admin';
+    console.log('Sending invitation to user with role:', userRole, 'from userData.Roles:', userData.Roles);
+    
+    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(userData.Email, {
+      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
+      data: {
         first_name: userData.FirstName,
         last_name: userData.LastName,
         middle_initial: userData.MiddleInitial,
         username: userData.Username,
         contact_number: userData.ContactNumber,
         address: userData.Address,
-        role: userData.Roles || 'Admin'
-      },
-      email_confirm: true // Auto-confirm email since admin is creating the user
+        role: userRole,
+        password: userData.Password // Store password in metadata for later use
+      }
     });
 
-    if (authError) {
-      console.error('Error creating auth user:', authError);
+    if (inviteError) {
+      console.error('Error sending invitation:', inviteError);
       res.status(500).json({
         success: false,
-        message: 'Failed to create authentication user',
-        error: authError.message
+        message: 'Failed to send invitation email',
+        error: inviteError.message
       });
       return;
     }
 
-    if (!authData.user) {
+    if (!inviteData.user) {
       res.status(500).json({
         success: false,
-        message: 'Failed to create authentication user - no user data returned'
+        message: 'Failed to create user via invitation - no user data returned'
       });
       return;
     }
 
-    // Create user in our User table with the auth user ID
-    const userRole = userData.Roles || 'Admin';
-    console.log('Creating user with role:', userRole, 'from userData.Roles:', userData.Roles);
-    
+    // Create user in our User table with the invited user ID
     const { data: newUser, error } = await supabase
       .from('User')
       .insert({
@@ -97,15 +96,15 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         Address: userData.Address,
         ContactNumber: userData.ContactNumber,
         Roles: userRole,
-        AuthUserID: authData.user.id, // Store the Supabase Auth user ID in AuthUserID field
+        AuthUserID: inviteData.user.id, // Store the Supabase Auth user ID in AuthUserID field
       })
       .select()
       .single();
 
     if (error) {
       console.error('Error creating user record:', error);
-      // If creating the user record fails, we should clean up the auth user
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      // If creating the user record fails, we should clean up the invited user
+      await supabaseAdmin.auth.admin.deleteUser(inviteData.user.id);
       res.status(500).json({
         success: false,
         message: 'Failed to create user record',
@@ -113,6 +112,8 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       });
       return;
     }
+
+    console.log(`Invitation email sent to ${userData.Email}. User must confirm their email before they can login.`);
 
     // Format user response
     const userResponse = formatUserResponse(newUser);
