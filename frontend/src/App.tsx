@@ -1,23 +1,22 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Layout from './components/Layout'
-import Dashboard from './pages/Dashboard'
-import Inventory from './pages/Inventory'
-import Orders from './pages/Orders'
-import Customers from './pages/Customers'
-import Reports from './pages/Reports'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Transactions } from './pages/Transactions';
+import { PurchaseOrders } from './pages/PurchaseOrder';
+import { NewPurchaseOrder } from './pages/NewPurchaseOrder';
+import { UpdatePurchaseOrder } from './pages/UpdatePurchaseOrder';
 
 function App() {
+
   return (
     <Router>
-      <Layout>
+      <div className="min-h-screen bg-base-200">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/reports" element={<Reports />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/purchase-orders" element={<PurchaseOrders />} />
+          <Route path="/purchase-orders/new" element={<NewPurchaseOrder />} />
+          <Route path="/purchase-orders/:id" element={<UpdatePurchaseOrder />} />
+
         </Routes>
-      </Layout>
+      </div>
     </Router>
   )
 }

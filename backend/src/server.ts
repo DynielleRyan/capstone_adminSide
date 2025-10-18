@@ -3,12 +3,20 @@ import cors from 'cors';
 import 'dotenv/config';
 import  { supabase } from './config/database';
 import transactionRoutes from './routes/transactionRoutes';
+import purchaseOrderRoutes from './routes/purchaseOrderRoutes';
 
 const app = express();
 const PORT = process.env.PORT;
 
+app.use(express.json());
 
-app.use("/api/transactions", transactionRoutes)
+app.use(cors({
+  origin: 'http://localhost:3000',
+}));
+
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/purchase-orders", purchaseOrderRoutes);
+
 
 app.get('/api/test-db', async (req, res) => {
     const { data, error } = await supabase
