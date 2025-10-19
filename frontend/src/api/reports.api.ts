@@ -1,7 +1,8 @@
 import axios from "axios";
 
+
 // 🧩 Your base URL (make sure this points to your backend)
-const API_BASE = "http://localhost:5001/api/reports"; // change port if needed
+const API_BASE = `${import.meta.env.VITE_API_BASE}/reports`; 
 
 // ---------------- TYPES ----------------
 
@@ -29,13 +30,18 @@ export interface ReorderItem {
   productId: string;
   name: string;
   totalStock: number;
+  avgDailyUsage?: number;  // optional, controller sends it
+  leadTimeDays?: number;   // optional
+  safetyStock?: number;    // optional
+  reorderQuantity?: number; 
   reorderLevel: number;
-  status: string;
+  status: "LOW STOCK" | "OK";
 }
+
 
 // ---------------- API CALLS ----------------
 
-// 📊 1️⃣ Get monthly transactions 
+// 1. Get monthly transactions 
 export const getMonthlyTransactions = async (
   year: number
 ): Promise<MonthlyTransaction[]> => {
@@ -47,7 +53,7 @@ export const getMonthlyTransactions = async (
   return res.data.series; // backend returns { year, series: [...] }
 };
 
-// 📊 1️⃣ Get yearly transactions 
+// 2. Get yearly transactions 
 export const getYearlyTransactions = async (
   from: number,
   to: number
@@ -59,7 +65,7 @@ export const getYearlyTransactions = async (
   return res.data.series ?? [];
 };
 
-// 🏆 2️⃣ Get top selling products or categories
+// 3. Get top selling products or categories
 export const getTopItems = async (
   type: "product" | "category" = "product",
   limit: number = 5
@@ -72,11 +78,11 @@ export const getTopItems = async (
   return res.data.items; // backend returns { type, fromYear, toYear, limit, items: [...] }
 };
 
-// ⚠️ 3️⃣ Get reorder level / low stock items
-export const getReorder = async (): Promise<ReorderItem[]> => {
-  const res = await axios.get<{ count: number; lowStock: ReorderItem[]; allProducts: ReorderItem[] }>(
-    `${API_BASE}/reorder`
-  );
+// // 4. Get reorder level / low stock items
 
-  return res.data.lowStock; // backend returns { count, lowStock, allProducts }
+export const getReorder = async (limit?: number): Promise<ReorderItem[]> => {
+  const res = await axios.get<ReorderItem[]>(`${API_BASE}/reorder`, {
+    params: limit ? { limit } : {},   // will call .../reorder?limit=5
+  });
+  return res.data ?? [];
 };

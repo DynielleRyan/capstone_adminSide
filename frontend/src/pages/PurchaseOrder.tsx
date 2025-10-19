@@ -1,5 +1,9 @@
 import React from "react";
 
 export default function PurchaseOrder() {
-  return <div>PurchaseOrder</div>;
+  return (
+    <div>
+      <h1>PurchaseOrder</h1>
+    </div>
+  );
 }

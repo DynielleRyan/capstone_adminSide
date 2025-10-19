@@ -19,7 +19,7 @@ export default function App() {
         {/* right side = header + routed pages */}
         <main className="ml-64 flex flex-col min-h-screen">
           <Header />
-          <div className="p-6 flex-1">
+          <div className="p-6 flex-1 bg-base-100">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/reports" element={<Reports />} />

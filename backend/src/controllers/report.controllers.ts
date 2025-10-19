@@ -217,61 +217,138 @@ export const getTopItems: RequestHandler = async (req, res) => {
   }
 };
 
-export const getReorderLevelFromItems: RequestHandler = async (_req, res) => {
+
+export const getReorderLevelFromItems: RequestHandler = async (req, res) => {
   try {
-    // Step 1. Get product info + usage details
-    const { data: products, error: pError } = await supabase
+    // Tunables (kept simple)
+    const WINDOW_DAYS = 30;         // look back N days of sales
+    const DEFAULT_LEAD = 7;         // days, if we can't compute from POs
+    const SAFETY_F = 0.2;           // 20% safety stock
+    const limit = Number(req.query.limit ?? 0); // optional ?limit=10
+
+    // Time window for sales
+    const now = new Date();
+    const from = new Date();
+    from.setDate(now.getDate() - WINDOW_DAYS);
+
+    // 1) Active products
+    const { data: products, error: prodErr } = await supabase
       .from("Product")
-      .select("ProductID, Name, AvgDailyUsage, LeadTimeDays, SafetyStock");
+      .select("ProductID, Name, IsActive")
+      .eq("IsActive", true);
 
-    if (pError) return res.status(500).json({ error: pError.message });
+    if (prodErr) return res.status(500).json({ error: prodErr.message });
 
-    // Step 2. Get all product items (actual stock by batch)
-    const { data: items, error: iError } = await supabase
+    // 2) Current stock per product (active Product_Item rows)
+    const { data: items, error: itemErr } = await supabase
       .from("Product_Item")
-      .select("ProductID, Stock");
+      .select("ProductID, Stock, IsActive")
+      .eq("IsActive", true);
 
-    if (iError) return res.status(500).json({ error: iError.message });
+    if (itemErr) return res.status(500).json({ error: itemErr.message });
 
-    // Step 3. Compute total stock per product
     const stockTotals: Record<string, number> = {};
-    for (const i of items ?? []) {
-      const pid = i.ProductID;
-      const qty = Number(i.Stock) || 0;
+    for (const row of items ?? []) {
+      const pid = row.ProductID;
+      const qty = Number(row.Stock) || 0;
       stockTotals[pid] = (stockTotals[pid] || 0) + qty;
     }
 
-    // Step 4. Compute reorder level & status
-    const results = (products ?? []).map((p) => {
-      const totalStock = stockTotals[p.ProductID] || 0;
-      const avg = Number(p.AvgDailyUsage) || 0;
-      const lead = Number(p.LeadTimeDays) || 0;
-      const safety = Number(p.SafetyStock) || 0;
-      const reorderLevel = avg * lead + safety;
+    // 3) Average daily usage from last WINDOW_DAYS
+    //    We join Transaction_Item -> Transaction to read OrderDateTime
+    const { data: txItems, error: txErr } = await supabase
+      .from("Transaction_Item")
+      .select(`
+        ProductID,
+        Quantity,
+        Transaction:TransactionID ( OrderDateTime )
+      `);
 
+    if (txErr) return res.status(500).json({ error: txErr.message });
+
+    const usageTotals: Record<string, number> = {};
+    for (const r of (txItems as any) ?? []) {
+      const whenStr = r?.Transaction?.OrderDateTime as string | undefined;
+      if (!whenStr) continue;
+      const when = new Date(whenStr);
+      if (isNaN(when.getTime())) continue;
+      if (when < from || when > now) continue; // only within window
+
+      const pid = r.ProductID as string;
+      const qty = Number(r.Quantity) || 0;
+      usageTotals[pid] = (usageTotals[pid] || 0) + qty;
+    }
+
+    const avgDaily: Record<string, number> = {};
+    const divisor = Math.max(WINDOW_DAYS, 1);
+    for (const pid of Object.keys(usageTotals)) {
+      avgDaily[pid] = usageTotals[pid] / divisor; // units/day
+    }
+
+    // 4) Lead time from delivered Purchase Orders
+    const { data: pos, error: poErr } = await supabase
+      .from("Purchase_Order")
+      .select("ProductID, OrderPlacedDateTime, OrderArrivalDateTime")
+      .not("OrderPlacedDateTime", "is", null)
+      .not("OrderArrivalDateTime", "is", null);
+
+    if (poErr) return res.status(500).json({ error: poErr.message });
+
+    const leadSum: Record<string, number> = {};
+    const leadCnt: Record<string, number> = {};
+    for (const po of pos ?? []) {
+      const placed = new Date(po.OrderPlacedDateTime as any);
+      const arrived = new Date(po.OrderArrivalDateTime as any);
+      if (isNaN(placed.getTime()) || isNaN(arrived.getTime())) continue;
+
+      const days = (arrived.getTime() - placed.getTime()) / (1000 * 60 * 60 * 24);
+      if (days <= 0) continue;
+
+      const pid = po.ProductID as string;
+      leadSum[pid] = (leadSum[pid] || 0) + days;
+      leadCnt[pid] = (leadCnt[pid] || 0) + 1;
+    }
+
+    const leadDays: Record<string, number> = {};
+    for (const pid of Object.keys(leadSum)) {
+      leadDays[pid] = leadSum[pid] / Math.max(leadCnt[pid], 1);
+    }
+
+    // 5) Compute per product and return LOW STOCK only
+    const results = (products ?? []).map((p) => {
+      const pid = p.ProductID as string;
+      const totalStock   = stockTotals[pid] || 0;
+      const avgUsage     = avgDaily[pid] || 0;                 // units/day
+      const lead         = leadDays[pid] || DEFAULT_LEAD;      // days
+      const safetyStock  = SAFETY_F * avgUsage * lead;         // 20% buffer
+      const reorderLevel = avgUsage * lead + safetyStock;      // final ROL
+
+      const reorderQty = Math.max(reorderLevel - totalStock + safetyStock, 0);
       return {
-        productId: p.ProductID,
-        name: p.Name,
+        productId: pid,
+        name: p.Name as string,
         totalStock,
-        avgDailyUsage: avg,
-        leadTimeDays: lead,
-        safetyStock: safety,
-        reorderLevel,
-        shortage: Math.max(0, reorderLevel - totalStock),
-        status: totalStock < reorderLevel ? "LOW STOCK" : "OK",
+        avgDailyUsage: +avgUsage.toFixed(2),
+        leadTimeDays:  +lead.toFixed(2),
+        safetyStock:   Math.round(safetyStock),
+        reorderLevel:  Math.round(reorderLevel),
+        reorderQuantity: Math.round(reorderQty), 
+        status: totalStock <= reorderLevel ? "LOW STOCK" : "OK",
       };
     });
 
-    // Step 5. Filter low stock only (optional)
-    const lowStock = results.filter((r) => r.status === "LOW STOCK");
+    let lowStock = results.filter((r) => r.status === "LOW STOCK");
 
-    return res.json({
-      count: lowStock.length,
-      lowStock,
-      allProducts: results,
-    });
+    // Optional limit (?limit=10)
+    if (limit > 0) {
+      lowStock = lowStock.slice(0, limit);
+    }
+
+    // Return ONLY lowStock (array)
+    return res.json(lowStock);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Something went wrong" });
+    return res
+      .status(500)
+      .json({ error: err?.message || "Something went wrong" });
   }
 };
-
