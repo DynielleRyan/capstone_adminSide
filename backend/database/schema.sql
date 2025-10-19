@@ -14,13 +14,12 @@ CREATE TABLE "User" (
     "Username" VARCHAR(50) UNIQUE NOT NULL,
     "Email" VARCHAR(255) UNIQUE NOT NULL,
     "Address" TEXT,
-    "Password" VARCHAR(255) NOT NULL,
     "ContactNumber" VARCHAR(20),
     "DateTimeLastLoggedIn" TIMESTAMP,
-    "PharmacistYN" BOOLEAN DEFAULT false,
-    "IsActive" BOOLEAN DEFAULT true,
     "CreatedAt" TIMESTAMP DEFAULT NOW(),
-    "UpdatedAt" TIMESTAMP DEFAULT NOW()
+    "UpdatedAt" TIMESTAMP DEFAULT NOW(),
+    "Roles" VARCHAR(50) NOT NULL CHECK ("Roles" IN ('Admin','Pharmacist', 'Clerk')) DEFAULT 'Admin',
+    "AuthUserID" UUID  NOT NULL
 );
 
 -- Pharmacist table (inherits from User)

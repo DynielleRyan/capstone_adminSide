@@ -8,15 +8,14 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="drawer lg:drawer-open">
-      <input id="drawer-toggle" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content flex flex-col">
+    <div className="flex h-screen">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 p-6 bg-base-200">
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
-      <Sidebar />
     </div>
   )
 }
