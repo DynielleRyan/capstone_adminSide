@@ -94,3 +94,23 @@ export interface PaginatedProducts {
   limit: number;
   totalPages: number;
 }
+
+// Product Source List response (joins Product, Product_Item, Purchase_Order, Supplier)
+export interface ProductSourceItem {
+  ProductID: string;
+  ProductName: string;
+  ProductImage?: string;
+  SupplierID: string;
+  SupplierName: string;
+  ContactNumber?: string;
+  TotalStock?: number;
+  LastPurchaseDate?: string;
+}
+
+export interface PaginatedProductSource {
+  products: ProductSourceItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

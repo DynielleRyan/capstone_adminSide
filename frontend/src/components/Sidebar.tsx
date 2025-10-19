@@ -9,7 +9,6 @@ import {
   Receipt,
   UserCog,
   ChevronDown,
-  ChevronRight,
   ShoppingBag
 } from 'lucide-react'
 
@@ -33,7 +32,7 @@ const Sidebar = () => {
       label: 'Suppliers', 
       icon: ShoppingBag,
       children: [
-        { path: '/suppliers', label: 'Product Source List', icon: ShoppingBag },
+        { path: '/product-source-list', label: 'Product Source List', icon: ShoppingBag },
         { path: '/purchase-order', label: 'Purchase Order', icon: Package }
       ]
     },

@@ -7,6 +7,7 @@ import Orders from './pages/Orders'
 import Reports from './pages/Reports'
 import RoleManagement from './pages/RoleManagement'
 import Suppliers from './pages/Suppliers'
+import ProductSourceList from './pages/ProductSourceList'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/role-management" element={<RoleManagement />} />
           <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/product-source-list" element={<ProductSourceList />} />
         </Routes>
       </Layout>
     </Router>

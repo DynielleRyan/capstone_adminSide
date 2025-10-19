@@ -7,6 +7,7 @@ import dotenv from 'dotenv'
 
 import userRoutes from './routes/userRoutes'
 import supplierRoutes from './routes/supplierRoutes'
+import productRoutes from './routes/productRoutes'
 
 
 // Load environment variables
@@ -42,6 +43,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/users', userRoutes)
 app.use('/api/suppliers', supplierRoutes)
+app.use('/api/products', productRoutes)
 
 
 // Error handling middleware
