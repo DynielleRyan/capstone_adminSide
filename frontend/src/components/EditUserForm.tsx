@@ -7,7 +7,7 @@ interface User {
   contact: string
   username: string
   password: string
-  role: 'PHARMACIST' | 'STAFF' | 'ADMIN'
+  role: 'PHARMACIST' | 'CLERK'
 }
 
 interface EditUserFormProps {
@@ -35,7 +35,7 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = fa
     setEditedUsers(prev => 
       prev.map(user => 
         user.userId === userId 
-          ? { ...user, role: newRole as 'PHARMACIST' | 'STAFF' | 'ADMIN' }
+          ? { ...user, role: newRole as 'PHARMACIST' | 'CLERK' }
           : user
       )
     )
@@ -132,14 +132,11 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = fa
                           className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
                             user.role === 'PHARMACIST' 
                               ? 'bg-green-100 text-green-800'
-                              : user.role === 'ADMIN'
-                              ? 'bg-red-100 text-red-800'
                               : 'bg-blue-100 text-blue-800'
                           }`}
                         >
-                          <option value="ADMIN">ADMIN</option>
                           <option value="PHARMACIST">PHARMACIST</option>
-                          <option value="STAFF">CLERK</option>
+                          <option value="CLERK">CLERK</option>
                         </select>
                       </td>
                     </tr>

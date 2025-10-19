@@ -30,7 +30,7 @@ const Header = () => {
             <div className="p-2 hover:bg-gray-100 rounded-full">
               <User className="w-6 h-6 text-gray-600" />
             </div>
-            <span className="text-gray-700 font-medium">Admin</span>
+            <span className="text-gray-700 font-medium">User</span>
           </div>
         </div>
       </div>

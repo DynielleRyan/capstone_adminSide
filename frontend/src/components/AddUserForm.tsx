@@ -200,7 +200,6 @@ const AddUserForm = ({ isOpen, onClose, onSubmit }: AddUserFormProps) => {
                 required
               >
                 <option value="">--SELECT--</option>
-                <option value="ADMIN">ADMIN</option>
                 <option value="PHARMACIST">PHARMACIST</option>
                 <option value="CLERK">CLERK</option>
               </select>

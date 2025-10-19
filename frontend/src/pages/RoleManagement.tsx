@@ -88,20 +88,18 @@ const RoleManagement = () => {
   const mapStringToRole = (roleString: string): UserRole => {
     switch (roleString?.toUpperCase()) {
       case 'PHARMACIST': return 'Pharmacist'
-      case 'ADMIN': return 'Admin'
       case 'CLERK': return 'Clerk'
       case 'STAFF': return 'Clerk' // Map STAFF to Clerk for backwards compatibility
-      default: return 'Admin'
+      default: return 'Pharmacist' // Default to Pharmacist instead of Admin
     }
   }
 
   // Helper function to convert new Roles format to old format for EditUserForm
-  const mapRoleToOldFormat = (role: UserRole): 'PHARMACIST' | 'STAFF' | 'ADMIN' => {
+  const mapRoleToOldFormat = (role: UserRole): 'PHARMACIST' | 'CLERK' => {
     switch (role) {
       case 'Pharmacist': return 'PHARMACIST'
-      case 'Admin': return 'ADMIN'
-      case 'Clerk': return 'STAFF' // Map Clerk to STAFF for backwards compatibility
-      default: return 'ADMIN'
+      case 'Clerk': return 'CLERK'
+      default: return 'PHARMACIST' // Default to PHARMACIST instead of ADMIN
     }
   }
 
@@ -112,8 +110,7 @@ const RoleManagement = () => {
       const searchLower = searchTerm.toLowerCase()
       // Helper function for role filtering
       const roleString = user.Roles === 'Pharmacist' ? 'pharmacist' :
-                        user.Roles === 'Admin' ? 'admin' :
-                        user.Roles === 'Clerk' ? 'clerk' : 'staff'
+                        user.Roles === 'Clerk' ? 'clerk' : 'pharmacist'
       return (
         fullName.includes(searchLower) ||
         user.Username.toLowerCase().includes(searchLower) ||
@@ -343,8 +340,6 @@ const RoleManagement = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                         user.Roles === 'Pharmacist'
                           ? 'bg-green-100 text-green-800'
-                          : user.Roles === 'Admin'
-                          ? 'bg-purple-100 text-purple-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}>
                         {user.Roles.toUpperCase()}

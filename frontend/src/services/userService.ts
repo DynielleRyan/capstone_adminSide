@@ -1,7 +1,7 @@
 import api from './api'
 
-// User role type based on schema constraint
-export type UserRole = 'Admin' | 'Pharmacist' | 'Clerk';
+// User role type based on schema constraint (Admin excluded from frontend)
+export type UserRole = 'Pharmacist' | 'Clerk';
 
 // Types for user operations
 export interface User {
@@ -29,7 +29,7 @@ export interface CreateUser {
   Password: string
   Address?: string
   ContactNumber?: string
-  Roles?: UserRole
+  Roles?: UserRole // Defaults to 'Pharmacist' in backend
 }
 
 export interface UpdateUser {
@@ -86,7 +86,7 @@ export interface UserWithPharmacist extends UserResponse {
 export interface UserFilters {
   search?: string
   pharmacistYN?: boolean // Keep for backwards compatibility
-  role?: UserRole // New role-based filtering
+  role?: UserRole // New role-based filtering (Admin excluded)
   page?: number
   limit?: number
 }

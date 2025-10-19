@@ -49,7 +49,18 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Send invitation email first (this creates the user in Supabase Auth)
-    const userRole = userData.Roles || 'Admin';
+    // Prevent Admin role creation - default to Pharmacist if no role specified
+    const userRole = userData.Roles || 'Pharmacist';
+    
+    // Block Admin role creation
+    if (userRole === 'Admin') {
+      res.status(400).json({
+        success: false,
+        message: 'Admin role cannot be created through this interface'
+      });
+      return;
+    }
+    
     console.log('Sending invitation to user with role:', userRole, 'from userData.Roles:', userData.Roles);
     
     const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(userData.Email, {
@@ -145,7 +156,8 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
     let query = supabase
       .from('User')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .neq('Roles', 'Admin'); // Exclude Admin users from results
 
     // Apply filters
     if (search) {
@@ -154,10 +166,18 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
     // Support both old pharmacistYN filter and new role filter
     if (role !== undefined) {
+      // Block Admin role filtering
+      if (role === 'Admin') {
+        res.status(400).json({
+          success: false,
+          message: 'Admin role cannot be filtered'
+        });
+        return;
+      }
       query = query.eq('Roles', role);
     } else if (pharmacistYN !== undefined) {
       // Backwards compatibility: map pharmacistYN to role filter
-      const targetRole = String(pharmacistYN) === 'true' ? 'Pharmacist' : 'Admin';
+      const targetRole = String(pharmacistYN) === 'true' ? 'Pharmacist' : 'Clerk';
       query = query.eq('Roles', targetRole);
     }
 
@@ -251,6 +271,15 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const { id } = req.params;
     const updateData: UpdateUser = req.body;
+
+    // Block Admin role updates
+    if (updateData.Roles === 'Admin') {
+      res.status(400).json({
+        success: false,
+        message: 'Admin role cannot be assigned through this interface'
+      });
+      return;
+    }
 
     // Add updated timestamp
     updateData.UpdatedAt = new Date();
