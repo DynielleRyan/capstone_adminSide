@@ -52,6 +52,12 @@ export interface LoginCredentials {
   Password: string;
 }
 
+// Interface for sign in (username or email)
+export interface SignInCredentials {
+  usernameOrEmail: string;
+  password: string;
+}
+
 // Interface for changing password
 export interface ChangePassword {
   UserID: string;

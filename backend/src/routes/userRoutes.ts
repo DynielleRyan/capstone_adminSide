@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createUser,
+  createAdminUser,
   getUsers,
   getUserById,
   updateUser,
@@ -12,6 +13,9 @@ import {
 const router = Router();
 
 // User CRUD routes
+
+// Create a new admin user (special endpoint)
+router.post('/admin', createAdminUser);
 
 // Create a new user
 router.post('/', createUser);

@@ -5,6 +5,7 @@ import morgan from 'morgan'
 import compression from 'compression'
 import dotenv from 'dotenv'
 
+import authRoutes from './routes/authRoutes'
 import userRoutes from './routes/userRoutes'
 import supplierRoutes from './routes/supplierRoutes'
 import productRoutes from './routes/productRoutes'
@@ -40,7 +41,7 @@ app.get('/health', (req, res) => {
 })
 
 // API Routes
-
+app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/suppliers', supplierRoutes)
 app.use('/api/products', productRoutes)

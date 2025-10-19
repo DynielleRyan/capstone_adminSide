@@ -17,6 +17,192 @@ const formatUserResponse = (user: User): UserResponse => {
   return user as UserResponse;
 };
 
+// Sign in user
+export const signIn = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { usernameOrEmail, password } = req.body;
+
+    // Validate input
+    if (!usernameOrEmail || !password) {
+      res.status(400).json({
+        success: false,
+        message: 'Username/Email and password are required'
+      });
+      return;
+    }
+
+    // Check if input is email or username by looking for @ symbol
+    const isEmail = usernameOrEmail.includes('@');
+    
+    // Find user in database
+    let query = supabase
+      .from('User')
+      .select('*')
+      .limit(1);
+
+    if (isEmail) {
+      query = query.eq('Email', usernameOrEmail);
+    } else {
+      query = query.eq('Username', usernameOrEmail);
+    }
+
+    const { data: users, error: userError } = await query;
+
+    if (userError || !users || users.length === 0) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+      return;
+    }
+
+    const user = users[0];
+
+    // Authenticate with Supabase Auth using the email
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: user.Email,
+      password: password
+    });
+
+    if (authError) {
+      console.error('Authentication error:', authError);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+      return;
+    }
+
+    if (!authData.user || !authData.session) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication failed'
+      });
+      return;
+    }
+
+    // Update last login time
+    const { error: updateError } = await supabase
+      .from('User')
+      .update({ DateTimeLastLoggedIn: new Date() })
+      .eq('UserID', user.UserID);
+
+    if (updateError) {
+      console.error('Error updating last login time:', updateError);
+      // Don't fail the login if this fails, just log it
+    }
+
+    // Format user response
+    const userResponse = formatUserResponse(user);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: userResponse,
+        session: {
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
+          expires_in: authData.session.expires_in,
+          expires_at: authData.session.expires_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in signIn:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Sign out user
+export const signOut = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Sign out from Supabase Auth
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error('Error signing out:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to sign out',
+        error: error.message
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Signed out successfully'
+    });
+  } catch (error) {
+    console.error('Error in signOut:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Get current user
+export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        success: false,
+        message: 'No authorization token provided'
+      });
+      return;
+    }
+
+    const token = authHeader.substring(7);
+
+    // Get user from Supabase Auth token
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+      return;
+    }
+
+    // Get user from database using AuthUserID
+    const { data: user, error: userError } = await supabase
+      .from('User')
+      .select('*')
+      .eq('AuthUserID', authUser.id)
+      .single();
+
+    if (userError || !user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Format user response
+    const userResponse = formatUserResponse(user);
+
+    res.status(200).json({
+      success: true,
+      data: userResponse
+    });
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 // Create a new user
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -136,6 +322,124 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     console.error('Error in createUser:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Create a new admin user (special endpoint for creating admin users)
+export const createAdminUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userData: CreateUser = req.body;
+
+    // Force the role to be Admin
+    userData.Roles = 'Admin';
+
+    // Check if username or email already exists in our User table
+    const { data: existingUsers } = await supabase
+      .from('User')
+      .select('UserID')
+      .or(`Username.eq.${userData.Username},Email.eq.${userData.Email}`);
+
+    if (existingUsers && existingUsers.length > 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Username or email already exists'
+      });
+      return;
+    }
+
+    // Check if email already exists in Supabase Auth
+    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+    const emailExists = existingAuthUser?.users?.some(user => user.email === userData.Email);
+    
+    if (emailExists) {
+      res.status(400).json({
+        success: false,
+        message: 'Email already exists in authentication system'
+      });
+      return;
+    }
+
+    console.log('Creating admin user with email:', userData.Email);
+    
+    // Create the admin user in Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: userData.Email,
+      password: userData.Password,
+      email_confirm: true, // Auto-confirm email for admin users
+      user_metadata: {
+        first_name: userData.FirstName,
+        last_name: userData.LastName,
+        middle_initial: userData.MiddleInitial,
+        username: userData.Username,
+        contact_number: userData.ContactNumber,
+        address: userData.Address,
+        role: 'Admin'
+      }
+    });
+
+    if (authError) {
+      console.error('Error creating admin auth user:', authError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create admin authentication user',
+        error: authError.message
+      });
+      return;
+    }
+
+    if (!authData.user) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create admin user - no user data returned'
+      });
+      return;
+    }
+
+    // Create user in our User table with the auth user ID
+    const { data: newUser, error } = await supabase
+      .from('User')
+      .insert({
+        FirstName: userData.FirstName,
+        MiddleInitial: userData.MiddleInitial,
+        LastName: userData.LastName,
+        Username: userData.Username,
+        Email: userData.Email,
+        Address: userData.Address,
+        ContactNumber: userData.ContactNumber,
+        Roles: 'Admin',
+        AuthUserID: authData.user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating admin user record:', error);
+      // If creating the user record fails, clean up the auth user
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create admin user record',
+        error: error.message
+      });
+      return;
+    }
+
+    console.log(`Admin user created successfully: ${userData.Email}`);
+
+    // Format user response
+    const userResponse = formatUserResponse(newUser);
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin user created successfully',
+      data: userResponse
+    });
+  } catch (error) {
+    console.error('Error in createAdminUser:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
