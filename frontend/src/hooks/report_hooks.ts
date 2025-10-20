@@ -1,10 +1,19 @@
-// src/hooks/report_hooks.ts
+// ===============================
+// 📊 Report Hooks
+// ===============================
+// This hook powers the Reports page:
+// - Fetches transaction charts (monthly / yearly)
+// - Loads top selling products / categories
+// - Fetches reorder level data
+// - Handles CSV exports and modal confirmation
+// ===============================
+
 import { useEffect, useMemo, useState } from "react";
 import {
   getMonthlyTransactions,
   getYearlyTransactions,
   getTopItems,
-  getReorder, // now returns an array of low-stock items
+  getReorder,
   MonthlyTransaction,
   YearlyTransaction,
   TopItem,
@@ -13,7 +22,9 @@ import {
 
 type ChartMode = "month" | "year";
 
-/** tiny CSV helper */
+// ===============================
+// 📦 CSV DOWNLOAD HELPER
+// ===============================
 function downloadCSV(filename: string, rows: Record<string, any>[]) {
   if (!rows?.length) return;
   const headers = Object.keys(rows[0]);
@@ -28,42 +39,43 @@ function downloadCSV(filename: string, rows: Record<string, any>[]) {
   a.click();
 }
 
+// ===============================
+// ⚙️ MAIN HOOK FUNCTION
+// ===============================
 export function report_hooks() {
-  // ===== Chart controls =====
+  // -------- CONTROLS: Chart --------
   const [mode, setMode] = useState<ChartMode>("month");
   const thisYear = new Date().getFullYear();
   const [year, setYear] = useState<number>(thisYear);
   const [fromYear] = useState<number>(thisYear - 4);
   const [toYear] = useState<number>(thisYear);
 
-  // ===== Data =====
+  // -------- STATE: Data --------
   const [chartMonthly, setChartMonthly] = useState<MonthlyTransaction[]>([]);
   const [chartYearly, setChartYearly] = useState<YearlyTransaction[]>([]);
   const [topItems, setTopItems] = useState<TopItem[]>([]);
-  const [reorder, setReorder] = useState<ReorderItem[]>([]); // LOW STOCK ONLY
+  const [reorder, setReorder] = useState<ReorderItem[]>([]);
 
-  // ===== Top controls =====
+  // -------- STATE: Top Selling --------
   const [type, setType] = useState<"product" | "category">("product");
   const [limit, setLimit] = useState<number>(5);
 
-  // ===== Loading flags =====
+  // -------- STATE: Loading --------
   const [loadingChart, setLoadingChart] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
   const [loadingReorder, setLoadingReorder] = useState(false);
-  
-  
 
-  // ----- transaction charts -----
+  // ===============================
+  // 🚀 FETCH: Chart (Monthly/Yearly)
+  // ===============================
   useEffect(() => {
     const run = async () => {
       setLoadingChart(true);
       try {
         if (mode === "month") {
-          const rows = await getMonthlyTransactions(year);
-          setChartMonthly(rows || []);
+          setChartMonthly(await getMonthlyTransactions(year));
         } else {
-          const rows = await getYearlyTransactions(fromYear, toYear);
-          setChartYearly(rows || []);
+          setChartYearly(await getYearlyTransactions(fromYear, toYear));
         }
       } finally {
         setLoadingChart(false);
@@ -72,13 +84,14 @@ export function report_hooks() {
     run();
   }, [mode, year, fromYear, toYear]);
 
-  // ----- top items -----
+  // ===============================
+  // 🏆 FETCH: Top Selling Items
+  // ===============================
   useEffect(() => {
     const run = async () => {
       setLoadingTop(true);
       try {
-        const rows = await getTopItems(type, limit);
-        setTopItems(rows || []);
+        setTopItems(await getTopItems(type, limit));
       } finally {
         setLoadingTop(false);
       }
@@ -86,37 +99,38 @@ export function report_hooks() {
     run();
   }, [type, limit]);
 
-   // ----- reorder level -----
-      // to limit
-   const [reorderLimit] = useState<number>(10); 
-
-   const refetchReorder = async () => {
-     setLoadingReorder(true);
-     try {
-       const rows = await getReorder(reorderLimit); // ⬅️ now allowed
-       setReorder(rows || []);
-     } finally {
-       setLoadingReorder(false);
-     }
-   };
+  // ===============================
+  // 🔁 FETCH: Reorder Level Data
+  // ===============================
+  const refetchReorder = async () => {
+    setLoadingReorder(true);
+    try {
+      setReorder(await getReorder(10));
+    } finally {
+      setLoadingReorder(false);
+    }
+  };
 
   useEffect(() => {
     refetchReorder();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // pick chart dataset
+  // ===============================
+  // 🧮 COMPUTED: Choose Chart Dataset
+  // ===============================
   const chartData = useMemo(
     () => (mode === "month" ? chartMonthly : chartYearly),
     [mode, chartMonthly, chartYearly]
   );
 
-  // ===== CSV actions =====
+  // ===============================
+  // 💾 CSV EXPORT FUNCTIONS
+  // ===============================
   const downloadChartCSV = () => {
     if (mode === "month") {
       downloadCSV(
         `transactions_by_month_${year}.csv`,
-        (chartMonthly || []).map((r) => ({
+        chartMonthly.map((r) => ({
           Month: r.month,
           TotalTransactions: r.totalTransactions,
         }))
@@ -124,7 +138,7 @@ export function report_hooks() {
     } else {
       downloadCSV(
         `transactions_by_year_${fromYear}-${toYear}.csv`,
-        (chartYearly || []).map((r) => ({
+        chartYearly.map((r) => ({
           Year: r.year,
           TotalTransactions: r.totalTransactions,
         }))
@@ -138,27 +152,17 @@ export function report_hooks() {
       topItems.map((it, i) => ({
         Rank: i + 1,
         [type === "product" ? "Product" : "Category"]:
-          type === "product" ? it.name ?? "Unknown Product" : it.category ?? "Uncategorized",
+          type === "product"
+            ? it.name ?? "Unknown Product"
+            : it.category ?? "Uncategorized",
         QuantitySold: it.sold,
       }))
     );
   };
 
-  // const downloadReorderCSV = () => {
-  //   downloadCSV(
-  //     `low_stock.csv`,
-  //     reorder.map((r) => ({
-  //       Name: r.name,
-  //       CurrentQty: r.totalStock,
-  //       ReorderLevel: r.reorderLevel,
-  //       Status: r.status,
-  //     }))
-  //   );
-  // };
   const downloadReorderCSV = async () => {
-    // fetch ALL for CSV regardless of current limit
-    const all = await getReorder(); // no limit → backend returns every low-stock
-    const rows = (all || []).map(r => ({
+    const all = await getReorder();
+    const rows = all.map((r) => ({
       Name: r.name,
       CurrentQty: r.totalStock,
       ReorderLevel: r.reorderLevel,
@@ -166,7 +170,10 @@ export function report_hooks() {
     }));
     downloadCSV("low_stock.csv", rows);
   };
-   // ===== Modals =====
+
+  // ===============================
+  // 🧾 MODAL HANDLERS
+  // ===============================
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     reportType: string;
@@ -176,34 +183,43 @@ export function report_hooks() {
     reportType: "",
     onConfirm: () => {},
   });
-  
-  const openDownloadModal = (reportType: string, onConfirm: () => void) => {
-    setModalState({
-      isOpen: true,
-      reportType,
-      onConfirm,
-    });
-  };
-  
-  const closeModal = () => {
-    setModalState({
-      isOpen: false,
-      reportType: "",
-      onConfirm: () => {},
-    });
-  };
+
+  const openDownloadModal = (reportType: string, onConfirm: () => void) =>
+    setModalState({ isOpen: true, reportType, onConfirm });
+
+  const closeModal = () =>
+    setModalState({ isOpen: false, reportType: "", onConfirm: () => {} });
+
+  // ===============================
+  // 🔄 RETURN VALUES
+  // ===============================
   return {
-    // controls
-    mode, setMode, thisYear, year, setYear, fromYear, toYear,
-    type, setType, limit, setLimit,
-    // data
-    topItems, reorder, chartData,
-    // loading
-    loadingChart, loadingTop, loadingReorder,
-    // actions
-    downloadChartCSV, downloadTopCSV, downloadReorderCSV,
+    // Controls
+    mode,
+    setMode,
+    thisYear,
+    year,
+    setYear,
+    fromYear,
+    toYear,
+    type,
+    setType,
+    limit,
+    setLimit,
+    // Data
+    topItems,
+    reorder,
+    chartData,
+    // Loading
+    loadingChart,
+    loadingTop,
+    loadingReorder,
+    // CSV Actions
+    downloadChartCSV,
+    downloadTopCSV,
+    downloadReorderCSV,
     refetchReorder,
-      // modal controls
+    // Modal
     modalState,
     openDownloadModal,
     closeModal,

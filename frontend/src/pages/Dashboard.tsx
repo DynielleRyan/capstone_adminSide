@@ -34,23 +34,26 @@ export default function Dashboard() {
     chartData,
   } = useDashboard();
 
+  // 🔒 SAFETY: Recharts must always get an array
+  const safeChartData = Array.isArray(chartData) ? chartData : [];
+
   return (
     <div className="space-y-6">
       {/* top metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
           title="Low on Stock"
-          value={loading ? "…" : lowCount}
+          value={loading ? "…" : lowCount ?? 0}
           onMenu={openLowModal}
         />
         <MetricCard
           title="Expiring"
-          value={loading ? "…" : expiringTotal}
+          value={loading ? "…" : expiringTotal ?? 0}
           onMenu={openExpModal}
         />
         <MetricCard
           title="Transactions"
-          value={loading ? "…" : transactions}
+          value={loading ? "…" : transactions ?? 0}
           onClick={() => navigate("/transactions")}
         />
       </div>
@@ -63,14 +66,14 @@ export default function Dashboard() {
               <h2 className="font-semibold text-lg">Total Sales</h2>
               <div className="text-blue-700 font-bold text-xl">
                 {currency}
-                {new Intl.NumberFormat().format(totalSales)}
+                {new Intl.NumberFormat().format(totalSales ?? 0)}
               </div>
             </div>
           </div>
 
           <div className="mt-4 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData}>
+              <ComposedChart data={safeChartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis yAxisId="left" />
@@ -123,20 +126,21 @@ export default function Dashboard() {
                         Loading…
                       </td>
                     </tr>
-                  ) : lowRows.length === 0 ? (
+                  ) : (Array.isArray(lowRows) ? lowRows : []).length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center opacity-60">
                         No low stock
                       </td>
                     </tr>
                   ) : (
-                    lowRows.map((r) => (
+                    (Array.isArray(lowRows) ? lowRows : []).map((r) => (
                       <tr key={r.productId}>
                         <td>{r.rowNo.toString().padStart(2, "0")}</td>
                         <td className="flex items-center gap-2">
                           {r.image && (
                             <img
                               src={r.image}
+                              alt={r.name}
                               className="w-8 h-8 object-cover rounded"
                             />
                           )}
@@ -146,10 +150,10 @@ export default function Dashboard() {
                         <td>{r.brand}</td>
                         <td>
                           {currency}
-                          {r.price.toFixed(2)}
+                          {(r.price ?? 0).toFixed(2)}
                         </td>
                         <td>{r.expiry ?? "—"}</td>
-                        <td>{r.qty}</td>
+                        <td>{r.qty ?? 0}</td>
                       </tr>
                     ))
                   )}
@@ -168,9 +172,9 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <h3 className="font-semibold">Expiring Products</h3>
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="inline-block w-4 h-4 rounded bg-yellow-300"></span>{" "}
+                  <span className="inline-block w-4 h-4 rounded bg-yellow-300" />
                   Yellow – 6 months
-                  <span className="inline-block w-4 h-4 rounded bg-red-400"></span>{" "}
+                  <span className="inline-block w-4 h-4 rounded bg-red-400" />
                   Red – 3 months
                 </div>
               </div>
@@ -206,14 +210,14 @@ export default function Dashboard() {
                         Loading…
                       </td>
                     </tr>
-                  ) : expRows.length === 0 ? (
+                  ) : (Array.isArray(expRows) ? expRows : []).length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center opacity-60">
                         No expiring items
                       </td>
                     </tr>
                   ) : (
-                    expRows.map((r, i) => (
+                    (Array.isArray(expRows) ? expRows : []).map((r, i) => (
                       <tr key={r.productItemId}>
                         <td>{(i + 1).toString().padStart(2, "0")}</td>
                         <td>{r.productName}</td>
@@ -230,7 +234,7 @@ export default function Dashboard() {
                             {r.expiryDate}
                           </span>
                         </td>
-                        <td>{r.qty}</td>
+                        <td>{r.qty ?? 0}</td>
                       </tr>
                     ))
                   )}
@@ -272,7 +276,7 @@ function MetricCard({
             className="btn btn-ghost btn-square absolute bottom-2 right-2"
             onClick={(e) => {
               e.stopPropagation();
-              onMenu();
+              onMenu?.();
             }}
             title="Open list"
           >

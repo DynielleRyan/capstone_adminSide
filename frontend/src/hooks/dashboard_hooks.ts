@@ -1,5 +1,14 @@
-// frontend/src/hooks/dashboard_hooks.ts
-import { useEffect, useMemo, useState } from "react";
+// ===============================
+// 🧭 Dashboard Hooks
+// ===============================
+// This hook handles the logic for the Dashboard page:
+// - Fetches top metrics (low stock, expiring, transactions, total sales)
+// - Loads and manages chart data for total sales
+// - Opens and populates modals for Low Stock and Expiring products
+// - Exports data to CSV
+// ===============================
+
+import { useEffect, useState } from "react";
 import {
   getLowStockCount,
   getExpiringCounts,
@@ -12,12 +21,14 @@ import {
   ExpiringRow,
 } from "../api/dashboard.api";
 
-// simple CSV helper
+// ===============================
+// 📦 CSV DOWNLOAD HELPER
+// ===============================
 function downloadCSV(filename: string, rows: Record<string, any>[]) {
   if (!rows?.length) return;
   const headers = Object.keys(rows[0]);
   const csv = [
-    headers.join(","),
+    headers.join(","), // column headers
     ...rows.map(r => headers.map(h => JSON.stringify(r[h] ?? "")).join(",")),
   ].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -27,61 +38,79 @@ function downloadCSV(filename: string, rows: Record<string, any>[]) {
   a.click();
 }
 
+// ===============================
+// ⚙️ MAIN HOOK FUNCTION
+// ===============================
 export function useDashboard() {
-  // --- settings
-  const threshold = 20;
-  const warnMonths = 6;
-  const dangerMonths = 3;
+  // -------- CONFIG --------
+  const threshold = 20; // qty threshold to mark as "low stock"
+  const warnMonths = 6; // expiring warning threshold
+  const dangerMonths = 3; // expiring danger threshold
 
-  // --- top cards
-  const [lowCount, setLowCount] = useState<number>(0);
-  const [expiringTotal, setExpiringTotal] = useState<number>(0);
-  const [transactions, setTransactions] = useState<number>(0);
+  // -------- STATE: Top Cards --------
+  const [lowCount, setLowCount] = useState(0);
+  const [expiringTotal, setExpiringTotal] = useState(0);
+  const [transactions, setTransactions] = useState(0);
 
-  // --- total sales
-  const [totalSales, setTotalSales] = useState<number>(0);
-  const currency = "₱"; // you can map from API if needed
-  const [chartData, setChartData] = useState<{ month: string; total: number; units: number }[]>([]);
+  // -------- STATE: Sales / Chart --------
+  const [totalSales, setTotalSales] = useState(0);
+  const currency = "₱";
+  const [chartData, setChartData] =
+    useState<{ month: string; total: number; units: number }[]>([]);
 
-  // --- lists for modals
+  // -------- STATE: Modal Data --------
   const [lowRows, setLowRows] = useState<LowStockRow[]>([]);
   const [expRows, setExpRows] = useState<ExpiringRow[]>([]);
 
-  // --- loading
+  // -------- STATE: Loading & Modal --------
   const [loading, setLoading] = useState(false);
   const [loadingLow, setLoadingLow] = useState(false);
   const [loadingExp, setLoadingExp] = useState(false);
-
-  // --- modal state
   const [open, setOpen] = useState<null | "low" | "exp">(null);
 
-  
-
-  // initial fetch
+  // ===============================
+  // 🚀 INITIAL FETCH (RUN ON MOUNT)
+  // ===============================
   useEffect(() => {
     const run = async () => {
       setLoading(true);
       try {
+        // fetch all data in parallel
         const [{ count }, exp, tx, sales, monthly] = await Promise.all([
           getLowStockCount(threshold),
           getExpiringCounts(warnMonths, dangerMonths),
           getTransactionsCount(),
           getTotalSales(),
-          getMonthlySales(),
+          getMonthlySales(), // monthly already normalized in API layer
         ]);
+        console.log("✅ Dashboard API results:", { count, exp, tx, sales, monthly });
+        // update dashboard cards
         setLowCount(count || 0);
         setExpiringTotal(exp.total || 0);
         setTransactions(tx.count || 0);
         setTotalSales(sales.totalSales || 0);
-        setChartData(monthly.data || []);
-      } finally {
+        setChartData(
+          Array.isArray((monthly as any)?.data)
+            ? (monthly as any).data
+            : Array.isArray(monthly as any)
+              ? (monthly as any)
+              : []
+        );
+        
+      } catch (err) {
+        console.error("❌ Dashboard API error:", err);
+      }finally {
         setLoading(false);
       }
     };
     run();
   }, []);
 
-  // modal loaders
+  // ===============================
+  // 📋 MODAL HANDLERS
+  // ===============================
+
+  // 🔹 Low Stock Modal
   async function openLowModal() {
     setOpen("low");
     setLoadingLow(true);
@@ -93,6 +122,7 @@ export function useDashboard() {
     }
   }
 
+  // 🔸 Expiring Products Modal
   async function openExpModal() {
     setOpen("exp");
     setLoadingExp(true);
@@ -104,54 +134,65 @@ export function useDashboard() {
     }
   }
 
-  // CSV
+  // ===============================
+  // 💾 CSV EXPORT FUNCTIONS
+  // ===============================
   function downloadLowCSV() {
-    downloadCSV("low_on_stock.csv", lowRows.map(r => ({
-      ID: r.rowNo,
-      Product: r.name,
-      Category: r.category,
-      Brand: r.brand,
-      Price: r.price,
-      Expiry: r.expiry ?? "",
-      Qty: r.qty,
-    })));
+    downloadCSV(
+      "low_on_stock.csv",
+      lowRows.map((r) => ({
+        ID: r.rowNo,
+        Product: r.name,
+        Category: r.category,
+        Brand: r.brand,
+        Price: r.price,
+        Expiry: r.expiry ?? "",
+        Qty: r.qty,
+      }))
+    );
   }
+
   function downloadExpCSV() {
-    downloadCSV("expiring_batches.csv", expRows.map((r, i) => ({
-      ID: i + 1,
-      Product: r.productName,
-      Category: r.category,
-      Brand: r.brand,
-      Expiry: r.expiryDate,
-      DaysLeft: r.daysLeft,
-      Qty: r.qty,
-      Level: r.expiryLevel,
-    })));
+    downloadCSV(
+      "expiring_batches.csv",
+      expRows.map((r, i) => ({
+        ID: i + 1,
+        Product: r.productName,
+        Category: r.category,
+        Brand: r.brand,
+        Expiry: r.expiryDate,
+        DaysLeft: r.daysLeft,
+        Qty: r.qty,
+        Level: r.expiryLevel,
+      }))
+    );
   }
 
-//   // simple chart demo data (swap with your real series if you have one)
-//   const chartData = useMemo(
-//     () => [
-//       { month: "Jan", units: 60, total: 2000 },
-//       { month: "Feb", units: 100, total: 4000 },
-//       { month: "Mar", units: 25, total: 1500 },
-//       { month: "Apr", units: 105, total: 6500 },
-//       { month: "May", units: 85, total: 5000 },
-//       { month: "Jun", units: 150, total: 7000 },
-//     ],
-//     []
-//   );
-
+  // ===============================
+  // 🔄 RETURN VALUES
+  // ===============================
   return {
-    // cards
-    lowCount, expiringTotal, transactions, totalSales, currency, loading,
-    // modals
-    open, setOpen, openLowModal, openExpModal,
-    // lists + flags
-    lowRows, expRows, loadingLow, loadingExp,
-    // csv
-    downloadLowCSV, downloadExpCSV,
-    // chart
+    // Cards
+    lowCount,
+    expiringTotal,
+    transactions,
+    totalSales,
+    currency,
+    loading,
+    // Modals
+    open,
+    setOpen,
+    openLowModal,
+    openExpModal,
+    // Modal data
+    lowRows,
+    expRows,
+    loadingLow,
+    loadingExp,
+    // CSV
+    downloadLowCSV,
+    downloadExpCSV,
+    // Chart
     chartData,
   } as const;
 }

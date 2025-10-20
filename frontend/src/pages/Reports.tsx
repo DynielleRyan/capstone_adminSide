@@ -1,5 +1,4 @@
 import { report_hooks } from "../hooks/report_hooks";
-
 import {
   BarChart,
   Bar,
@@ -12,7 +11,6 @@ import {
 
 type ChartMode = "month" | "year";
 
-// ==== MODAL COMPONENT FOR DOWNLOAD CONFIRMATION ====
 interface DownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,7 +27,7 @@ function DownloadModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+    <div className="fixed top-0 left-0 w-screen h-screen bg-black/50 flex items-center justify-center z-[1000]">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold mb-4">Confirm Download</h3>
         <p className="text-gray-600 mb-6">
@@ -56,7 +54,7 @@ function DownloadModal({
 
 export default function Reports() {
   const {
-    // ====controls====
+    // controls
     mode,
     setMode,
     thisYear,
@@ -66,33 +64,36 @@ export default function Reports() {
     setType,
     limit,
     setLimit,
-    // ====data====
+    // data
     topItems,
     reorder,
     chartData,
-    // ====loading flags=====
+    // loading flags
     loadingChart,
     loadingTop,
     loadingReorder,
-    // ====actions====
+    // actions
     downloadChartCSV,
     downloadTopCSV,
     downloadReorderCSV,
-    // modal handlers
+    // modal
     modalState,
     openDownloadModal,
     closeModal,
   } = report_hooks();
 
+  // 🔒 SAFETY: never let Recharts / tables receive undefined
+  const safeChart = Array.isArray(chartData) ? chartData : [];
+  const safeTop = Array.isArray(topItems) ? topItems : [];
+  const safeReorder = Array.isArray(reorder) ? reorder : [];
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-blue-700">REPORTS</h1>
 
-      {/* Chart + Top table side-by-side */}
-
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Total Transactions Card */}
-        <div className="card  flex-1">
+        {/* Total Transactions */}
+        <div className="card flex-1">
           <button
             className="btn btn-link justify-end text-blue-700"
             style={{ textDecoration: "none" }}
@@ -145,7 +146,7 @@ export default function Reports() {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData as any[]}>
+                  <BarChart data={safeChart}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey={mode === "month" ? "month" : "year"} />
                     <YAxis />
@@ -157,8 +158,9 @@ export default function Reports() {
             </div>
           </div>
         </div>
-        {/* Top Selling Card */}
-        <div className="card  flex-1">
+
+        {/* Top Selling */}
+        <div className="card flex-1">
           <button
             className="btn btn-link justify-end text-blue-700"
             style={{ textDecoration: "none" }}
@@ -166,6 +168,7 @@ export default function Reports() {
           >
             Download Report
           </button>
+
           <div className="bg-base-300 rounded-xl p-4 shadow flex-1 min-w-0">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-lg">Top Selling</h2>
@@ -207,22 +210,22 @@ export default function Reports() {
                         Loading...
                       </td>
                     </tr>
-                  ) : topItems.length === 0 ? (
+                  ) : safeTop.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="text-center opacity-60">
                         No data
                       </td>
                     </tr>
                   ) : (
-                    topItems.map((item, i) => (
-                      <tr key={`${item.name}-${i}`}>
+                    safeTop.map((item, i) => (
+                      <tr key={`${item.name ?? item.category}-${i}`}>
                         <td>{i + 1}</td>
                         <td>
                           {type === "product"
                             ? item.name ?? "Unknown Product"
                             : item.category ?? "Uncategorized"}
                         </td>
-                        <td>{item.sold}</td>
+                        <td>{item.sold ?? 0}</td>
                       </tr>
                     ))
                   )}
@@ -233,7 +236,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Row 2: Reorder Level */}
+      {/* Reorder Level */}
       <div className="card">
         <button
           className="btn btn-link justify-end text-blue-700"
@@ -242,6 +245,7 @@ export default function Reports() {
         >
           Download Report
         </button>
+
         <div className="bg-base-300 rounded-xl p-4 shadow min-w-0">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-lg">
@@ -257,7 +261,6 @@ export default function Reports() {
                   <th>Current Qty</th>
                   <th>Reorder Level</th>
                   <th>Suggested Reorder Qty</th>
-                  {/* <th>Status</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -267,30 +270,19 @@ export default function Reports() {
                       Loading...
                     </td>
                   </tr>
-                ) : reorder.length === 0 ? (
+                ) : safeReorder.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-center opacity-60">
                       No low stock
                     </td>
                   </tr>
                 ) : (
-                  reorder.map((r) => (
-                    <tr key={r.productId}>
+                  safeReorder.map((r) => (
+                    <tr key={r.productId ?? r.name}>
                       <td>{r.name}</td>
-                      <td>{r.totalStock}</td>
-                      <td>{r.reorderLevel}</td>
-                      <td>{r.reorderQuantity}</td>
-                      {/* <td>
-                        <span
-                          className={`badge ${
-                            r.status === "LOW STOCK"
-                              ? "badge-error"
-                              : "badge-success"
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </td> */}
+                      <td>{r.totalStock ?? 0}</td>
+                      <td>{r.reorderLevel ?? 0}</td>
+                      <td>{r.reorderQuantity ?? 0}</td>
                     </tr>
                   ))
                 )}
@@ -300,7 +292,6 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* ==== DOWNLOAD CONFIRMATION MODAL ==== */}
       <DownloadModal
         isOpen={modalState.isOpen}
         onClose={closeModal}
