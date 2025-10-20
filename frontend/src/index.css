@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Optional: light tweaks that are framework-agnostic and safe to keep empty */
+/* You can delete these if you truly want only Tailwind directives. */
+

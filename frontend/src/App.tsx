@@ -21,7 +21,7 @@ export default function App() {
           <Header />
           <div className="p-6 flex-1 bg-base-100">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/suppliers" element={<Suppliers />} />

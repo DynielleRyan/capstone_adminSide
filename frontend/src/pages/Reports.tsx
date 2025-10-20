@@ -1,5 +1,4 @@
 import { report_hooks } from "../hooks/report_hooks";
-import { useState } from "react";
 
 import {
   BarChart,

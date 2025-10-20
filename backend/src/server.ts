@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { supabase } from "./config/database";
 import reportRoutes from "./routes/report.routes";
+import dashBoard from "./routes/dahboard.routes";
 import cors from "cors";
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/reports", reportRoutes);
+app.use("/api/dashboard", dashBoard);
 
 
 // Start server
