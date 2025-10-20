@@ -7,7 +7,6 @@ import ProtectedRoute from './components/ProtectedRoute'
 import ConfirmDialog from './components/ConfirmDialog'
 import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
-import Orders from './pages/Orders'
 // import Customers from './pages/Customers'
 import Reports from './pages/Reports'
 import RoleManagement from './pages/RoleManagement'
@@ -16,6 +15,10 @@ import ProductSourceList from './pages/ProductSourceList'
 import UserProfile from './pages/UserProfile'
 import Login from './pages/Login'
 import alertService from './services/alertService'
+import { Transactions } from './pages/Transactions'
+import { PurchaseOrders } from './pages/PurchaseOrder'
+import { NewPurchaseOrder } from './pages/NewPurchaseOrder'
+import { UpdatePurchaseOrder } from './pages/UpdatePurchaseOrder'
 
 function App() {
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -97,12 +100,15 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/inventory" element={<Inventory />} />
-                <Route path="/orders" element={<Orders />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/role-management" element={<RoleManagement />} />
                 <Route path="/suppliers" element={<Suppliers />} />
                 <Route path="/product-source-list" element={<ProductSourceList />} />
                 <Route path="/profile" element={<UserProfile />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/purchase-orders/new" element={<NewPurchaseOrder />} />
+                <Route path="/purchase-orders/:id" element={<UpdatePurchaseOrder />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

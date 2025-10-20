@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ShoppingBag
 } from 'lucide-react'
+import './Sidebar.css'
 
 const Sidebar = () => {
   const location = useLocation()
@@ -35,7 +36,7 @@ const Sidebar = () => {
         { path: '/product-source-list', label: 'Product Source List', icon: ShoppingBag }
       ]
     },
-    { path: '/purchase-order', label: 'Purchase Order', icon: Package },
+    { path: '/purchase-orders', label: 'Purchase Order', icon: Package },
   ]
 
   return (
