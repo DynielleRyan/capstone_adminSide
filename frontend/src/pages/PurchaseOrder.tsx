@@ -1,9 +1,18 @@
-import React from "react";
+import { useEffect, useState } from 'react';
+import { fetchPurchaseOrders } from '../services/purchaseOrderService';
+import { PurchaseOrder } from '../types/purchaseOrder';
+import { PurchaseOrderTable } from '../components/purchaseOrderTable';
 
-export default function PurchaseOrder() {
+export const PurchaseOrders = () => {
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+
+  useEffect(() => {
+    fetchPurchaseOrders().then(setOrders);
+  }, []);
+
   return (
-    <div>
-      <h1>PurchaseOrder</h1>
+    <div className="p-6 bg-white text-black min-h-screen">
+      <PurchaseOrderTable orders={orders} />
     </div>
   );
-}
+};

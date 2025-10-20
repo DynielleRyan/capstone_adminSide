@@ -1,97 +1,113 @@
-import { NavLink } from "react-router-dom";
-import {
-  Home,
-  BarChart3,
-  Receipt,
-  Users,
-  Factory,
+import { Link, useLocation } from 'react-router-dom'
+import { 
+  LayoutDashboard, 
+  Package, 
+  // ShoppingCart, 
+  Users, 
+  // BarChart3,
   FileText,
-} from "lucide-react";
+  Receipt,
+  UserCog,
+  ChevronDown,
+  ShoppingBag
+} from 'lucide-react'
+import './Sidebar.css'
 
-export default function Sidebar() {
+const Sidebar = () => {
+  const location = useLocation()
+
+  const menuItems = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/reports', label: 'Report', icon: FileText },
+    { path: '/transactions', label: 'Transactions', icon: Receipt },
+    { 
+      path: '/user-management', 
+      label: 'User Management', 
+      icon: Users,
+      children: [
+        { path: '/role-management', label: 'Role Management', icon: UserCog }
+      ]
+    },
+    { 
+      path: '/suppliers', 
+      label: 'Suppliers', 
+      icon: ShoppingBag,
+      children: [
+        { path: '/product-source-list', label: 'Product Source List', icon: ShoppingBag }
+      ]
+    },
+    { path: '/purchase-orders', label: 'Purchase Order', icon: Package },
+  ]
+
   return (
-    <div className="w-64 h-screen bg-base-300 p-4 flex flex-col fixed">
-      <h2 className="text-xl font-bold mb-6 text-blue-700">Jambo's Pharmacy</h2>
-      <ul className="menu text-base">
-        <li>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              isActive ? "active bg-blue-100 font-bold " : undefined
+    <aside className="w-64 bg-gray-50 border-r border-gray-200 h-full">
+      <div className="p-4">
+        <h2 className="text-lg font-bold text-blue-600">Jambo's Pharmacy</h2>
+      </div>
+        <ul className="p-4 w-full space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            const isActive = location.pathname === item.path || 
+              (item.children && item.children.some(child => location.pathname === child.path))
+            
+            if (item.children) {
+              return (
+                <li key={item.path}>
+                  <details open={isActive}>
+                    <summary className={`flex items-center gap-3 p-3 rounded-md cursor-pointer hover:bg-blue-100 ${
+                      isActive ? 'bg-blue-100 text-blue-600' : 'text-gray-700'
+                    }`}>
+                      <Link 
+                        to={item.path}
+                        className="flex items-center gap-3 flex-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {item.label}
+                      </Link>
+                      <ChevronDown className="w-4 h-4 ml-auto" />
+                    </summary>
+                    <ul className="ml-4 mt-1 space-y-1">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon
+                        const isChildActive = location.pathname === child.path
+                        return (
+                          <li key={child.path}>
+                            <Link 
+                              to={child.path}
+                              className={`flex items-center gap-3 p-2 rounded-md hover:bg-blue-100 ${
+                                isChildActive ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+                              }`}
+                            >
+                              <ChildIcon className="w-4 h-4" />
+                              {child.label}
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </details>
+                </li>
+              )
             }
-          >
-            <span className="flex items-center gap-2">
-              <Home size={18} />
-              Dashboard
-            </span>
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/reports"
-            className={({ isActive }) =>
-              isActive ? "active bg-blue-100 font-bold" : undefined
-            }
-          >
-            <span className="flex items-center gap-2">
-              <BarChart3 size={18} />
-              Reports
-            </span>
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/transactions"
-            className={({ isActive }) =>
-              isActive ? "active bg-blue-100  font-bold" : undefined
-            }
-          >
-            <span className="flex items-center gap-2">
-              <Receipt size={18} />
-              Transactions
-            </span>
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/users"
-            className={({ isActive }) =>
-              isActive ? "active bg-blue-100  font-bold" : undefined
-            }
-          >
-            <span className="flex items-center gap-2">
-              <Users size={18} />
-              User Management
-            </span>
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/suppliers"
-            className={({ isActive }) =>
-              isActive ? "active bg-blue-100  font-bold" : undefined
-            }
-          >
-            <span className="flex items-center gap-2">
-              <Factory size={18} />
-              Suppliers
-            </span>
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/purchase"
-            className={({ isActive }) =>
-              isActive ? "active bg-blue-100 font-bold" : undefined
-            }
-          >
-            <span className="flex items-center gap-2">
-              <FileText size={18} />
-              Purchase Order
-            </span>
-          </NavLink>
-        </li>
-      </ul>
-    </div>
-  );
+            
+            return (
+              <li key={item.path}>
+                <Link 
+                  to={item.path}
+                  className={`flex items-center gap-3 p-3 rounded-md hover:bg-blue-100 ${
+                    isActive ? 'bg-blue-100 text-blue-600' : 'text-gray-700'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {item.label}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </aside>
+  )
 }
+
+export default Sidebar
