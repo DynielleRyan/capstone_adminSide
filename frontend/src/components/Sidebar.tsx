@@ -32,10 +32,10 @@ const Sidebar = () => {
       label: 'Suppliers', 
       icon: ShoppingBag,
       children: [
-        { path: '/product-source-list', label: 'Product Source List', icon: ShoppingBag },
-        { path: '/purchase-order', label: 'Purchase Order', icon: Package }
+        { path: '/product-source-list', label: 'Product Source List', icon: ShoppingBag }
       ]
     },
+    { path: '/purchase-order', label: 'Purchase Order', icon: Package },
   ]
 
   return (

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import alertService from '../services/alertService'
 
 interface AddSupplierFormProps {
   isOpen: boolean
@@ -40,7 +41,7 @@ const AddSupplierForm = ({ isOpen, onClose, onSubmit }: AddSupplierFormProps) =>
     
     // Validate status selection
     if (formData.status === '--SELECT--') {
-      alert('Please select a status')
+      alertService.warning('Please select a status')
       return
     }
     

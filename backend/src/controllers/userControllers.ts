@@ -58,7 +58,7 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
 
     const user = users[0];
 
-    // Authenticate with Supabase Auth using the email
+    // Authenticate with Supabase Auth using the email to check credentials
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: user.Email,
       password: password
@@ -77,6 +77,34 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({
         success: false,
         message: 'Authentication failed'
+      });
+      return;
+    }
+
+    // Check if email is verified
+    const emailVerified = authData.user.email_confirmed_at !== null;
+
+    // Block ALL logins if email is NOT verified (no exceptions)
+    if (!emailVerified) {
+      // Sign out the user since we won't allow this login
+      await supabase.auth.signOut();
+      
+      res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in. Check your inbox for the verification link.',
+        requiresEmailVerification: true
+      });
+      return;
+    }
+
+    // Block non-Admin users from accessing admin side
+    if (user.Roles !== 'Admin') {
+      // Sign out the user since we won't allow this login
+      await supabase.auth.signOut();
+      
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. This portal is for administrators only.'
       });
       return;
     }
@@ -105,7 +133,8 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
           refresh_token: authData.session.refresh_token,
           expires_in: authData.session.expires_in,
           expires_at: authData.session.expires_at
-        }
+        },
+        emailVerified: emailVerified
       }
     });
   } catch (error) {
@@ -247,41 +276,47 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
     
-    console.log('Sending invitation to user with role:', userRole, 'from userData.Roles:', userData.Roles);
+    console.log('Creating user with role:', userRole, 'from userData.Roles:', userData.Roles);
     
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(userData.Email, {
-      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
-      data: {
+    // Create user with email NOT confirmed - user MUST verify before they can login
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: userData.Email,
+      password: userData.Password,
+      email_confirm: false,  // Email NOT confirmed - user cannot login until verified
+      user_metadata: {
         first_name: userData.FirstName,
         last_name: userData.LastName,
         middle_initial: userData.MiddleInitial,
         username: userData.Username,
         contact_number: userData.ContactNumber,
         address: userData.Address,
-        role: userRole,
-        password: userData.Password // Store password in metadata for later use
+        role: userRole
       }
     });
 
-    if (inviteError) {
-      console.error('Error sending invitation:', inviteError);
+    if (authError) {
+      console.error('Error creating user:', authError);
       res.status(500).json({
         success: false,
-        message: 'Failed to send invitation email',
-        error: inviteError.message
+        message: 'Failed to create user',
+        error: authError.message
       });
       return;
     }
 
-    if (!inviteData.user) {
+    if (!authData.user) {
       res.status(500).json({
         success: false,
-        message: 'Failed to create user via invitation - no user data returned'
+        message: 'Failed to create user - no user data returned'
       });
       return;
     }
 
-    // Create user in our User table with the invited user ID
+    // Send verification email - user MUST verify before login
+    // Supabase will automatically send the confirmation email
+    console.log(`User created. Verification email will be sent to ${userData.Email}`);
+
+    // Create user in our User table with the auth user ID
     const { data: newUser, error } = await supabase
       .from('User')
       .insert({
@@ -293,15 +328,15 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         Address: userData.Address,
         ContactNumber: userData.ContactNumber,
         Roles: userRole,
-        AuthUserID: inviteData.user.id, // Store the Supabase Auth user ID in AuthUserID field
+        AuthUserID: authData.user.id, // Store the Supabase Auth user ID in AuthUserID field
       })
       .select()
       .single();
 
     if (error) {
       console.error('Error creating user record:', error);
-      // If creating the user record fails, we should clean up the invited user
-      await supabaseAdmin.auth.admin.deleteUser(inviteData.user.id);
+      // If creating the user record fails, clean up the auth user
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       res.status(500).json({
         success: false,
         message: 'Failed to create user record',
@@ -310,14 +345,14 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    console.log(`Invitation email sent to ${userData.Email}. User must confirm their email before they can login.`);
+    console.log(`User created successfully: ${userData.Email}. Verification email sent - user must verify before login.`);
 
     // Format user response
     const userResponse = formatUserResponse(newUser);
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
+      message: 'User created successfully. Verification email sent - user must verify before login.',
       data: userResponse
     });
   } catch (error) {
@@ -791,6 +826,77 @@ export const getUserWithPharmacist = async (req: Request, res: Response): Promis
     });
   } catch (error) {
     console.error('Error in getUserWithPharmacist:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Resend verification email
+export const resendVerificationEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+      return;
+    }
+
+    // Get user by email first
+    const { data: { users }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (getUserError) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to find user',
+        error: getUserError.message
+      });
+      return;
+    }
+
+    const user = users?.find(u => u.email === email);
+    
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Generate magic link for email verification
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email,
+      options: {
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`
+      }
+    });
+
+    if (error) {
+      console.error('Failed to generate verification link:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email',
+        error: error.message
+      });
+      return;
+    }
+
+    console.log(`Verification link generated for ${email}:`, data.properties.action_link);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent successfully',
+      // Include the link in development for testing
+      ...(process.env.NODE_ENV === 'development' && { verificationLink: data.properties.action_link })
+    });
+  } catch (error) {
+    console.error('Error in resendVerificationEmail:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
