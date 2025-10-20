@@ -10,6 +10,7 @@ export interface PurchaseOrder {
     ETA: string;
     Product: {
       Name: string;
+      Image: string;
     }
     Supplier: {
       Name: string;

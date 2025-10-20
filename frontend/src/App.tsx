@@ -7,7 +7,6 @@ import ProtectedRoute from './components/ProtectedRoute'
 import ConfirmDialog from './components/ConfirmDialog'
 import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
-import Orders from './pages/Orders'
 // import Customers from './pages/Customers'
 import Reports from './pages/Reports'
 import RoleManagement from './pages/RoleManagement'
@@ -101,7 +100,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/inventory" element={<Inventory />} />
-                <Route path="/orders" element={<Orders />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/role-management" element={<RoleManagement />} />
                 <Route path="/suppliers" element={<Suppliers />} />

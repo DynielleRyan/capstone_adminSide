@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchProducts } from '../services/productService';
+import { fetchProducts } from '../services/purchaseOrderService';
 import { fetchPurchaseOrderById, updatePurchaseOrder } from '../services/purchaseOrderService';
 import { Product } from '../types/product';
 
@@ -70,6 +70,10 @@ export const UpdatePurchaseOrderForm = () => {
     p.Name.toLowerCase().startsWith(searchTerm.trim().toLowerCase())
   );    
 
+  const handleCancel = () => {
+    navigate('/purchase-orders');
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
@@ -99,18 +103,22 @@ export const UpdatePurchaseOrderForm = () => {
     return <div className="text-center p-6">Loading purchase order details…</div>;
   }
 
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto p-6 bg-base-200 rounded-box shadow-md">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 max-w-4xl mx-auto p-6 rounded-box shadow-md bg-blue-100 text-black"
+    >
       <h2 className="text-xl font-bold">Edit Purchase Order</h2>
 
       {/* 🔍 Product Search */}
-      <div>
-        <label htmlFor="productSearch" className="label">Product</label>
+      <div className="flex gap-4">
+      <div className="flex-1">
+        <label htmlFor="productSearch" className="label">PRODUCT NAME</label>
         <input
           id="productSearch"
           type="text"
-          className="input input-bordered w-full"
-          placeholder="Search product name"
+          className="input input-bordered w-full bg-white text-black border-blue-900"          placeholder="Search product name"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           required
@@ -126,7 +134,7 @@ export const UpdatePurchaseOrderForm = () => {
             <li key={p.ProductID}>
               <button
                 type="button"
-                className={`w-full text-left ${selectedProduct?.ProductID === p.ProductID ? 'bg-primary text-white' : ''}`}
+                className={`w-full text-left ${selectedProduct?.ProductID === p.ProductID ? 'bg-white text-black' : ''}`}
                 onClick={() => {
                 setSelectedProduct(p);
                 setSearchTerm(p.Name);
@@ -141,91 +149,105 @@ export const UpdatePurchaseOrderForm = () => {
         )}
       </div>
 
-
-      <div>
+      <div  className="flex-1">
         <label htmlFor="supplier" className="label">Supplier</label>
         <input
         id="supplier"
-          className="input input-bordered w-full"
+          className="input input-bordered w-full bg-white text-black  border-blue-900"
           value={selectedProduct?.Supplier.Name || ''}
           disabled
         />
       </div>
+      </div>
 
-      <div>
+      <div className="flex gap-4">
+      <div className="flex-1">
         <label htmlFor="dateordered" className="label">Order Date</label>
         <input
         id="dateordered"
           type="date"
-          className="input input-bordered w-full"
+          className="input input-bordered w-full bg-white text-black  border-blue-900"
           value={formData.orderDate ?? ''}
           onChange={e => setFormData({ ...formData, orderDate: e.target.value })}
           required
         />
       </div>
 
-      <div>
+      <div className="flex-1">
         <label htmlFor="eta" className="label">ETA</label>
         <input
         id="eta"
           type="date"
-          className="input input-bordered w-full"
+          className="input input-bordered w-full bg-white text-black  border-blue-900"
           value={formData.ETA ?? ''}
           onChange={e => setFormData({ ...formData, ETA: e.target.value })}
           required
         />
       </div>
 
-      <div>
+      <div className="flex-1">
         <label htmlFor="datearrived" className="label">Date Arrived</label>
         <input
         id="datearrived"
           type="date"
-          className="input input-bordered w-full"
+          className="input input-bordered w-full bg-white text-black  border-blue-900"
           value={formData.orderArrival}
           onChange={e => setFormData({ ...formData, orderArrival: e.target.value })}
         />
       </div>
+      </div>
 
-      <div>
+      <div className="flex gap-4">
+      <div className="flex-1">
           <label htmlFor="quantity" className="label">Quantity</label>
           <input
           id="quantity"
-            type="number"
-            className="input input-bordered w-full"
+            type="text"
+            className="input input-bordered w-full bg-white text-black  border-blue-900"
             value={formData.quantity}
             onChange={e => setFormData({ ...formData, quantity: e.target.value })}
             required
           />
         </div>
 
-      <div>
+      <div className="flex-1">
         <label htmlFor="baseprice" className="label">Base Price</label>
         <input
         id="baseprice"
-          type="string"
-          className="input input-bordered w-full"
+          type="text"
+          className="input input-bordered w-full bg-white text-black  border-blue-900"
           value={formData.basePrice ?? ''}
           onChange={e => setFormData({ ...formData, basePrice: e.target.value })}
           required
         />
       </div>
 
-      <div>
+      <div className="flex-1">
         <label htmlFor="totalcost" className="label">Total Purchase Cost</label>
         <input
         id="totalcost"
-          type="string"
-          className="input input-bordered w-full"
+          type="text"
+          className="input input-bordered w-full bg-white text-black  border-blue-900"
           value={formData.totalCost}
           onChange={e => setFormData({ ...formData, totalCost: e.target.value })}
           required
         />
       </div>
+      </div>
 
-      <button className="btn btn-primary w-full" type="submit">
-        Submit Order
-      </button>
+      {/* Action Buttons */}
+  <div className="flex gap-4">
+    <button className="btn bg-blue-900 text-white w-half" type="submit">
+      CONFIRM
+    </button>
+    <button
+      type="button"
+      className="btn bg-white text-blue-900 border-blue-900 w-half"
+      onClick={handleCancel}
+    >
+      CANCEL
+    </button>
+  </div>
     </form>
   );
 };

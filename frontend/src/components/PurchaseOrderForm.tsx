@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../types/product';
 import { PurchaseOrderForms } from '../types/PurchaseOrderForms';
-import { fetchProducts } from '../services/productService';
+import { fetchProducts } from '../services/purchaseOrderService';
 import { createPurchaseOrder } from '../services/purchaseOrderService';
 
 export const PurchaseOrderForm = () => {
@@ -25,7 +25,10 @@ export const PurchaseOrderForm = () => {
     fetchProducts().then(setProducts);
   }, []);
 
-
+  const handleCancel = () => {
+    navigate('/purchase-orders');
+  };
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,126 +51,147 @@ export const PurchaseOrderForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto p-6 bg-base-200 rounded-box shadow-md">
-      <h2 className="text-xl font-bold">Create Purchase Order</h2>
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 max-w-4xl mx-auto p-6 rounded-box shadow-md bg-blue-100 text-black"
+    >
+    <h2 className="text-xl font-bold">ADD PURCHASE ORDER</h2>
 
-      <div>
-  <label htmlFor="productSearch" className="label">Product</label>
-  <input
-    id="productSearch"
-    type="text"
-    className="input input-bordered w-full"
-    placeholder="Search product name"
-    value={searchTerm}
-    onChange={e => setSearchTerm(e.target.value)}
-    required
-  />
-  {searchTerm.length > 0 && filteredProducts.length > 0 && (
-  <ul className="menu bg-base-100 w-full mt-2 rounded-box shadow max-h-60 overflow-auto">
-    {filteredProducts.map(p => (
-      <li key={p.ProductID}>
-        <button
-          type="button"
-          className="w-full text-left"
-          onClick={() => {
-            setSelectedProduct(p);
-            setSearchTerm(p.Name);
-          }}
-        >
-          {p.Name}
-        </button>
-      </li>
-    ))}
-  </ul>
-)}
-</div>
+  {/* Product Search */}
+  <div className="flex gap-4">
+    <div className="flex-1">
+      <label htmlFor="productSearch" className="label">PRODUCT NAME</label>
+      <input
+        id="productSearch"
+        type="text"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        placeholder="Search product name"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        required
+      />
+      {searchTerm.length > 0 && filteredProducts.length > 0 && (
+        <ul className="menu bg-base-100 w-full mt-2 rounded-box shadow max-h-60 overflow-auto">
+          {filteredProducts.map((p) => (
+            <li key={p.ProductID}>
+              <button
+                type="button"
+                className="w-full text-left bg-white text-black"
+                onClick={() => {
+                  setSelectedProduct(p);
+                  setSearchTerm(p.Name);
+                }}
+              >
+                {p.Name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
 
-
-
-      <div>
-        <label htmlFor="supplier" className="label">Supplier</label>
-        <input
+    <div className="flex-1">
+      <label htmlFor="supplier" className="label">SUPPLIER NAME</label>
+      <input
         id="supplier"
-          className="input input-bordered w-full"
-          value={selectedProduct?.Supplier.Name || ''}
-          disabled
-        />
-      </div>
+        className="input input-bordered w-full bg-white text-black  border-blue-900"
+        value={selectedProduct?.Supplier.Name || ''}
+        disabled
+      />
+    </div>
+  </div>
 
-      <div>
-        <label htmlFor="dateordered" className="label">Order Date</label>
-        <input
+  {/* Dates Row */}
+  <div className="flex gap-4">
+    <div className="flex-1">
+      <label htmlFor="dateordered" className="label">DATE ORDERED</label>
+      <input
         id="dateordered"
-          type="date"
-          className="input input-bordered w-full"
-          value={formData.orderDate}
-          onChange={e => setFormData({ ...formData, orderDate: e.target.value })}
-          required
-        />
-      </div>
+        type="date"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        value={formData.orderDate}
+        onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+        required
+      />
+    </div>
 
-      <div>
-        <label htmlFor="eta" className="label">ETA</label>
-        <input
+    <div className="flex-1">
+      <label htmlFor="eta" className="label">ESTIMATED TIME OF ARRIVAL</label>
+      <input
         id="eta"
-          type="date"
-          className="input input-bordered w-full"
-          value={formData.ETA}
-          onChange={e => setFormData({ ...formData, ETA: e.target.value })}
-          required
-        />
-      </div>
+        type="date"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        value={formData.ETA}
+        onChange={(e) => setFormData({ ...formData, ETA: e.target.value })}
+        required
+      />
+    </div>
 
-      <div>
-        <label htmlFor="datearrived" className="label">Date Arrived</label>
-        <input
+    <div className="flex-1">
+      <label htmlFor="datearrived" className="label">DATE ARRIVED</label>
+      <input
         id="datearrived"
-          type="date"
-          className="input input-bordered w-full"
-          value={formData.orderArrival}
-          onChange={e => setFormData({ ...formData, orderArrival: e.target.value })}
-        />
-      </div>
+        type="date"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        value={formData.orderArrival}
+        onChange={(e) => setFormData({ ...formData, orderArrival: e.target.value })}
+      />
+    </div>
+  </div>
 
-      <div>
-        <label htmlFor="quantity" className="label">Quantity</label>
-        <input
+  {/* Quantity and Pricing Row */}
+  <div className="flex gap-4">
+    <div className="flex-1">
+      <label htmlFor="quantity" className="label">QUANTITY</label>
+      <input
         id="quantity"
-          type="string"
-          className="input input-bordered w-full"
-          value={formData.quantity}
-          onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-          required
-        />
-      </div>
+        type="text"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        value={formData.quantity}
+        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+        required
+      />
+    </div>
 
-      <div>
-        <label htmlFor="baseprice" className="label">Base Price</label>
-        <input
+    <div className="flex-1">
+      <label htmlFor="baseprice" className="label">BASE PRICE</label>
+      <input
         id="baseprice"
-          type="string"
-          className="input input-bordered w-full"
-          value={formData.basePrice}
-          onChange={e => setFormData({ ...formData, basePrice: e.target.value })}
-          required
-        />
-      </div>
+        type="text"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        value={formData.basePrice}
+        onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+        required
+      />
+    </div>
 
-      <div>
-        <label htmlFor="totalcost" className="label">Total Purchase Cost</label>
-        <input
+    <div className="flex-1">
+      <label htmlFor="totalcost" className="label">TOTAL COST</label>
+      <input
         id="totalcost"
-          type="number"
-          className="input input-bordered w-full"
-          value={formData.totalCost}
-          onChange={e => setFormData({ ...formData, totalCost: e.target.value })}
-          required
-        />
-      </div>
+        type="text"
+        className="input input-bordered w-full bg-white text-black border-blue-900"
+        value={formData.totalCost}
+        onChange={(e) => setFormData({ ...formData, totalCost: e.target.value })}
+        required
+      />
+    </div>
+  </div>
 
-      <button className="btn btn-primary w-full" type="submit">
-        Submit Order
-      </button>
-    </form>
+  {/* Action Buttons */}
+  <div className="flex gap-4">
+    <button className="btn bg-blue-900 text-white w-half" type="submit">
+      CONFIRM
+    </button>
+    <button
+      type="button"
+      className="btn bg-white text-blue-900 border-blue-900 w-half"
+      onClick={handleCancel}
+    >
+      CANCEL
+    </button>
+  </div>
+</form>
+
   );
 };

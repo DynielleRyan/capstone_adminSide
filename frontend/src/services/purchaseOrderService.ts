@@ -1,12 +1,17 @@
 import api from './api';
 import { PurchaseOrder } from '../types/purchaseOrder';
 import { PurchaseOrderForms } from '../types/PurchaseOrderForms';
+import { Product } from '../types/product';
+
+export const fetchProducts = async (): Promise<Product[]> => {
+  const response = await api.get('/purchase-orders/products');
+  return response.data;
+};
 
 export const fetchPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
   const response = await api.get('/purchase-orders');
   return response.data;
 };
-
 
 export const createPurchaseOrder = async (purchaseorder: PurchaseOrderForms) => {
   const response = await api.post('/purchase-orders', purchaseorder);
