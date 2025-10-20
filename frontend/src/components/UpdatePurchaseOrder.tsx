@@ -55,8 +55,8 @@ export const UpdatePurchaseOrderForm = () => {
             } else {
               console.warn('Product not found for ID:', order.ProductID);
             }
-        } catch (err) {
-          console.error('Failed to load purchase order:', err);
+        } catch (err: any) {
+          console.error('Failed to load order:', err);
           alert('Failed to load purchase order details. Please try again.');
         } finally {
           setLoading(false);
@@ -67,8 +67,8 @@ export const UpdatePurchaseOrderForm = () => {
   }, [id, products]);
 
   const filteredProducts = products.filter(p =>
-    p.Name.startsWith(searchTerm)
-  );
+    p.Name.toLowerCase().startsWith(searchTerm.trim().toLowerCase())
+  );    
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +81,8 @@ export const UpdatePurchaseOrderForm = () => {
         OrderPlacedDateTime: formData.orderDate,
         ETA: formData.ETA,
         OrderArrivalDateTime: formData.orderArrival || null,
-        BasePrice: parseInt(formData.basePrice),
-        TotalPurchaseCost: parseInt(formData.totalCost),
+        BasePrice: parseFloat(formData.basePrice),
+        TotalPurchaseCost: parseFloat(formData.totalCost),
     };
 
     try {

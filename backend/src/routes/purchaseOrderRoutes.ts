@@ -3,9 +3,9 @@ import * as purchaseOrderController from '../controllers/purchaseOrderController
 
 const router = express.Router();
 
+router.get("/products", purchaseOrderController.getProducts);
 router.get("/", purchaseOrderController.getPurchaseOrders);
 router.get("/:id", purchaseOrderController.getPurchaseOrderByID);
-router.get("/products", purchaseOrderController.getProducts);
 router.post("/", purchaseOrderController.createPurchaseOrder);
 router.put("/:id", purchaseOrderController.updatePurchaseOrder);
 

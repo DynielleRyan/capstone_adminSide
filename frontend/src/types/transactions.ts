@@ -1,8 +1,9 @@
 export interface Transaction {
     TransactionID: string;
+    UserID: string;
     Total: number;
     PaymentMethod: string;
-    VATAmount: string;
+    VATAmount: number;
     OrderDateTime:string;
     CashReceived: string;
     PaymentChange: string;

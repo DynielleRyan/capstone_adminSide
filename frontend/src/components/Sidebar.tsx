@@ -1,51 +1,53 @@
 import { Link, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
+  FileText, 
+  CreditCard, 
   Users, 
-  BarChart3 
+  ShoppingCart,
+  Truck,
+  ChevronRight
 } from 'lucide-react'
+import './Sidebar.css'
 
 const Sidebar = () => {
   const location = useLocation()
 
   const menuItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/inventory', label: 'Inventory', icon: Package },
-    { path: '/orders', label: 'Orders', icon: ShoppingCart },
-    { path: '/customers', label: 'Customers', icon: Users },
-    { path: '/reports', label: 'Reports', icon: BarChart3 },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard, hasChevron: false },
+    { path: '/reports', label: 'Report', icon: FileText, hasChevron: false },
+    { path: '/transactions', label: 'Transactions', icon: CreditCard, hasChevron: false },
+    { path: '/users', label: 'User Management', icon: Users, hasChevron: true },
+    { path: '/suppliers', label: 'Suppliers', icon: ShoppingCart, hasChevron: true },
+    { path: '/purchase-orders', label: 'Purchase Order', icon: Truck, hasChevron: false },
   ]
 
   return (
-    <div className="drawer-side">
-      <label htmlFor="drawer-toggle" aria-label="close sidebar" className="drawer-overlay"></label>
-      <aside className="min-h-full w-64 bg-base-100">
-        <div className="p-4">
-          <h2 className="text-lg font-bold text-primary">Pharmacy Admin</h2>
-        </div>
-        <ul className="menu p-4 w-full">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = location.pathname === item.path
-            return (
-              <li key={item.path}>
-                <Link 
-                  to={item.path}
-                  className={`flex items-center gap-3 ${
-                    isActive ? 'active' : ''
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  {item.label}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </aside>
-    </div>
+    <aside className="sidebar-container">
+      <div>
+        <h2 className="sidebar-title">Jambo's Pharmacy</h2>
+      </div>
+      <ul className="sidebar-menu">
+        {menuItems.map((item) => {
+          const Icon = item.icon
+          const isActive = location.pathname === item.path
+          return (
+            <li key={item.path} className="sidebar-menu-item">
+              <Link 
+                to={item.path}
+                className={`sidebar-menu-link ${isActive ? 'active' : ''}`}
+              >
+                <Icon className="sidebar-menu-icon" />
+                <span className="sidebar-menu-text">{item.label}</span>
+                {item.hasChevron && (
+                  <ChevronRight className="sidebar-menu-chevron" />
+                )}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </aside>
   )
 }
 

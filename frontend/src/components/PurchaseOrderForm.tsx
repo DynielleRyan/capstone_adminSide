@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Product } from '../types/product';
 import { PurchaseOrderForms } from '../types/PurchaseOrderForms';
 import { fetchProducts } from '../services/productService';
 import { createPurchaseOrder } from '../services/purchaseOrderService';
 
 export const PurchaseOrderForm = () => {
+
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -34,14 +38,13 @@ export const PurchaseOrderForm = () => {
       OrderPlacedDateTime: formData.orderDate,
       ETA: formData.ETA,
       OrderArrivalDateTime: formData.orderArrival || null,
-      BasePrice: parseInt(formData.basePrice),
-      TotalPurchaseCost: parseInt(formData.totalCost),
+      BasePrice: parseFloat(formData.basePrice),
+      TotalPurchaseCost: parseFloat(formData.totalCost),
     };
 
     await createPurchaseOrder(purchaseorder);
     alert('Purchase Order created!');
-    setSelectedProductId('');
-    setFormData({ quantity: '', orderDate: '', ETA: '', orderArrival: '', basePrice: '', totalCost: '' });
+    navigate('/purchase-orders');
   };
 
   return (
@@ -154,7 +157,7 @@ export const PurchaseOrderForm = () => {
         <label htmlFor="totalcost" className="label">Total Purchase Cost</label>
         <input
         id="totalcost"
-          type="string"
+          type="number"
           className="input input-bordered w-full"
           value={formData.totalCost}
           onChange={e => setFormData({ ...formData, totalCost: e.target.value })}
