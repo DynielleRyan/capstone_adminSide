@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import alertService from '../services/alertService'
 import { productService, ProductSourceItem, ProductSourceListParams } from '../services/productService'
 
 const ProductSourceList = () => {
@@ -33,7 +34,9 @@ const ProductSourceList = () => {
       setTotalProducts(response.total)
     } catch (err) {
       console.error('Error fetching products:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch products')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products'
+      setError(errorMessage)
+      alertService.error(errorMessage)
       if (!products.length) {
         setProducts([])
       }

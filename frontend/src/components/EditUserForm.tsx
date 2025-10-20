@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Trash2, Loader2 } from 'lucide-react'
+import alertService from '../services/alertService'
 
 interface User {
   userId: string
@@ -52,12 +53,12 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = fa
     onClose()
   }
 
-  const handleDelete = (userId: string, userName: string) => {
-    if (window.confirm(`Are you sure you want to delete user ${userName}?`)) {
+  const handleDelete = async (userId: string, userName: string) => {
+    await alertService.confirmDelete(userName, () => {
       onDelete(userId)
       // Remove from local state as well
       setEditedUsers(prev => prev.filter(user => user.userId !== userId))
-    }
+    })
   }
 
   if (!isOpen) return null

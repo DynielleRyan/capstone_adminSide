@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight } from 'lucide-react'
+import alertService from '../services/alertService'
+import loadingService from '../services/loadingService'
 import AddUserForm from '../components/AddUserForm'
 import EditUserForm from '../components/EditUserForm'
 import { userService, UserResponse, CreateUser, UpdateUser, UserFilters, UserRole } from '../services/userService'
@@ -139,6 +141,8 @@ const RoleManagement = () => {
   }, [users, searchTerm, sortBy])
 
   const handleAddUser = async (userData: any) => {
+    loadingService.start('add-user', 'Creating user...')
+    
     try {
       console.log('Raw userData.role:', userData.role);
       const mappedRole = mapStringToRole(userData.role);
@@ -161,16 +165,16 @@ const RoleManagement = () => {
       const response = await userService.createUser(createUserData)
       
       if (response.success) {
-        alert(`User ${userData.firstName} ${userData.lastName} added successfully!`)
+        loadingService.success('add-user', `User ${userData.firstName} ${userData.lastName} added successfully!`)
         setIsAddUserOpen(false)
         // Refresh both users lists
         fetchUsers()
         fetchAllUsersForEdit()
       } else {
-        alert('Failed to create user: ' + response.message)
+        loadingService.error('add-user', 'Failed to create user: ' + response.message)
       }
     } catch (error) {
-      alert('Error creating user: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      loadingService.error('add-user', 'Error creating user: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
@@ -185,6 +189,8 @@ const RoleManagement = () => {
   })
 
   const handleEditUser = async (updatedUsers: any[]) => {
+    loadingService.start('edit-user', `Updating ${updatedUsers.length} user(s)...`)
+    
     try {
       const updatePromises = updatedUsers.map(user => {
         const updateData: UpdateUser = {
@@ -195,33 +201,35 @@ const RoleManagement = () => {
       })
 
       await Promise.all(updatePromises)
-      alert('Users updated successfully!')
+      loadingService.success('edit-user', `${updatedUsers.length} user(s) updated successfully!`)
       setIsEditUserOpen(false)
       // Refresh both users lists
       fetchUsers()
       fetchAllUsersForEdit()
     } catch (error) {
-      alert('Error updating users: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      loadingService.error('edit-user', 'Error updating users: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    await alertService.confirmDelete('this user', async () => {
+      loadingService.start('delete-user', 'Deleting user...')
+      
       try {
         const response = await userService.deleteUser(userId)
         
         if (response.success) {
-          alert(`User ${userId} deleted successfully!`)
+          loadingService.success('delete-user', 'User deleted successfully!')
           // Refresh both users lists
           fetchUsers()
           fetchAllUsersForEdit()
         } else {
-          alert('Failed to delete user: ' + response.message)
+          loadingService.error('delete-user', 'Failed to delete user: ' + response.message)
         }
       } catch (error) {
-        alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'))
+        loadingService.error('delete-user', 'Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'))
       }
-    }
+    })
   }
 
 
@@ -274,11 +282,11 @@ const RoleManagement = () => {
           <button 
             onClick={() => {
               if (loading) {
-                alert('Please wait for users to load before editing.')
+                alertService.warning('Please wait for users to load before editing.')
                 return
               }
               if (editUsers.length === 0) {
-                alert('No users available to edit. Please add users first.')
+                alertService.info('No users available to edit. Please add users first.')
                 return
               }
               setIsEditUserOpen(true)

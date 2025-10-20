@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import loadingService from '../services/loadingService'
 import AddSupplierForm from '../components/AddSupplierForm'
 import EditSupplierForm from '../components/EditSupplierForm'
 import SupplierDetailsModal from '../components/SupplierDetailsModal'
@@ -95,6 +96,8 @@ const Suppliers = () => {
   }, [suppliers, searchTerm, sortBy])
 
   const handleAddSupplier = async (supplierData: any) => {
+    loadingService.start('add-supplier', 'Adding supplier...')
+    
     try {
       const createSupplierData: CreateSupplier = {
         Name: supplierData.name,
@@ -109,20 +112,22 @@ const Suppliers = () => {
       const response = await supplierService.createSupplier(createSupplierData)
       
       if (response.success) {
-        alert(`Supplier ${supplierData.name} added successfully!`)
+        loadingService.success('add-supplier', `Supplier "${supplierData.name}" added successfully!`)
         setIsAddSupplierOpen(false)
         // Refresh suppliers list
         fetchSuppliers()
       } else {
-        alert('Failed to create supplier: ' + response.message)
+        loadingService.error('add-supplier', 'Failed to create supplier: ' + response.message)
       }
     } catch (error) {
-      alert('Error creating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      loadingService.error('add-supplier', 'Error creating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
 
   const handleEditSupplier = async (updatedSupplierData: any) => {
+    loadingService.start('edit-supplier', 'Updating supplier...')
+    
     try {
       const updateData: UpdateSupplier = {
         SupplierID: updatedSupplierData.supplierId,
@@ -138,16 +143,16 @@ const Suppliers = () => {
       const response = await supplierService.updateSupplier(updatedSupplierData.supplierId, updateData)
       
       if (response.success) {
-        alert(`Supplier ${updatedSupplierData.name} updated successfully!`)
+        loadingService.success('edit-supplier', `Supplier "${updatedSupplierData.name}" updated successfully!`)
         setIsEditSupplierOpen(false)
         setSelectedSupplier(null)
         // Refresh suppliers list
         fetchSuppliers()
       } else {
-        alert('Failed to update supplier: ' + response.message)
+        loadingService.error('edit-supplier', 'Failed to update supplier: ' + response.message)
       }
     } catch (error) {
-      alert('Error updating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      loadingService.error('edit-supplier', 'Error updating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 

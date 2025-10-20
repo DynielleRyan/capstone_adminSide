@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import alertService from '../services/alertService'
 
 interface SupplierFormData {
   name: string
@@ -64,13 +65,13 @@ const EditSupplierForm = ({ isOpen, onClose, onSubmit, supplier }: EditSupplierF
     e.preventDefault()
     
     if (!supplier) {
-      alert('No supplier selected for editing')
+      alertService.error('No supplier selected for editing')
       return
     }
     
     // Validate status selection
     if (formData.status === '--SELECT--') {
-      alert('Please select a status')
+      alertService.warning('Please select a status')
       return
     }
     

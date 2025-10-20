@@ -1,16 +1,25 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { authService } from '../services/authService'
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [usernameOrEmail, setUsernameOrEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (authService.isAuthenticated()) {
+      const from = (location.state as any)?.from?.pathname || '/'
+      navigate(from, { replace: true })
+    }
+  }, [navigate, location])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,8 +39,9 @@ const Login = () => {
       })
 
       if (response.success) {
-        // Navigate to dashboard after successful login
-        navigate('/')
+        // Navigate to the page they were trying to access, or dashboard
+        const from = (location.state as any)?.from?.pathname || '/'
+        navigate(from, { replace: true })
       } else {
         setError(response.message || 'Login failed')
       }

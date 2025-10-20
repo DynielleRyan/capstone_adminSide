@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X } from 'lucide-react'
+import loadingService from '../services/loadingService'
 import { userService, UserResponse } from '../services/userService'
 import { authService } from '../services/authService'
 
@@ -63,6 +64,8 @@ const UserProfile = () => {
   const handleSave = async () => {
     if (!user?.UserID) return
 
+    loadingService.start('update-profile', 'Updating contact number...')
+
     try {
       setSaving(true)
       
@@ -74,13 +77,13 @@ const UserProfile = () => {
       if (response.success && response.data) {
         setUser(response.data)
         setIsEditing(false)
-        alert('Contact number updated successfully!')
+        loadingService.success('update-profile', 'Contact number updated successfully!')
       } else {
-        alert('Failed to update contact number: ' + response.message)
+        loadingService.error('update-profile', 'Failed to update contact number: ' + response.message)
       }
     } catch (err) {
       console.error('Error updating contact number:', err)
-      alert('Error updating contact number: ' + (err instanceof Error ? err.message : 'Unknown error'))
+      loadingService.error('update-profile', 'Error updating contact number: ' + (err instanceof Error ? err.message : 'Unknown error'))
     } finally {
       setSaving(false)
     }
