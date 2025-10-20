@@ -1,7 +1,7 @@
 // frontend/src/api/dashboard.api.ts
 import axios from "axios";
 
-const API_BASE = `${import.meta.env.VITE_API_BASE}/dashboard`; 
+const API_BASE = `${import.meta.env.VITE_API_URL}/dashboard`; 
 
 // ---- counts (top cards) ----
 export async function getLowStockCount(threshold = 20) {

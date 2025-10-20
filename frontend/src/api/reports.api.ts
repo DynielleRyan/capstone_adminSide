@@ -2,7 +2,7 @@ import axios from "axios";
 
 
 // 🧩 Your base URL (make sure this points to your backend)
-const API_BASE = `${import.meta.env.VITE_API_BASE}/reports`; 
+const API_BASE = `${import.meta.env.VITE_API_URL}/reports`; 
 
 // ---------------- TYPES ----------------
 

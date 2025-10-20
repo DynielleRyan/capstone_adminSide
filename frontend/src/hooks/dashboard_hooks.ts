@@ -83,7 +83,7 @@ export function useDashboard() {
           getTotalSales(),
           getMonthlySales(), // monthly already normalized in API layer
         ]);
-        console.log("✅ Dashboard API results:", { count, exp, tx, sales, monthly });
+        // console.log("✅ Dashboard API results:", { count, exp, tx, sales, monthly });
         // update dashboard cards
         setLowCount(count || 0);
         setExpiringTotal(exp.total || 0);
