@@ -1,4 +1,4 @@
-import api from './api'
+import api from './api';
 
 export interface Product {
   id: number
@@ -88,3 +88,4 @@ export const productService = {
     return response.data
   },
 }
+

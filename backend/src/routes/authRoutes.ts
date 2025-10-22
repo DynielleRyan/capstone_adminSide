@@ -23,4 +23,3 @@ router.get('/me', getCurrentUser);
 router.post('/resend-verification', resendVerificationEmail);
 
 export default router;
-

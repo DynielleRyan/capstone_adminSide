@@ -1,42 +1,42 @@
-import { useState, useEffect } from 'react'
-import { Bell, User, Search, LogOut, UserCircle } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { authService } from '../services/authService'
-import { UserResponse } from '../services/userService'
+import { useState, useEffect } from "react";
+import { Bell, User, Search, LogOut, UserCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { authService } from "../services/authService";
+import { UserResponse } from "../services/userService";
 
 const Header = () => {
-  const navigate = useNavigate()
-  const [user, setUser] = useState<UserResponse | null>(null)
-  const [showDropdown, setShowDropdown] = useState(false)
+  const navigate = useNavigate();
+  const [user, setUser] = useState<UserResponse | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     // Get user from localStorage
-    const storedUser = authService.getStoredUser()
+    const storedUser = authService.getStoredUser();
     if (storedUser) {
-      setUser(storedUser)
+      setUser(storedUser);
     }
-  }, [])
+  }, []);
 
   const handleProfileClick = () => {
-    setShowDropdown(false)
-    navigate('/profile')
-  }
+    setShowDropdown(false);
+    navigate("/profile");
+  };
 
   const handleLogout = async () => {
     try {
-      await authService.signOut()
-      navigate('/login')
+      await authService.signOut();
+      navigate("/login");
     } catch (error) {
-      console.error('Logout error:', error)
+      console.error("Logout error:", error);
       // Navigate to login anyway
-      navigate('/login')
+      navigate("/login");
     }
-  }
+  };
 
   const getUserDisplayName = () => {
-    if (!user) return 'User'
-    return `${user.FirstName} ${user.LastName}`
-  }
+    if (!user) return "User";
+    return `${user.FirstName} ${user.LastName}`;
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
@@ -45,7 +45,7 @@ const Header = () => {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-blue-600">Jambo's Pharmacy</h1>
         </div>
-        
+
         {/* Search Bar */}
         <div className="flex-1 max-w-md mx-8">
           <div className="relative">
@@ -57,23 +57,25 @@ const Header = () => {
             />
           </div>
         </div>
-        
+
         {/* Right side icons */}
         <div className="flex items-center gap-4">
           <button className="p-2 hover:bg-gray-100 rounded-full">
             <Bell className="w-6 h-6 text-gray-600" />
           </button>
-          
+
           {/* User Menu */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-2 hover:bg-gray-100 rounded-lg p-2 transition-colors"
             >
               <div className="p-2 bg-gray-100 rounded-full">
                 <User className="w-6 h-6 text-gray-600" />
               </div>
-              <span className="text-gray-700 font-medium">{getUserDisplayName()}</span>
+              <span className="text-gray-700 font-medium">
+                {getUserDisplayName()}
+              </span>
             </button>
 
             {/* Dropdown Menu */}
@@ -102,13 +104,13 @@ const Header = () => {
 
       {/* Click outside to close dropdown */}
       {showDropdown && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setShowDropdown(false)}
         />
       )}
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
