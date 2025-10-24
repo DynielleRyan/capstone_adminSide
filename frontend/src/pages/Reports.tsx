@@ -27,25 +27,32 @@ function DownloadModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen bg-black/50 flex items-center justify-center z-[1000]">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-semibold mb-4">Confirm Download</h3>
-        <p className="text-gray-600 mb-6">
-          Are you sure you want to download the {reportType} report as CSV?
-        </p>
-        <div className="flex justify-end gap-3">
-          <button className="btn btn-outline" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-          >
-            Download
-          </button>
+    <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50">
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Confirm Download</h3>
+        </div>
+        <div className="p-6">
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to download the {reportType} report as CSV?
+          </p>
+          <div className="flex justify-end gap-3">
+            <button 
+              className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" 
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+              onClick={() => {
+                onConfirm();
+                onClose();
+              }}
+            >
+              Download
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -88,23 +95,27 @@ export default function Reports() {
   const safeReorder = Array.isArray(reorder) ? reorder : [];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-blue-700">REPORTS</h1>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">REPORTS</h1>
+      </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Total Transactions */}
-        <div className="card flex-1">
-          <button
-            className="btn btn-link justify-end text-blue-700"
-            style={{ textDecoration: "none" }}
-            onClick={() =>
-              openDownloadModal("Transaction Chart", downloadChartCSV)
-            }
-          >
-            Download Report
-          </button>
+        <div className="flex-1">
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 flex justify-end border-b border-gray-200">
+              <button
+                className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                onClick={() =>
+                  openDownloadModal("Transaction Chart", downloadChartCSV)
+                }
+              >
+                Download Report
+              </button>
+            </div>
 
-          <div className="bg-base-300 rounded-xl p-4 shadow min-w-0">
+          <div className="bg-white rounded-lg p-6 min-w-0">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-lg">Total Transaction per</h2>
               <div className="flex items-center gap-2">
@@ -157,19 +168,22 @@ export default function Reports() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Top Selling */}
-        <div className="card flex-1">
-          <button
-            className="btn btn-link justify-end text-blue-700"
-            style={{ textDecoration: "none" }}
-            onClick={() => openDownloadModal("Top Selling", downloadTopCSV)}
-          >
-            Download Report
-          </button>
+        <div className="flex-1">
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 flex justify-end border-b border-gray-200">
+              <button
+                className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                onClick={() => openDownloadModal("Top Selling", downloadTopCSV)}
+              >
+                Download Report
+              </button>
+            </div>
 
-          <div className="bg-base-300 rounded-xl p-4 shadow flex-1 min-w-0">
+          <div className="bg-white rounded-lg p-6 flex-1 min-w-0">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-lg">Top Selling</h2>
               <div className="flex items-center gap-2">
@@ -233,20 +247,22 @@ export default function Reports() {
               </table>
             </div>
           </div>
+          </div>
         </div>
       </div>
 
       {/* Reorder Level */}
-      <div className="card">
-        <button
-          className="btn btn-link justify-end text-blue-700"
-          style={{ textDecoration: "none" }}
-          onClick={() => openDownloadModal("Reorder Level", downloadReorderCSV)}
-        >
-          Download Report
-        </button>
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 flex justify-end border-b border-gray-200">
+          <button
+            className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            onClick={() => openDownloadModal("Reorder Level", downloadReorderCSV)}
+          >
+            Download Report
+          </button>
+        </div>
 
-        <div className="bg-base-300 rounded-xl p-4 shadow min-w-0">
+        <div className="bg-white rounded-lg p-6 min-w-0">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-lg">
               Reorder Level for Low on Stock

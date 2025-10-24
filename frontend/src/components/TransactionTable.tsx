@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems } from '../services/transactionService';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -187,9 +187,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         {/* Download CSV Button */}
         <div className="flex gap-3">
           <button 
-            className="bg-blue-500 text-white font-bold text-sm px-4 py-2 rounded uppercase hover:bg-blue-600 transition-colors" 
+            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2" 
             onClick={handleDownloadCSV}
-            style={{ backgroundColor: '#3498db' }}
           >
             DOWNLOAD CSV
           </button>
@@ -200,25 +199,30 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       {/* Transaction Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="table w-full text-sm">
+        <table className="w-full">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th>TXN ID</th>
-              <th>DATE ORDERED</th>
-              <th>STAFF</th>
-              <th>PAYMENT METHOD</th>
-              <th>QTY</th>
-              <th>TOTAL</th>
-              <th>VIEW</th>
+              <th className="px-6 py-4 text-left font-semibold">TXN ID</th>
+              <th className="px-6 py-4 text-left font-semibold">DATE ORDERED</th>
+              <th className="px-6 py-4 text-left font-semibold">STAFF</th>
+              <th className="px-6 py-4 text-left font-semibold">PAYMENT METHOD</th>
+              <th className="px-6 py-4 text-left font-semibold">QTY</th>
+              <th className="px-6 py-4 text-left font-semibold">TOTAL</th>
+              <th className="px-6 py-4 text-left font-semibold">VIEW</th>
             </tr>
           </thead>
-          <tbody style={{ color: '#374151' }}>
+          <tbody>
             {paginatedData.map((tx, index) => (
-              <tr key={tx.TransactionID} className="border-b">
-                <td>
+              <tr 
+                key={tx.TransactionID} 
+                className={`${
+                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                } hover:bg-blue-100 transition-colors`}
+              >
+                <td className="px-6 py-4 text-gray-700">
                   {String(tx.TransactionID).padStart(2, '0')}
                 </td>
-                <td>
+                <td className="px-6 py-4 text-gray-700">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
                       month: 'numeric', 
@@ -229,20 +233,19 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     00:00:00
                   </div>
                 </td>
-                <td>
+                <td className="px-6 py-4 text-gray-700">
                   <div className="font-medium">{tx.User.FirstName} {tx.User.LastName}</div>
                 </td>
-                <td>{tx.PaymentMethod}</td>
-                <td>
+                <td className="px-6 py-4 text-gray-700">{tx.PaymentMethod}</td>
+                <td className="px-6 py-4 text-gray-700">
                   {Math.floor(Math.random() * 20) + 1}
                 </td>
-                <td>
+                <td className="px-6 py-4 text-gray-700">
                   P{tx.Total.toFixed(2)}
                 </td>
-                <td>
+                <td className="px-6 py-4">
                   <button
-                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-100" 
-                    style={{ color: '#374151' }}
+                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
                     onClick={() => handleView(tx.TransactionID)}
                     title="View Transaction Details"
                   >
@@ -254,102 +257,123 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           </tbody>
         </table>
       </div>
-
-      {/*Pagination Controls*/}
-      <div className="flex justify-center mt-4">
-      <div className="join">
-        <button
-          type="button"
-          className="join-item btn btn-sm"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((prev) => prev - 1)}
-        >
-          Prev
-        </button>
-
-      {[...Array(totalPages)].map((_, i) => (
-        <button
-          key={i}
-          type="button"
-          className={`join-item btn btn-sm ${currentPage === i + 1 ? 'btn-active' : ''}`}
-          onClick={() => setCurrentPage(i + 1)}
-        >
-          {i + 1}
-        </button>
-      ))}
-
-      <button
-        type="button"
-        className="join-item btn btn-sm"
-        disabled={currentPage === totalPages}
-        onClick={() => setCurrentPage((prev) => prev + 1)}
-      >
-        Next
-      </button>
-    </div>
       </div>
 
-      {/* DaisyUI Modal */}
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm text-gray-700">
+          Showing {paginatedData.length} of {displayedTransactions.length} transactions
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+            disabled={currentPage === 1}
+            className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="px-4 py-2 text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            disabled={currentPage === totalPages}
+            className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Transaction Modal */}
       <dialog id="transaction_modal" className="modal">
-        <div className="modal-box bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto text-black">
+        <div className="modal-box bg-white rounded-lg w-full max-w-4xl max-h-[90vh] p-0 text-black flex flex-col">
           {errorMessage ? (
-            <div className="text-red-500 font-semibold">
-              {errorMessage}
+            <div className="p-6">
+              <div className="text-red-500 font-semibold">
+                {errorMessage}
+              </div>
+              <div className="mt-6 flex justify-end">
+                <form method="dialog">
+                  <button className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors">
+                    Close
+                  </button>
+                </form>
+              </div>
             </div>
           ) : selectedTransaction ? (
             <>
-              <h3 className="font-bold text-lg mb-2">Transaction Details</h3>
-              <div className="space-y-1 text-sm">
-                <p><strong>ID:</strong> {selectedTransaction.TransactionID}</p>
-                <p><strong>Date:</strong> {new Date(selectedTransaction.OrderDateTime).toLocaleString()}</p>
-                <p><strong>Total:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
-                <p><strong>User:</strong> {selectedTransaction.User.FirstName} {selectedTransaction.User.LastName}</p>
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900">Transaction Details</h3>
+                <div className="mt-2 space-y-1 text-sm text-gray-700">
+                  <p><strong>ID:</strong> {selectedTransaction.TransactionID}</p>
+                  <p><strong>Date:</strong> {new Date(selectedTransaction.OrderDateTime).toLocaleString()}</p>
+                  <p><strong>Staff:</strong> {selectedTransaction.User.FirstName} {selectedTransaction.User.LastName}</p>
+                </div>
               </div>
 
-              <h4 className="mt-4 font-semibold">Items</h4>
-              <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-100 mb-8">
-                <table className="table bg-white text-black">
-                  <thead className=" text-black">
-                  <tr>
-                    <th >ITEM</th>
-                    <th >PRICE</th>
-                    <th >QUANTITY</th>
-                    <th >SUBTOTAL</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  {items.map((item) => (
-                    <tr key={item.TransactionItemID} className="table-row">
-                      <td className="table-cell item-name">{item.Product.Name}</td>
-                      <td className="table-cell item-price">P{item.Product.SellingPrice.toFixed(2)}</td>
-                      <td className="table-cell item-quantity">{item.Quantity}</td>              
-                      <td className="table-cell subtotal-amount">P{item.Subtotal.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  </tbody>
-                </table>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <h4 className="font-semibold text-gray-900 mb-3">Items</h4>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-900 text-white">
+                      <tr>
+                        <th className="px-6 py-3 text-left font-semibold">ITEM</th>
+                        <th className="px-6 py-3 text-left font-semibold">PRICE</th>
+                        <th className="px-6 py-3 text-left font-semibold">QUANTITY</th>
+                        <th className="px-6 py-3 text-left font-semibold">SUBTOTAL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => (
+                        <tr 
+                          key={item.TransactionItemID}
+                          className={`${
+                            index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                          } hover:bg-blue-100 transition-colors`}
+                        >
+                          <td className="px-6 py-4 text-gray-700">{item.Product.Name}</td>
+                          <td className="px-6 py-4 text-gray-700">₱{item.Product.SellingPrice.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-gray-700">{item.Quantity}</td>              
+                          <td className="px-6 py-4 text-gray-700">₱{item.Subtotal.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-6 space-y-2 text-sm text-right">
+                  <p className="text-gray-700"><strong>SUBTOTAL:</strong> ₱{items.reduce((sum, item) => sum + item.Subtotal, 0).toFixed(2)}</p>
+                  <p className="text-gray-700"><strong>VAT AMOUNT:</strong> ₱{selectedTransaction.VATAmount.toFixed(2)}</p>
+                  <p className="text-lg font-semibold text-gray-900"><strong>TOTAL:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
+                </div>
               </div>
 
-              <div className="space-y-1 text-sm text-right">
-                <p><strong>SUBTOTAL:</strong> ₱{items.reduce((sum, item) => sum + item.Subtotal, 0).toFixed(2)}</p>
-                <p><strong>DISCOUNT:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
-                <p><strong>VAT AMOUNT:</strong> ₱{selectedTransaction.VATAmount.toFixed(2)}</p>
-
-                <p><strong>TOTAL:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end flex-shrink-0">
+                <form method="dialog">
+                  <button className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors">
+                    Close
+                  </button>
+                </form>
               </div>
             </>
           ) : (
-            <p className="text-sm">No transaction selected.</p>
+            <div className="p-6">
+              <p className="text-sm text-gray-500">No transaction selected.</p>
+              <div className="mt-6 flex justify-end">
+                <form method="dialog">
+                  <button className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors">
+                    Close
+                  </button>
+                </form>
+              </div>
+            </div>
           )}
-
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn">Close</button>
-            </form>
-          </div>
         </div>
       </dialog>
-    </div>
     </div>
   );
 };

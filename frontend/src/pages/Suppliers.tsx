@@ -1,19 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
-import loadingService from '../services/loadingService'
-import AddSupplierForm from '../components/AddSupplierForm'
-import EditSupplierForm from '../components/EditSupplierForm'
 import SupplierDetailsModal from '../components/SupplierDetailsModal'
-import { supplierService, SupplierResponse, CreateSupplier, UpdateSupplier, SupplierFilters } from '../services/supplierService'
+import { supplierService, SupplierResponse, SupplierFilters } from '../services/supplierService'
 
 const Suppliers = () => {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('none')
-  const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false)
-  const [isEditSupplierOpen, setIsEditSupplierOpen] = useState(false)
   const [isSupplierDetailsOpen, setIsSupplierDetailsOpen] = useState(false)
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null)
-  const [selectedSupplier, setSelectedSupplier] = useState<any>(null)
   const [suppliers, setSuppliers] = useState<SupplierResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,68 +91,6 @@ const Suppliers = () => {
     return filtered
   }, [suppliers, searchTerm, sortBy])
 
-  const handleAddSupplier = async (supplierData: any) => {
-    loadingService.start('add-supplier', 'Adding supplier...')
-    
-    try {
-      const createSupplierData: CreateSupplier = {
-        Name: supplierData.name,
-        ContactPerson: supplierData.contactPerson,
-        ContactNumber: supplierData.contactNumber,
-        Email: supplierData.email,
-        Address: supplierData.address,
-        Remarks: supplierData.remarks,
-        IsActiveYN: supplierData.isActiveYN,
-      }
-
-      const response = await supplierService.createSupplier(createSupplierData)
-      
-      if (response.success) {
-        loadingService.success('add-supplier', `Supplier "${supplierData.name}" added successfully!`)
-        setIsAddSupplierOpen(false)
-        // Refresh suppliers list
-        fetchSuppliers()
-      } else {
-        loadingService.error('add-supplier', 'Failed to create supplier: ' + response.message)
-      }
-    } catch (error) {
-      loadingService.error('add-supplier', 'Error creating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    }
-  }
-
-
-  const handleEditSupplier = async (updatedSupplierData: any) => {
-    loadingService.start('edit-supplier', 'Updating supplier...')
-    
-    try {
-      const updateData: UpdateSupplier = {
-        SupplierID: updatedSupplierData.supplierId,
-        Name: updatedSupplierData.name,
-        ContactPerson: updatedSupplierData.contactPerson,
-        ContactNumber: updatedSupplierData.contactNumber,
-        Email: updatedSupplierData.email,
-        Address: updatedSupplierData.address,
-        Remarks: updatedSupplierData.remarks,
-        IsActiveYN: updatedSupplierData.isActiveYN
-      }
-
-      const response = await supplierService.updateSupplier(updatedSupplierData.supplierId, updateData)
-      
-      if (response.success) {
-        loadingService.success('edit-supplier', `Supplier "${updatedSupplierData.name}" updated successfully!`)
-        setIsEditSupplierOpen(false)
-        setSelectedSupplier(null)
-        // Refresh suppliers list
-        fetchSuppliers()
-      } else {
-        loadingService.error('edit-supplier', 'Failed to update supplier: ' + response.message)
-      }
-    } catch (error) {
-      loadingService.error('edit-supplier', 'Error updating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    }
-  }
-
-
   // Format supplier ID to show a shortened version of the UUID
   const formatSupplierId = (supplierId: string) => {
     if (!supplierId) return 'N/A'
@@ -205,7 +139,7 @@ const Suppliers = () => {
         {/* Action Buttons */}
         <div className="flex gap-3">
           <button 
-            onClick={() => setIsAddSupplierOpen(true)}
+            onClick={() => navigate('/suppliers/add')}
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -283,8 +217,7 @@ const Suppliers = () => {
                         </button>
                         <button
                           onClick={() => {
-                            setSelectedSupplier(supplier)
-                            setIsEditSupplierOpen(true)
+                            navigate('/suppliers/edit', { state: { supplier } })
                           }}
                           className="text-green-500 hover:text-green-700 transition-colors"
                         >
@@ -325,24 +258,6 @@ const Suppliers = () => {
           </button>
         </div>
       </div>
-
-      {/* Add Supplier Form Modal */}
-      <AddSupplierForm
-        isOpen={isAddSupplierOpen}
-        onClose={() => setIsAddSupplierOpen(false)}
-        onSubmit={handleAddSupplier}
-      />
-
-      {/* Edit Supplier Form Modal */}
-      <EditSupplierForm
-        isOpen={isEditSupplierOpen}
-        onClose={() => {
-          setIsEditSupplierOpen(false)
-          setSelectedSupplier(null)
-        }}
-        onSubmit={handleEditSupplier}
-        supplier={selectedSupplier}
-      />
 
       {/* Supplier Details Modal */}
       <SupplierDetailsModal

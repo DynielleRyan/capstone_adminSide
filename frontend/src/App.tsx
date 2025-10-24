@@ -19,6 +19,10 @@ import { Transactions } from './pages/Transactions'
 import { PurchaseOrders } from './pages/PurchaseOrder'
 import { NewPurchaseOrder } from './pages/NewPurchaseOrder'
 import { UpdatePurchaseOrder } from './pages/UpdatePurchaseOrder'
+import AddUser from './pages/AddUser'
+import EditUser from './pages/EditUser'
+import AddSupplier from './pages/AddSupplier'
+import EditSupplier from './pages/EditSupplier'
 
 function App() {
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -102,7 +106,11 @@ function App() {
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/role-management" element={<RoleManagement />} />
+                <Route path="/role-management/add" element={<AddUser />} />
+                <Route path="/role-management/edit" element={<EditUser />} />
                 <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/suppliers/add" element={<AddSupplier />} />
+                <Route path="/suppliers/edit" element={<EditSupplier />} />
                 <Route path="/product-source-list" element={<ProductSourceList />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/transactions" element={<Transactions />} />

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
-import { X, Trash2, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Trash2, Loader2 } from 'lucide-react'
 import alertService from '../services/alertService'
+import loadingService from '../services/loadingService'
+import { userService, UserResponse, UpdateUser, UserFilters, UserRole } from '../services/userService'
 
 interface User {
   userId: string
@@ -11,26 +14,65 @@ interface User {
   role: 'PHARMACIST' | 'CLERK'
 }
 
-interface EditUserFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (updatedUsers: User[]) => void
-  onDelete: (userId: string) => void
-  users: User[]
-  loading?: boolean
-}
-
-const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = false }: EditUserFormProps) => {
+const EditUser = () => {
+  const navigate = useNavigate()
   const [editedUsers, setEditedUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Sync editedUsers with users prop when it changes
-  useEffect(() => {
-    if (users && users.length > 0) {
-      setEditedUsers(users)
-    } else {
-      setEditedUsers([])
+  // Helper function to convert new Roles format to old format for EditUserForm
+  const mapRoleToOldFormat = (role: UserRole): 'PHARMACIST' | 'CLERK' => {
+    switch (role) {
+      case 'Pharmacist': return 'PHARMACIST'
+      case 'Clerk': return 'CLERK'
+      default: return 'PHARMACIST'
     }
-  }, [users])
+  }
+
+  // Helper function to convert old role format to new Roles format
+  const mapStringToRole = (roleString: string): UserRole => {
+    switch (roleString?.toUpperCase()) {
+      case 'PHARMACIST': return 'Pharmacist'
+      case 'CLERK': return 'Clerk'
+      default: return 'Pharmacist'
+    }
+  }
+
+  // Convert UserResponse to the format expected by the component
+  const convertToEditUserFormat = (user: UserResponse) => ({
+    userId: user.UserID!,
+    name: `${user.FirstName} ${user.MiddleInitial || ''} ${user.LastName}`.trim(),
+    contact: user.ContactNumber || '',
+    username: user.Username,
+    password: '',
+    role: mapRoleToOldFormat(user.Roles)
+  })
+
+  // Fetch all users for editing
+  useEffect(() => {
+    const fetchAllUsersForEdit = async () => {
+      try {
+        setLoading(true)
+        const filters: UserFilters = {
+          limit: 1000,
+          page: 1
+        }
+        
+        const response = await userService.getUsers(filters)
+        
+        if (response.success && response.data) {
+          const formattedUsers = response.data.users.map(convertToEditUserFormat)
+          setEditedUsers(formattedUsers)
+        }
+      } catch (err) {
+        console.error('Error fetching users:', err)
+        alertService.error('Failed to load users')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAllUsersForEdit()
+  }, [])
 
   const handleRoleChange = (userId: string, newRole: string) => {
     setEditedUsers(prev => 
@@ -42,42 +84,68 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = fa
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(editedUsers)
-    onClose()
+    
+    loadingService.start('edit-user', `Updating ${editedUsers.length} user(s)...`)
+    
+    try {
+      const updatePromises = editedUsers.map(user => {
+        const updateData: UpdateUser = {
+          UserID: user.userId,
+          Roles: mapStringToRole(user.role)
+        }
+        return userService.updateUser(user.userId, updateData)
+      })
+
+      await Promise.all(updatePromises)
+      loadingService.success('edit-user', `${editedUsers.length} user(s) updated successfully!`)
+      navigate('/role-management')
+    } catch (error) {
+      loadingService.error('edit-user', 'Error updating users: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    }
   }
 
   const handleCancel = () => {
-    setEditedUsers(users) // Reset changes
-    onClose()
+    navigate('/role-management')
   }
 
   const handleDelete = async (userId: string, userName: string) => {
-    await alertService.confirmDelete(userName, () => {
-      onDelete(userId)
-      // Remove from local state as well
-      setEditedUsers(prev => prev.filter(user => user.userId !== userId))
+    await alertService.confirmDelete(userName, async () => {
+      loadingService.start('delete-user', 'Deleting user...')
+      
+      try {
+        const response = await userService.deleteUser(userId)
+        
+        if (response.success) {
+          loadingService.success('delete-user', 'User deleted successfully!')
+          // Remove from local state
+          setEditedUsers(prev => prev.filter(user => user.userId !== userId))
+        } else {
+          loadingService.error('delete-user', 'Failed to delete user: ' + response.message)
+        }
+      } catch (error) {
+        loadingService.error('delete-user', 'Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      }
     })
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-blue-900">EDIT USERS</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Page Header */}
+      <div className="mb-6">
+        <button
+          onClick={handleCancel}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back to Role Management</span>
+        </button>
+        <h1 className="text-3xl font-bold text-blue-900">EDIT USERS</h1>
+      </div>
 
-        {/* Users Table */}
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow p-8">
         <form onSubmit={handleSubmit}>
           <div className="overflow-x-auto mb-6">
             <table className="w-full">
@@ -158,7 +226,8 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = fa
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              disabled={loading || editedUsers.length === 0}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               CONFIRM CHANGES
             </button>
@@ -169,4 +238,5 @@ const EditUserForm = ({ isOpen, onClose, onSubmit, onDelete, users, loading = fa
   )
 }
 
-export default EditUserForm
+export default EditUser
+

@@ -1,12 +1,8 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
-import alertService from '../services/alertService'
-
-interface AddSupplierFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (supplierData: any) => void
-}
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { supplierService, UpdateSupplier } from '../services/supplierService'
+import loadingService from '../services/loadingService'
 
 interface SupplierFormData {
   name: string
@@ -18,7 +14,11 @@ interface SupplierFormData {
   status: string
 }
 
-const AddSupplierForm = ({ isOpen, onClose, onSubmit }: AddSupplierFormProps) => {
+const EditSupplier = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const supplier = location.state?.supplier
+
   const [formData, setFormData] = useState<SupplierFormData>({
     name: '',
     contactPerson: '',
@@ -29,6 +29,24 @@ const AddSupplierForm = ({ isOpen, onClose, onSubmit }: AddSupplierFormProps) =>
     status: '--SELECT--'
   })
 
+  // Pre-fill form data when component mounts
+  useEffect(() => {
+    if (supplier) {
+      setFormData({
+        name: supplier.Name || '',
+        contactPerson: supplier.ContactPerson || '',
+        contactNumber: supplier.ContactNumber || '',
+        email: supplier.Email || '',
+        address: supplier.Address || '',
+        remarks: supplier.Remarks || '',
+        status: supplier.IsActiveYN ? 'ACTIVE' : 'INACTIVE'
+      })
+    } else {
+      // If no supplier data, redirect back
+      navigate('/suppliers')
+    }
+  }, [supplier, navigate])
+
   const handleInputChange = (field: keyof SupplierFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -36,71 +54,67 @@ const AddSupplierForm = ({ isOpen, onClose, onSubmit }: AddSupplierFormProps) =>
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validate status selection
-    if (formData.status === '--SELECT--') {
-      alertService.warning('Please select a status')
+    if (!supplier) {
+      loadingService.error('edit-supplier', 'No supplier selected for editing')
       return
     }
     
-    // Convert form data to the format expected by the backend
-    const supplierData = {
-      name: formData.name,
-      contactPerson: formData.contactPerson,
-      contactNumber: formData.contactNumber,
-      email: formData.email,
-      address: formData.address,
-      remarks: formData.remarks,
-      isActiveYN: formData.status === 'ACTIVE'
+    // Validate status selection
+    if (formData.status === '--SELECT--') {
+      loadingService.error('edit-supplier', 'Please select a status')
+      return
     }
     
-    onSubmit(supplierData)
+    loadingService.start('edit-supplier', 'Updating supplier...')
     
-    // Reset form
-    setFormData({
-      name: '',
-      contactPerson: '',
-      contactNumber: '',
-      email: '',
-      address: '',
-      remarks: '',
-      status: '--SELECT--'
-    })
-    onClose()
+    try {
+      const updateData: UpdateSupplier = {
+        SupplierID: supplier.SupplierID,
+        Name: formData.name,
+        ContactPerson: formData.contactPerson,
+        ContactNumber: formData.contactNumber,
+        Email: formData.email,
+        Address: formData.address,
+        Remarks: formData.remarks,
+        IsActiveYN: formData.status === 'ACTIVE'
+      }
+
+      const response = await supplierService.updateSupplier(supplier.SupplierID, updateData)
+      
+      if (response.success) {
+        loadingService.success('edit-supplier', `Supplier "${formData.name}" updated successfully!`)
+        navigate('/suppliers')
+      } else {
+        loadingService.error('edit-supplier', 'Failed to update supplier: ' + response.message)
+      }
+    } catch (error) {
+      loadingService.error('edit-supplier', 'Error updating supplier: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    }
   }
 
   const handleCancel = () => {
-    setFormData({
-      name: '',
-      contactPerson: '',
-      contactNumber: '',
-      email: '',
-      address: '',
-      remarks: '',
-      status: '--SELECT--'
-    })
-    onClose()
+    navigate('/suppliers')
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-800">ADD SUPPLIER</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Page Header */}
+      <div className="mb-6">
+        <button
+          onClick={handleCancel}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back to Suppliers</span>
+        </button>
+        <h1 className="text-3xl font-bold text-blue-900">EDIT SUPPLIER</h1>
+      </div>
 
-        {/* Form */}
+      {/* Form Card */}
+      <div className="bg-white rounded-lg shadow p-8">
         <form onSubmit={handleSubmit}>
           <div className="bg-blue-50 rounded-lg p-6 space-y-6">
             
@@ -213,4 +227,5 @@ const AddSupplierForm = ({ isOpen, onClose, onSubmit }: AddSupplierFormProps) =>
   )
 }
 
-export default AddSupplierForm
+export default EditSupplier
+
