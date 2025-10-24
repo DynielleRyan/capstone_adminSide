@@ -1,23 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight } from 'lucide-react'
 import alertService from '../services/alertService'
-import loadingService from '../services/loadingService'
-import AddUserForm from '../components/AddUserForm'
-import EditUserForm from '../components/EditUserForm'
-import { userService, UserResponse, CreateUser, UpdateUser, UserFilters, UserRole } from '../services/userService'
+import { userService, UserResponse, UserFilters } from '../services/userService'
 
 const RoleManagement = () => {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('none')
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
-  const [isEditUserOpen, setIsEditUserOpen] = useState(false)
   const [users, setUsers] = useState<UserResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalUsers, setTotalUsers] = useState(0)
-  const [editUsers, setEditUsers] = useState<UserResponse[]>([])
 
   // Fetch users from API
   const fetchUsers = useCallback(async (page = 1, search = searchTerm) => {
@@ -53,28 +49,10 @@ const RoleManagement = () => {
     }
   }, [searchTerm])
 
-  // Fetch all users for editing (without pagination)
-  const fetchAllUsersForEdit = useCallback(async () => {
-    try {
-      const filters: UserFilters = {
-        limit: 1000, // Large limit to get all users
-        page: 1
-      }
-      
-      const response = await userService.getUsers(filters)
-      
-      if (response.success && response.data) {
-        setEditUsers(response.data.users)
-      }
-    } catch (err) {
-      console.error('Error fetching all users for edit:', err)
-    }
-  }, [])
 
   // Load users on component mount
   useEffect(() => {
     fetchUsers()
-    fetchAllUsersForEdit()
   }, []) // Empty dependency array to run only on mount
 
   // Debounced search effect
@@ -86,24 +64,6 @@ const RoleManagement = () => {
     return () => clearTimeout(timeoutId)
   }, [searchTerm, fetchUsers])
 
-  // Helper function to convert old role format to new Roles format
-  const mapStringToRole = (roleString: string): UserRole => {
-    switch (roleString?.toUpperCase()) {
-      case 'PHARMACIST': return 'Pharmacist'
-      case 'CLERK': return 'Clerk'
-      case 'STAFF': return 'Clerk' // Map STAFF to Clerk for backwards compatibility
-      default: return 'Pharmacist' // Default to Pharmacist instead of Admin
-    }
-  }
-
-  // Helper function to convert new Roles format to old format for EditUserForm
-  const mapRoleToOldFormat = (role: UserRole): 'PHARMACIST' | 'CLERK' => {
-    switch (role) {
-      case 'Pharmacist': return 'PHARMACIST'
-      case 'Clerk': return 'CLERK'
-      default: return 'PHARMACIST' // Default to PHARMACIST instead of ADMIN
-    }
-  }
 
   // Filter and sort users based on search term and sort criteria
   const filteredUsers = useMemo(() => {
@@ -140,97 +100,6 @@ const RoleManagement = () => {
     return filtered
   }, [users, searchTerm, sortBy])
 
-  const handleAddUser = async (userData: any) => {
-    loadingService.start('add-user', 'Creating user...')
-    
-    try {
-      console.log('Raw userData.role:', userData.role);
-      const mappedRole = mapStringToRole(userData.role);
-      console.log('Mapped role:', mappedRole);
-      
-      const createUserData: CreateUser = {
-        FirstName: userData.firstName,
-        MiddleInitial: userData.middleInitial,
-        LastName: userData.lastName,
-        Username: userData.username,
-        Email: userData.email,
-        Password: userData.password,
-        Address: userData.address,
-        ContactNumber: userData.contactNumber,
-        Roles: mappedRole,
-      }
-      
-      console.log('Final createUserData:', createUserData);
-
-      const response = await userService.createUser(createUserData)
-      
-      if (response.success) {
-        loadingService.success('add-user', `User ${userData.firstName} ${userData.lastName} added successfully!`)
-        setIsAddUserOpen(false)
-        // Refresh both users lists
-        fetchUsers()
-        fetchAllUsersForEdit()
-      } else {
-        loadingService.error('add-user', 'Failed to create user: ' + response.message)
-      }
-    } catch (error) {
-      loadingService.error('add-user', 'Error creating user: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    }
-  }
-
-  // Convert UserResponse to the format expected by EditUserForm
-  const convertToEditUserFormat = (user: UserResponse) => ({
-    userId: user.UserID!,
-    name: `${user.FirstName} ${user.MiddleInitial || ''} ${user.LastName}`.trim(),
-    contact: user.ContactNumber || '',
-    username: user.Username,
-    password: '', // Dummy field for EditUserForm compatibility
-    role: mapRoleToOldFormat(user.Roles)
-  })
-
-  const handleEditUser = async (updatedUsers: any[]) => {
-    loadingService.start('edit-user', `Updating ${updatedUsers.length} user(s)...`)
-    
-    try {
-      const updatePromises = updatedUsers.map(user => {
-        const updateData: UpdateUser = {
-          UserID: user.userId,
-          Roles: mapStringToRole(user.role)
-        }
-        return userService.updateUser(user.userId, updateData)
-      })
-
-      await Promise.all(updatePromises)
-      loadingService.success('edit-user', `${updatedUsers.length} user(s) updated successfully!`)
-      setIsEditUserOpen(false)
-      // Refresh both users lists
-      fetchUsers()
-      fetchAllUsersForEdit()
-    } catch (error) {
-      loadingService.error('edit-user', 'Error updating users: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    }
-  }
-
-  const handleDeleteUser = async (userId: string) => {
-    await alertService.confirmDelete('this user', async () => {
-      loadingService.start('delete-user', 'Deleting user...')
-      
-      try {
-        const response = await userService.deleteUser(userId)
-        
-        if (response.success) {
-          loadingService.success('delete-user', 'User deleted successfully!')
-          // Refresh both users lists
-          fetchUsers()
-          fetchAllUsersForEdit()
-        } else {
-          loadingService.error('delete-user', 'Failed to delete user: ' + response.message)
-        }
-      } catch (error) {
-        loadingService.error('delete-user', 'Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'))
-      }
-    })
-  }
 
 
   return (
@@ -273,7 +142,7 @@ const RoleManagement = () => {
         {/* Action Buttons */}
         <div className="flex gap-3">
           <button 
-            onClick={() => setIsAddUserOpen(true)}
+            onClick={() => navigate('/role-management/add')}
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -285,13 +154,13 @@ const RoleManagement = () => {
                 alertService.warning('Please wait for users to load before editing.')
                 return
               }
-              if (editUsers.length === 0) {
+              if (users.length === 0) {
                 alertService.info('No users available to edit. Please add users first.')
                 return
               }
-              setIsEditUserOpen(true)
+              navigate('/role-management/edit')
             }}
-            disabled={loading || editUsers.length === 0}
+            disabled={loading || users.length === 0}
             className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Edit3 className="w-4 h-4" />
@@ -386,23 +255,6 @@ const RoleManagement = () => {
           </button>
         </div>
       </div>
-
-      {/* Add User Form Modal */}
-      <AddUserForm
-        isOpen={isAddUserOpen}
-        onClose={() => setIsAddUserOpen(false)}
-        onSubmit={handleAddUser}
-      />
-
-      {/* Edit User Form Modal */}
-      <EditUserForm
-        isOpen={isEditUserOpen}
-        onClose={() => setIsEditUserOpen(false)}
-        onSubmit={handleEditUser}
-        onDelete={handleDeleteUser}
-        users={editUsers.map(convertToEditUserFormat)}
-        loading={loading}
-      />
     </div>
   )
 }
