@@ -88,7 +88,7 @@ export default function Reports() {
   const safeReorder = Array.isArray(reorder) ? reorder : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 m-5">
       <h1 className="text-3xl font-bold text-blue-700">REPORTS</h1>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -104,7 +104,7 @@ export default function Reports() {
             Download Report
           </button>
 
-          <div className="bg-base-300 rounded-xl p-4 shadow min-w-0">
+          <div className="bg-base-300 rounded-xl p-4 shadow min-w-0 h-96">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-lg">Total Transaction per</h2>
               <div className="flex items-center gap-2">
@@ -169,7 +169,7 @@ export default function Reports() {
             Download Report
           </button>
 
-          <div className="bg-base-300 rounded-xl p-4 shadow flex-1 min-w-0">
+          <div className="bg-base-300 rounded-xl p-4 shadow flex-1 min-w-0 overflow-x-auto max-h-96">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-lg">Top Selling</h2>
               <div className="flex items-center gap-2">

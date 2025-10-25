@@ -38,7 +38,8 @@ export default function Dashboard() {
   const safeChartData = Array.isArray(chartData) ? chartData : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 m-5">
+      <h1 className="text-3xl font-bold text-blue-700">DASHBOARD</h1>
       {/* top metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
@@ -80,7 +81,13 @@ export default function Dashboard() {
                 <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
                 <Bar yAxisId="left" dataKey="units" fill="#4B9CE2" />
-                <Line yAxisId="right" dataKey="total" type="monotone" />
+                <Line
+                  yAxisId="right"
+                  dataKey="total"
+                  type="monotone"
+                  stroke="orange"
+                  strokeWidth={2}
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -89,7 +96,7 @@ export default function Dashboard() {
 
       {/* LOW STOCK MODAL */}
       {open === "low" && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-xl shadow-xl max-w-5xl w-[95%]">
             <div className="p-4 border-b flex items-center justify-between">
               <h3 className="font-semibold">Low on Stock (≤ 20)</h3>
@@ -110,7 +117,7 @@ export default function Dashboard() {
               <table className="table table-sm">
                 <thead>
                   <tr>
-                    <th>ID</th>
+                    <th>#</th>
                     <th>Product</th>
                     <th>Category</th>
                     <th>Brand</th>
