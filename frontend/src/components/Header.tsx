@@ -1,20 +1,39 @@
 import { useState, useEffect } from "react";
-import { Bell, User, Search, LogOut, UserCircle } from "lucide-react";
+import {
+  Bell,
+  User,
+  Search,
+  LogOut,
+  UserCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { UserResponse } from "../services/userService";
+import {
+  getNotificationCounts,
+  getNotificationLists,
+  type LowStockItem,
+  type ExpiringBatch,
+} from "../services/notificationServices";
 
 const Header = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserResponse | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  //  Notifications
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [lowStock, setLowStock] = useState<LowStockItem[]>([]);
+  const [expiring, setExpiring] = useState<ExpiringBatch[]>([]);
+  const [lowCount, setLowCount] = useState(0);
+  const [expCount, setExpCount] = useState(0);
+  const [loadingNotif, setLoadingNotif] = useState(false);
+
+  // Load user from localStorage
   useEffect(() => {
-    // Get user from localStorage
     const storedUser = authService.getStoredUser();
-    if (storedUser) {
-      setUser(storedUser);
-    }
+    if (storedUser) setUser(storedUser);
   }, []);
 
   const handleProfileClick = () => {
@@ -26,9 +45,7 @@ const Header = () => {
     try {
       await authService.signOut();
       navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Navigate to login anyway
+    } catch {
       navigate("/login");
     }
   };
@@ -38,8 +55,54 @@ const Header = () => {
     return `${user.FirstName} ${user.LastName}`;
   };
 
+  // =====================
+  // 🔔 Notification logic
+  // =====================
+
+  // Fetch counts for the badge
+  async function loadNotifCounts() {
+    try {
+      const { lowCount, expTotal } = await getNotificationCounts();
+      setLowCount(lowCount);
+      setExpCount(expTotal);
+    } catch (err) {
+      console.error("Notif count error:", err);
+    }
+  }
+
+  // Fetch item details for dropdown
+  async function loadNotifList() {
+    setLoadingNotif(true);
+    try {
+      const { lowList, expList } = await getNotificationLists();
+      setLowStock(lowList);
+      setExpiring(expList);
+    } catch (err) {
+      console.error("Notif list error:", err);
+    } finally {
+      setLoadingNotif(false);
+    }
+  }
+
+  useEffect(() => {
+    loadNotifCounts();
+    const interval = setInterval(loadNotifCounts, 30_000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const badgeCount = lowCount + expCount;
+
+  // When user opens the notification bell
+  const toggleNotif = async () => {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    if (next) {
+      await loadNotifList();
+    }
+  };
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 relative">
       <div className="flex items-center justify-between">
         {/* Pharmacy Name */}
         <div className="flex-1">
@@ -60,11 +123,92 @@ const Header = () => {
 
         {/* Right side icons */}
         <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Bell className="w-6 h-6 text-gray-600" />
-          </button>
+          {/* 🔔 Notification Bell */}
+          <div className="relative">
+            <button
+              onClick={toggleNotif}
+              className="p-2 hover:bg-gray-100 rounded-full relative"
+            >
+              <Bell className="w-6 h-6 text-gray-600" />
+              {badgeCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              )}
+            </button>
 
-          {/* User Menu */}
+            {/* Dropdown */}
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-96 max-h-[400px] overflow-y-auto bg-white border rounded-xl shadow-lg z-50">
+                <div className="p-3 font-semibold border-b">Notifications</div>
+                {loadingNotif && (
+                  <div className="p-3 text-sm text-gray-500">Loading…</div>
+                )}
+                {!loadingNotif && (
+                  <div className="divide-y text-sm">
+                    {/* Low Stock */}
+                    {lowStock.length > 0 && (
+                      <div className="p-3">
+                        <div className="text-xs font-semibold mb-2 uppercase text-gray-500">
+                          Low Stock
+                        </div>
+                        {lowStock.map((item) => (
+                          <div key={item.productId} className="mb-2">
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-xs text-gray-600">
+                              Quantity: {item.qty}{" "}
+                              {item.expiry &&
+                                `| Earliest Expiry: ${item.expiry}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Expiring Soon */}
+                    {expiring.length > 0 && (
+                      <div className="p-3">
+                        <div className="text-xs font-semibold mb-2 uppercase text-gray-500">
+                          Expiring Soon
+                        </div>
+                        {expiring.map((batch) => (
+                          <div key={batch.productItemId} className="mb-2">
+                            <div className="font-medium flex items-center gap-1">
+                              {batch.expiryLevel === "danger" && (
+                                <AlertTriangle className="w-4 h-4 text-red-500" />
+                              )}
+                              {batch.productName}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Expires on: {batch.expiryDate} | Days left:{" "}
+                              {batch.daysLeft} | Qty: {batch.qty}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* If nothing */}
+                    {lowStock.length === 0 && expiring.length === 0 && (
+                      <div className="p-3 text-gray-500 text-sm">
+                        No notifications 🎉
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="p-2 border-t text-right">
+                  <button
+                    onClick={loadNotifList}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 👤 User Menu */}
           <div className="relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
@@ -78,7 +222,6 @@ const Header = () => {
               </span>
             </button>
 
-            {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                 <button
@@ -102,11 +245,14 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Click outside to close dropdown */}
-      {showDropdown && (
+      {/* Click outside to close dropdowns */}
+      {(showDropdown || notifOpen) && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setShowDropdown(false)}
+          onClick={() => {
+            setShowDropdown(false);
+            setNotifOpen(false);
+          }}
         />
       )}
     </header>

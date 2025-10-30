@@ -10,9 +10,6 @@ export default {
   plugins: [require("daisyui")],
   daisyui: {
     themes: [
-      "light",
-      "dark",
-      "cupcake",
       {
         jambo: {
           "primary": "#2E62A3", // Deep blue (headings, links)
@@ -29,5 +26,6 @@ export default {
         },
       },
     ],
+    darkTheme: false, // Disable dark mode entirely
   },
 }

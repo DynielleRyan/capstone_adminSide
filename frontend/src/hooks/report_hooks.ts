@@ -1,5 +1,5 @@
 // ===============================
-// 📊 Report Hooks
+//  Report Hooks
 // ===============================
 // This hook powers the Reports page:
 // - Fetches transaction charts (monthly / yearly)
@@ -18,12 +18,12 @@ import {
   YearlyTransaction,
   TopItem,
   ReorderItem,
-} from "../api/reports.api";
+} from "../types/reports.api";
 
 type ChartMode = "month" | "year";
 
 // ===============================
-// 📦 CSV DOWNLOAD HELPER
+//  CSV DOWNLOAD HELPER
 // ===============================
 function downloadCSV(filename: string, rows: Record<string, any>[]) {
   if (!rows?.length) return;
@@ -40,7 +40,7 @@ function downloadCSV(filename: string, rows: Record<string, any>[]) {
 }
 
 // ===============================
-// ⚙️ MAIN HOOK FUNCTION
+//  MAIN HOOK FUNCTION
 // ===============================
 export function report_hooks() {
   // -------- CONTROLS: Chart --------
@@ -66,7 +66,7 @@ export function report_hooks() {
   const [loadingReorder, setLoadingReorder] = useState(false);
 
   // ===============================
-  // 🚀 FETCH: Chart (Monthly/Yearly)
+  //  FETCH: Chart (Monthly/Yearly)
   // ===============================
   useEffect(() => {
     const run = async () => {
@@ -85,7 +85,7 @@ export function report_hooks() {
   }, [mode, year, fromYear, toYear]);
 
   // ===============================
-  // 🏆 FETCH: Top Selling Items
+  //  FETCH: Top Selling Items
   // ===============================
   useEffect(() => {
     const run = async () => {
@@ -100,12 +100,12 @@ export function report_hooks() {
   }, [type, limit]);
 
   // ===============================
-  // 🔁 FETCH: Reorder Level Data
+  // FETCH: Reorder Level Data
   // ===============================
   const refetchReorder = async () => {
     setLoadingReorder(true);
     try {
-      setReorder(await getReorder(10));
+      setReorder(await getReorder()); // I limit it to none
     } finally {
       setLoadingReorder(false);
     }
@@ -116,7 +116,7 @@ export function report_hooks() {
   }, []);
 
   // ===============================
-  // 🧮 COMPUTED: Choose Chart Dataset
+  //  COMPUTED: Choose Chart Dataset
   // ===============================
   const chartData = useMemo(
     () => (mode === "month" ? chartMonthly : chartYearly),
@@ -172,7 +172,7 @@ export function report_hooks() {
   };
 
   // ===============================
-  // 🧾 MODAL HANDLERS
+  //  MODAL HANDLERS
   // ===============================
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -191,7 +191,7 @@ export function report_hooks() {
     setModalState({ isOpen: false, reportType: "", onConfirm: () => {} });
 
   // ===============================
-  // 🔄 RETURN VALUES
+  //  RETURN VALUES
   // ===============================
   return {
     // Controls

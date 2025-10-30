@@ -160,8 +160,8 @@ export const getLowStockCount: RequestHandler = async (req, res) => {
     try {
       const months = Number(req.query.months ?? 6);   // warn threshold
       const danger = Number(req.query.danger ?? 3);   // danger threshold
-      const limit = Number(req.query.limit ?? 100);
-      const offset = Number(req.query.offset ?? 0);
+      const limit = Number(req.query.limit ?? 100);   
+      const offset = Number(req.query.offset ?? 0);    
   
       const now = new Date();
   
@@ -184,7 +184,7 @@ export const getLowStockCount: RequestHandler = async (req, res) => {
         (products ?? []).map(p => [p.ProductID, p])
       );
   
-      const MS_PER_DAY = 1000 * 60 * 60 * 24;
+      const MS_PER_DAY = 1000 * 60 * 60 * 24; 
       const rows = (items ?? [])
         .map(it => {
           const prod = pMap[it.ProductID];
@@ -344,3 +344,178 @@ export const getLowStockCount: RequestHandler = async (req, res) => {
     }
   };
   
+
+
+export const getDailySales: RequestHandler = async (req, res) => {
+  try {
+    const daysLimit = Number(req.query.days ?? 60); // default 60 days
+    const now = new Date();
+    const from = new Date();
+    from.setDate(now.getDate() - daysLimit);
+
+    // 1️⃣ Get all transactions within the last N days
+    const { data: txs, error } = await supabase
+      .from("Transaction")
+      .select("Total, OrderDateTime")
+      .gte("OrderDateTime", from.toISOString())
+      .lte("OrderDateTime", now.toISOString());
+
+    if (error) return res.status(500).json({ message: error.message });
+
+    // 2️⃣ Group totals by date
+    const dayTotals: Record<string, { total: number; units: number }> = {};
+
+    // Transactions (total)
+    for (const t of txs ?? []) {
+      const d = new Date(t.OrderDateTime);
+      const dayKey = d.toISOString().slice(0, 10); // e.g., "2025-10-28"
+      if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0 };
+      dayTotals[dayKey].total += Number(t.Total || 0);
+    }
+
+    // Transaction items (units sold)
+    const { data: items, error: iErr } = await supabase
+      .from("Transaction_Item")
+      .select(`
+        Quantity,
+        Transaction:TransactionID ( OrderDateTime )
+      `);
+
+    if (iErr) return res.status(500).json({ message: iErr.message });
+
+    for (const it of items ?? []) {
+      const transaction = Array.isArray(it.Transaction) ? it.Transaction[0] : it.Transaction;
+      if (!transaction?.OrderDateTime) continue;
+      const d = new Date(transaction.OrderDateTime);
+      if (d < from || d > now) continue;
+
+      const dayKey = d.toISOString().slice(0, 10);
+      if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0 };
+      dayTotals[dayKey].units += Number(it.Quantity || 0);
+    }
+
+    // 3️⃣ Convert to sorted array
+    const data = Object.entries(dayTotals)
+      .map(([day, { total, units }]) => ({ day, total, units }))
+      .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
+
+    return res.json({ from: from.toISOString(), to: now.toISOString(), data });
+  } catch (err: any) {
+    return res.status(500).json({ message: err?.message ?? "Internal Server Error" });
+  }
+};
+
+export const getWeeklySales: RequestHandler = async (req, res) => {
+  try {
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const yearEnd = new Date(now.getFullYear(), 11, 31);
+
+    const from = req.query.from ? new Date(String(req.query.from)) : yearStart;
+    const to = req.query.to ? new Date(String(req.query.to)) : yearEnd;
+
+    const { data: txs, error: tErr } = await supabase
+      .from("Transaction")
+      .select("Total, OrderDateTime")
+      .gte("OrderDateTime", from.toISOString())
+      .lte("OrderDateTime", to.toISOString());
+    if (tErr) return res.status(500).json({ message: tErr.message });
+
+    const { data: items, error: iErr } = await supabase
+      .from("Transaction_Item")
+      .select(`Quantity, Transaction:TransactionID ( OrderDateTime )`);
+    if (iErr) return res.status(500).json({ message: iErr.message });
+
+    const itemsInWindow = (items ?? []).filter((r) => {
+      const tx = Array.isArray(r.Transaction) ? r.Transaction[0] : r.Transaction;
+      const d = tx?.OrderDateTime ? new Date(tx.OrderDateTime) : null;
+      return d && d >= from && d <= to;
+    });
+
+    // Helper to get ISO week number
+    const getWeek = (d: Date) => {
+      const date = new Date(d.getTime());
+      date.setHours(0, 0, 0, 0);
+      // Thursday in current week decides the year.
+      date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+      const week1 = new Date(date.getFullYear(), 0, 4);
+      return (
+        1 +
+        Math.round(
+          ((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+        )
+      );
+    };
+
+    const weekly: Record<string, { total: number; units: number }> = {};
+
+    // Aggregate totals by week
+    for (const t of txs ?? []) {
+      const d = new Date(t.OrderDateTime);
+      const key = `Week ${getWeek(d)}`;
+      if (!weekly[key]) weekly[key] = { total: 0, units: 0 };
+      weekly[key].total += Number(t.Total || 0);
+    }
+
+    // Aggregate units by week
+    for (const it of itemsInWindow) {
+      const tx = Array.isArray(it.Transaction) ? it.Transaction[0] : it.Transaction;
+      const d = new Date(tx!.OrderDateTime);
+      const key = `Week ${getWeek(d)}`;
+      if (!weekly[key]) weekly[key] = { total: 0, units: 0 };
+      weekly[key].units += Number(it.Quantity || 0);
+    }
+
+    const data = Object.keys(weekly).map((week) => ({
+      week,
+      total: weekly[week].total,
+      units: weekly[week].units,
+    }));
+
+    return res.json({ data });
+  } catch (err: any) {
+    return res.status(500).json({ message: err?.message ?? "Internal Server Error" });
+  }
+};
+
+
+export const getYearlySales: RequestHandler = async (req, res) => {
+  try {
+    const { data: txs, error: tErr } = await supabase
+      .from("Transaction")
+      .select("Total, OrderDateTime");
+    if (tErr) return res.status(500).json({ message: tErr.message });
+
+    const { data: items, error: iErr } = await supabase
+      .from("Transaction_Item")
+      .select(`Quantity, Transaction:TransactionID ( OrderDateTime )`);
+    if (iErr) return res.status(500).json({ message: iErr.message });
+
+    const yearly: Record<string, { total: number; units: number }> = {};
+
+    for (const t of txs ?? []) {
+      const y = new Date(t.OrderDateTime).getFullYear();
+      if (!yearly[y]) yearly[y] = { total: 0, units: 0 };
+      yearly[y].total += Number(t.Total || 0);
+    }
+
+    for (const it of items ?? []) {
+      const tx = Array.isArray(it.Transaction) ? it.Transaction[0] : it.Transaction;
+      const y = new Date(tx!.OrderDateTime).getFullYear();
+      if (!yearly[y]) yearly[y] = { total: 0, units: 0 };
+      yearly[y].units += Number(it.Quantity || 0);
+    }
+
+    const data = Object.keys(yearly)
+      .sort()
+      .map((y) => ({
+        year: Number(y),
+        total: yearly[y].total,
+        units: yearly[y].units,
+      }));
+
+    return res.json({ data });
+  } catch (err: any) {
+    return res.status(500).json({ message: err?.message ?? "Internal Server Error" });
+  }
+};
