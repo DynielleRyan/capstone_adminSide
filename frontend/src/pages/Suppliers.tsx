@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import SupplierDetailsModal from '../components/SupplierDetailsModal'
 import { supplierService, SupplierResponse, SupplierFilters } from '../services/supplierService'
+import { Permissions } from '../utils/permissions'
 
 const Suppliers = () => {
   const navigate = useNavigate()
@@ -138,13 +139,15 @@ const Suppliers = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <button 
-            onClick={() => navigate('/suppliers/add')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            ADD SUPPLIER
-          </button>
+          {Permissions.canCreateSupplier() && (
+            <button 
+              onClick={() => navigate('/suppliers/add')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              ADD SUPPLIER
+            </button>
+          )}
         </div>
       </div>
 
@@ -212,17 +215,21 @@ const Suppliers = () => {
                             setIsSupplierDetailsOpen(true)
                           }}
                           className="text-blue-500 hover:text-blue-700 transition-colors"
+                          title="View details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            navigate('/suppliers/edit', { state: { supplier } })
-                          }}
-                          className="text-green-500 hover:text-green-700 transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                        {Permissions.canUpdateSupplier() && (
+                          <button
+                            onClick={() => {
+                              navigate('/suppliers/edit', { state: { supplier } })
+                            }}
+                            className="text-green-500 hover:text-green-700 transition-colors"
+                            title="Edit supplier"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

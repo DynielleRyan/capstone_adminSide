@@ -1,57 +1,21 @@
 import { useState, useEffect } from 'react'
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X } from 'lucide-react'
 import loadingService from '../services/loadingService'
-import { userService, UserResponse } from '../services/userService'
-import { authService } from '../services/authService'
+import { userService } from '../services/userService'
+import { useAuth } from '../hooks/useAuth'
 
 const UserProfile = () => {
-  const [user, setUser] = useState<UserResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user, isLoading: loading, refreshUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [editedContactNumber, setEditedContactNumber] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Fetch current authenticated user
-  const fetchCurrentUser = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Try to get current user from API
-      const response = await authService.getCurrentUser()
-      
-      if (response.success && response.data) {
-        setUser(response.data)
-        setEditedContactNumber(response.data.ContactNumber || '')
-      } else {
-        // If API call fails, try to get stored user
-        const storedUser = authService.getStoredUser()
-        if (storedUser) {
-          setUser(storedUser)
-          setEditedContactNumber(storedUser.ContactNumber || '')
-        } else {
-          setError('User not found. Please log in.')
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching user profile:', err)
-      // Try to get stored user as fallback
-      const storedUser = authService.getStoredUser()
-      if (storedUser) {
-        setUser(storedUser)
-        setEditedContactNumber(storedUser.ContactNumber || '')
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to fetch user profile')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Initialize contact number when user is loaded
   useEffect(() => {
-    fetchCurrentUser()
-  }, [])
+    if (user) {
+      setEditedContactNumber(user.ContactNumber || '')
+    }
+  }, [user])
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -75,7 +39,8 @@ const UserProfile = () => {
       })
 
       if (response.success && response.data) {
-        setUser(response.data)
+        // Refresh user data from API
+        await refreshUser()
         setIsEditing(false)
         loadingService.success('update-profile', 'Contact number updated successfully!')
       } else {
@@ -109,14 +74,19 @@ const UserProfile = () => {
     )
   }
 
-  if (error || !user) {
+  if (!loading && !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <p className="text-red-600 text-lg">{error || 'User not found'}</p>
+          <p className="text-red-600 text-lg">User not found. Please log in.</p>
         </div>
       </div>
     )
+  }
+
+  // Return null while loading or if user is null (shouldn't reach here based on above checks, but TypeScript safety)
+  if (!user) {
+    return null
   }
 
   return (

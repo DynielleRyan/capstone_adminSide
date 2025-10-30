@@ -84,27 +84,29 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
     // Check if email is verified
     const emailVerified = authData.user.email_confirmed_at !== null;
 
-    // Block ALL logins if email is NOT verified (no exceptions)
-    if (!emailVerified) {
-      // Sign out the user since we won't allow this login
-      await supabase.auth.signOut();
-      
-      res.status(403).json({
-        success: false,
-        message: 'Please verify your email before logging in. Check your inbox for the verification link.',
-        requiresEmailVerification: true
-      });
-      return;
-    }
+    // COMMENTED OUT FOR TESTING - Email verification check disabled
+    // // Block ALL logins if email is NOT verified (no exceptions)
+    // if (!emailVerified) {
+    //   // Sign out the user since we won't allow this login
+    //   await supabase.auth.signOut();
+    //   
+    //   res.status(403).json({
+    //     success: false,
+    //     message: 'Please verify your email before logging in. Check your inbox for the verification link.',
+    //     requiresEmailVerification: true
+    //   });
+    //   return;
+    // }
 
-    // Block non-Admin users from accessing admin side
-    if (user.Roles !== 'Admin') {
+    // Allow both Admin and Pharmacist users to access the system
+    // Block Clerk users from accessing this portal
+    if (user.Roles !== 'Admin' && user.Roles !== 'Pharmacist') {
       // Sign out the user since we won't allow this login
       await supabase.auth.signOut();
       
       res.status(403).json({
         success: false,
-        message: 'Access denied. This portal is for administrators only.'
+        message: 'Access denied. This portal is for administrators and pharmacists only.'
       });
       return;
     }
@@ -278,11 +280,11 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     
     console.log('Creating user with role:', userRole, 'from userData.Roles:', userData.Roles);
     
-    // Create user with email NOT confirmed - user MUST verify before they can login
+    // MODIFIED FOR TESTING - Email auto-confirmed for testing purposes
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.Email,
       password: userData.Password,
-      email_confirm: false,  // Email NOT confirmed - user cannot login until verified
+      email_confirm: true,  // FOR TESTING: Auto-confirm email so users can login immediately
       user_metadata: {
         first_name: userData.FirstName,
         last_name: userData.LastName,
@@ -312,9 +314,8 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Send verification email - user MUST verify before login
-    // Supabase will automatically send the confirmation email
-    console.log(`User created. Verification email will be sent to ${userData.Email}`);
+    // FOR TESTING: Verification email disabled - users can login immediately
+    console.log(`User created with auto-confirmed email: ${userData.Email}`);
 
     // Create user in our User table with the auth user ID
     const { data: newUser, error } = await supabase
@@ -345,14 +346,14 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    console.log(`User created successfully: ${userData.Email}. Verification email sent - user must verify before login.`);
+    console.log(`User created successfully: ${userData.Email}. Email auto-verified for testing.`);
 
     // Format user response
     const userResponse = formatUserResponse(newUser);
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully. Verification email sent - user must verify before login.',
+      message: 'User created successfully. You can now login immediately.',
       data: userResponse
     });
   } catch (error) {

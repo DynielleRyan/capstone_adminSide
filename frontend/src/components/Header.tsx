@@ -1,21 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bell, User, Search, LogOut, UserCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
-import { UserResponse } from "../services/userService";
+import { useAuth } from "../hooks/useAuth";
 
 const Header = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserResponse | null>(null);
+  const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
-
-  useEffect(() => {
-    // Get user from localStorage
-    const storedUser = authService.getStoredUser();
-    if (storedUser) {
-      setUser(storedUser);
-    }
-  }, []);
 
   const handleProfileClick = () => {
     setShowDropdown(false);

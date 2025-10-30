@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { userService, CreateUser, UserRole } from '../services/userService'
 import loadingService from '../services/loadingService'
+import { Permissions } from '../utils/permissions'
+import alertService from '../services/alertService'
 
 interface UserFormData {
   firstName: string
@@ -29,6 +31,14 @@ const AddUser = () => {
     address: '',
     role: ''
   })
+
+  // Check permissions on mount
+  useEffect(() => {
+    if (!Permissions.canCreateUser()) {
+      alertService.error('You do not have permission to create users')
+      navigate('/role-management')
+    }
+  }, [navigate])
 
   // Helper function to convert old role format to new Roles format
   const mapStringToRole = (roleString: string): UserRole => {

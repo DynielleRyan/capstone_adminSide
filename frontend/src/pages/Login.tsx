@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { authService } from '../services/authService'
+import { useAuth } from '../hooks/useAuth'
 
 const Login = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { isAuthenticated, user, isLoading } = useAuth()
   const [usernameOrEmail, setUsernameOrEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -15,11 +17,16 @@ const Login = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (authService.isAuthenticated()) {
-      const from = (location.state as any)?.from?.pathname || '/'
-      navigate(from, { replace: true })
+    if (!isLoading && isAuthenticated && user) {
+      // Redirect based on role
+      if (user.Roles === 'Pharmacist') {
+        navigate('/pharmacist/dashboard', { replace: true })
+      } else {
+        const from = (location.state as any)?.from?.pathname || '/'
+        navigate(from, { replace: true })
+      }
     }
-  }, [navigate, location])
+  }, [isAuthenticated, isLoading, user, navigate, location])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,10 +45,22 @@ const Login = () => {
         password
       })
 
-      if (response.success) {
-        // Navigate to the page they were trying to access, or dashboard
-        const from = (location.state as any)?.from?.pathname || '/'
-        navigate(from, { replace: true })
+      if (response.success && response.data?.user) {
+        // Get user role and redirect accordingly
+        const userRole = response.data.user.Roles
+        
+        // Redirect based on role
+        if (userRole === 'Pharmacist') {
+          // Pharmacist goes to pharmacist dashboard
+          navigate('/pharmacist/dashboard', { replace: true })
+        } else if (userRole === 'Admin') {
+          // Admin goes to admin dashboard or the page they were trying to access
+          const from = (location.state as any)?.from?.pathname || '/'
+          navigate(from, { replace: true })
+        } else {
+          // Default fallback (Clerk or other roles)
+          navigate('/', { replace: true })
+        }
       } else {
         setError(response.message || 'Login failed')
       }
