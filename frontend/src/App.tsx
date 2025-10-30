@@ -23,6 +23,9 @@ import AddUser from './pages/AddUser'
 import EditUser from './pages/EditUser'
 import AddSupplier from './pages/AddSupplier'
 import EditSupplier from './pages/EditSupplier'
+import ProductList from './pages/pharmacist/ProductList'
+import ProductUpload from './pages/pharmacist/ProductUpload'
+import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
 
 function App() {
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -117,6 +120,11 @@ function App() {
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
                 <Route path="/purchase-orders/new" element={<NewPurchaseOrder />} />
                 <Route path="/purchase-orders/:id" element={<UpdatePurchaseOrder />} />
+                
+                {/* Pharmacist Routes */}
+                <Route path="/pharmacist/dashboard" element={<PharmacistDashboard />} />
+                <Route path="/pharmacist/products/list" element={<ProductList />} />
+                <Route path="/pharmacist/products/upload" element={<ProductUpload />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

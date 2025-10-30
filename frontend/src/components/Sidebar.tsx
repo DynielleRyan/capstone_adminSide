@@ -11,11 +11,28 @@ import {
   ChevronDown,
   ShoppingBag,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 const Sidebar = () => {
   const location = useLocation();
+  const { isPharmacist } = useAuth();
 
-  const menuItems = [
+  // Pharmacist menu items
+  const pharmacistMenuItems = [
+    { path: "/pharmacist/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    {
+      path: "/pharmacist/products",
+      label: "Products",
+      icon: Package,
+      children: [
+        { path: "/pharmacist/products/list", label: "Product List", icon: Package },
+        { path: "/pharmacist/products/upload", label: "Product Upload", icon: Package },
+      ],
+    },
+  ];
+
+  // Admin/Clerk menu items (default)
+  const adminMenuItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
     { path: "/reports", label: "Report", icon: FileText },
     { path: "/transactions", label: "Transactions", icon: Receipt },
@@ -41,6 +58,9 @@ const Sidebar = () => {
     },
     { path: "/purchase-orders", label: "Purchase Order", icon: Package },
   ];
+
+  // Select menu items based on user role
+  const menuItems = isPharmacist ? pharmacistMenuItems : adminMenuItems;
 
   return (
     <aside className="w-64 bg-gray-50 border-r border-gray-200 h-full">

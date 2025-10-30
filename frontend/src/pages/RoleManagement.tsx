@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit3, ChevronLeft, ChevronRight } from 'lucide-react'
 import alertService from '../services/alertService'
 import { userService, UserResponse, UserFilters } from '../services/userService'
+import { useAuth } from '../hooks/useAuth'
+import { Permissions } from '../utils/permissions'
 
 const RoleManagement = () => {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('none')
   const [users, setUsers] = useState<UserResponse[]>([])
@@ -141,31 +144,43 @@ const RoleManagement = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <button 
-            onClick={() => navigate('/role-management/add')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            ADD USER
-          </button>
-          <button 
-            onClick={() => {
-              if (loading) {
-                alertService.warning('Please wait for users to load before editing.')
-                return
-              }
-              if (users.length === 0) {
-                alertService.info('No users available to edit. Please add users first.')
-                return
-              }
-              navigate('/role-management/edit')
-            }}
-            disabled={loading || users.length === 0}
-            className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Edit3 className="w-4 h-4" />
-            EDIT USER
-          </button>
+          {Permissions.canCreateUser() && (
+            <button 
+              onClick={() => navigate('/role-management/add')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              ADD USER
+            </button>
+          )}
+          {Permissions.canUpdateUser() && (
+            <button 
+              onClick={() => {
+                if (loading) {
+                  alertService.warning('Please wait for users to load before editing.')
+                  return
+                }
+                if (users.length === 0) {
+                  alertService.info('No users available to edit. Please add users first.')
+                  return
+                }
+                navigate('/role-management/edit')
+              }}
+              disabled={loading || users.length === 0}
+              className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Edit3 className="w-4 h-4" />
+              EDIT USER
+            </button>
+          )}
+          {!isAdmin && (
+            <div className="text-sm text-gray-500 flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              Admin-only features are restricted
+            </div>
+          )}
         </div>
       </div>
 
