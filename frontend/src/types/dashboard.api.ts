@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../services/api";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/dashboard`;
 // const API_BASE = import.meta.env.VITE_API_URL;
@@ -71,7 +71,7 @@ export type ExpiringRow = {
 
 //  DASHBOARD METRICS
 export async function getLowStockCount(threshold = 20): Promise<LowStockCount> {
-  const { data } = await axios.get<LowStockCount>(`${API_BASE}/lowstock`, {
+  const { data } = await api.get<LowStockCount>(`${API_BASE}/lowstock`, {
     params: { threshold },
   });
   return data;
@@ -81,7 +81,7 @@ export async function getExpiringCounts(
   warnMonths = 6,
   dangerMonths = 3
 ): Promise<ExpiringCounts> {
-  const { data } = await axios.get<ExpiringCounts>(`${API_BASE}/expire`, {
+  const { data } = await api.get<ExpiringCounts>(`${API_BASE}/expire`, {
     params: { warn_months: warnMonths, danger_months: dangerMonths },
   });
   return data;
@@ -91,7 +91,7 @@ export async function getTransactionsCount(
   from?: string,
   to?: string
 ): Promise<TransactionsCount> {
-  const { data } = await axios.get<TransactionsCount>(
+  const { data } = await api.get<TransactionsCount>(
     `${API_BASE}/transac_total`,
     { params: { from, to } }
   );
@@ -102,7 +102,7 @@ export async function getTotalSales(
   from?: string,
   to?: string
 ): Promise<TotalSales> {
-  const { data } = await axios.get<TotalSales>(`${API_BASE}/sales`, {
+  const { data } = await api.get<TotalSales>(`${API_BASE}/sales`, {
     params: { from, to },
   });
   return data;
@@ -110,7 +110,7 @@ export async function getTotalSales(
 
 //  CHART DATA (Sales over time)
 export async function getDailySales(days = 60) {
-  const { data } = await axios.get(`${API_BASE}/sales_day`, {
+  const { data } = await api.get(`${API_BASE}/sales_day`, {
     params: { days },
   });
   return data;
@@ -121,7 +121,7 @@ export async function getWeeklySales(
   from?: string,
   to?: string
 ): Promise<SalesResponse> {
-  const { data } = await axios.get<SalesResponse>(`${API_BASE}/sales_week`, {
+  const { data } = await api.get<SalesResponse>(`${API_BASE}/sales_week`, {
     params: { from, to },
   });
   return data;
@@ -131,7 +131,7 @@ export async function getMonthlySales(
   from?: string,
   to?: string
 ): Promise<SalesResponse> {
-  const { data } = await axios.get<SalesResponse>(`${API_BASE}/sales_month`, {
+  const { data } = await api.get<SalesResponse>(`${API_BASE}/sales_month`, {
     params: { from, to },
   });
   return data;
@@ -141,7 +141,7 @@ export async function getYearlySales(
   from?: string,
   to?: string
 ): Promise<SalesResponse> {
-  const { data } = await axios.get<SalesResponse>(`${API_BASE}/sales_year`, {
+  const { data } = await api.get<SalesResponse>(`${API_BASE}/sales_year`, {
     params: { from, to },
   });
   return data;
@@ -153,7 +153,7 @@ export async function listLowStock(
   limit = 100,
   offset = 0
 ): Promise<LowStockRow[]> {
-  const { data } = await axios.get<LowStockRow[]>(`${API_BASE}/lowstock_list`, {
+  const { data } = await api.get<LowStockRow[]>(`${API_BASE}/lowstock_list`, {
     params: { threshold, limit, offset },
   });
   return data;
@@ -165,7 +165,7 @@ export async function listExpiringBatches(
   limit = 0,
   offset = 0
 ): Promise<ExpiringRow[]> {
-  const { data } = await axios.get<ExpiringRow[]>(`${API_BASE}/expire_list`, {
+  const { data } = await api.get<ExpiringRow[]>(`${API_BASE}/expire_list`, {
     params: { months, danger, limit, offset },
   });
   return data;

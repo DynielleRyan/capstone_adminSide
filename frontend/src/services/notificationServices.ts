@@ -1,6 +1,7 @@
-// src/services/notificationService.ts
-const API_BASE = import.meta.env.VITE_API_URL; // example: "http://localhost:5001"
+// src/services/notificationServices.ts
+import api from "./api";
 
+// ========== TYPES ==========
 export interface LowStockItem {
   rowNo: number;
   productId: string;
@@ -19,32 +20,57 @@ export interface ExpiringBatch {
   expiryLevel: "warn" | "danger";
 }
 
-// Get total counts for badge
-export async function getNotificationCounts() {
-  const [lowRes, expRes] = await Promise.all([
-    fetch(`${API_BASE}/dashboard/lowstock`),
-    fetch(`${API_BASE}/dashboard/expire`),
+// Response shapes from backend
+interface LowStockCountResponse {
+  count: number;
+}
+
+interface ExpiringCountResponse {
+  total: number;
+  warn: number;
+  danger: number;
+}
+
+// ========== API CALLS ==========
+
+// 🔔 Badge counts
+export async function getNotificationCounts(): Promise<{
+  lowCount: number;
+  expTotal: number;
+  expWarn: number;
+  expDanger: number;
+}> {
+  const [low, exp] = await Promise.all([
+    api.get<LowStockCountResponse>("/dashboard/lowstock").then((r) => r.data),
+    api.get<ExpiringCountResponse>("/dashboard/expire").then((r) => r.data),
   ]);
 
-  const low = await lowRes.json();
-  const exp = await expRes.json();
-
   return {
-    lowCount: low.count ?? 0,
-    expTotal: exp.total ?? 0,
-    expWarn: exp.warn ?? 0,
-    expDanger: exp.danger ?? 0,
+    lowCount: low?.count ?? 0,
+    expTotal: exp?.total ?? 0,
+    expWarn: exp?.warn ?? 0,
+    expDanger: exp?.danger ?? 0,
   };
 }
 
-// Get actual items for dropdown
-export async function getNotificationLists() {
-  const [lowRes, expRes] = await Promise.all([
-    fetch(`${API_BASE}/dashboard/lowstock_list?limit=10`),
-    fetch(`${API_BASE}/dashboard/expire_list?limit=10`),
+// 📋 Lists for dropdown
+export async function getNotificationLists(
+  limit = 10
+): Promise<{
+  lowList: LowStockItem[];
+  expList: ExpiringBatch[];
+}> {
+  const [lowList, expList] = await Promise.all([
+    api
+      .get<LowStockItem[]>("/dashboard/lowstock_list", { params: { limit } })
+      .then((r) => r.data),
+    api
+      .get<ExpiringBatch[]>("/dashboard/expire_list", { params: { limit } })
+      .then((r) => r.data),
   ]);
+
   return {
-    lowList: await lowRes.json(),
-    expList: await expRes.json(),
+    lowList: Array.isArray(lowList) ? lowList : [],
+    expList: Array.isArray(expList) ? expList : [],
   };
 }

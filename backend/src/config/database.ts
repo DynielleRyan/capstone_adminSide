@@ -11,6 +11,10 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY in backend .env')
+}
+
 // For server-side operations that need service role key
 export const supabaseAdmin = createClient(
   supabaseUrl,

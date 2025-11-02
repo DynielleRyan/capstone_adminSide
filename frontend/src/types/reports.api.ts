@@ -1,5 +1,4 @@
-import axios from "axios";
-
+import api from "../services/api";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/reports`; 
 // const API_BASE = import.meta.env.VITE_API_URL;
@@ -45,7 +44,7 @@ export interface ReorderItem {
 export const getMonthlyTransactions = async (
   year: number
 ): Promise<MonthlyTransaction[]> => {
-  const res = await axios.get<{ year: number; series: MonthlyTransaction[] }>(
+  const res = await api.get<{ year: number; series: MonthlyTransaction[] }>(
     `${API_BASE}/transac_monthly`,
     { params: { year } }
   );
@@ -58,7 +57,7 @@ export const getYearlyTransactions = async (
   from: number,
   to: number
 ): Promise<YearlyTransaction[]> => {
-  const res = await axios.get<{ series: YearlyTransaction[] }>(
+  const res = await api.get<{ series: YearlyTransaction[] }>(
     `${API_BASE}/transac_yearly`,
     { params: { from, to } }
   );
@@ -70,7 +69,7 @@ export const getTopItems = async (
   type: "product" | "category" = "product",
   limit: number = 5
 ): Promise<TopItem[]> => {
-  const res = await axios.get<{ type: string; fromYear: number; toYear: number; limit: number; items: TopItem[] }>(
+  const res = await api.get<{ type: string; fromYear: number; toYear: number; limit: number; items: TopItem[] }>(
     `${API_BASE}/top_items`,
     { params: { type, limit } }
   );
@@ -81,7 +80,7 @@ export const getTopItems = async (
 // // 4. Get reorder level / low stock items
 
 export const getReorder = async (limit?: number): Promise<ReorderItem[]> => {
-  const res = await axios.get<ReorderItem[]>(`${API_BASE}/reorder`, {
+  const res = await api.get<ReorderItem[]>(`${API_BASE}/reorder`, {
     params: limit ? { limit } : {},   // will call .../reorder?limit=5
   });
   return res.data ?? [];

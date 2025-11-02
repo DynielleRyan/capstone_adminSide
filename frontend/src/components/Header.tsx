@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
-import { UserResponse } from "../services/userService";
+import { useAuth } from "../hooks/useAuth";
 import {
   getNotificationCounts,
   getNotificationLists,
@@ -19,7 +19,7 @@ import {
 
 const Header = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserResponse | null>(null);
+  const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
   //  Notifications
@@ -31,10 +31,6 @@ const Header = () => {
   const [loadingNotif, setLoadingNotif] = useState(false);
 
   // Load user from localStorage
-  useEffect(() => {
-    const storedUser = authService.getStoredUser();
-    if (storedUser) setUser(storedUser);
-  }, []);
 
   const handleProfileClick = () => {
     setShowDropdown(false);
@@ -222,6 +218,7 @@ const Header = () => {
               </span>
             </button>
 
+            {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                 <button

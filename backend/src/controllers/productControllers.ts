@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { supabase } from '../config/database';
+import { supabase, supabaseAdmin } from '../config/database';
 import {
   Product,
   CreateProduct,
@@ -14,6 +14,95 @@ import {
 // Helper function to format product response
 const formatProductResponse = (product: Product): ProductResponse => {
   return product as ProductResponse;
+};
+
+// Upload image to Supabase storage (base64 approach)
+export const uploadImage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { imageData, fileName } = req.body;
+
+    if (!imageData || !fileName) {
+      res.status(400).json({
+        success: false,
+        message: 'No image data or filename provided'
+      });
+      return;
+    }
+
+    // Extract base64 data and content type
+    const matches = imageData.match(/^data:(.+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid image data format'
+      });
+      return;
+    }
+
+    const contentType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Validate file size (max 5MB)
+    if (buffer.length > 5 * 1024 * 1024) {
+      res.status(400).json({
+        success: false,
+        message: 'Image size exceeds 5MB limit'
+      });
+      return;
+    }
+
+    // Validate content type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(contentType)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'
+      });
+      return;
+    }
+
+    // Generate unique file path
+    const fileExtension = fileName.split('.').pop();
+    const uniqueFileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExtension}`;
+    const filePath = `products/${uniqueFileName}`;
+
+    // Upload to Supabase storage
+    const { error } = await supabaseAdmin.storage
+      .from('product-images')
+      .upload(filePath, buffer, {
+        contentType: contentType,
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Error uploading image:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to storage'
+      });
+      return;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
+    res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: {
+        imageUrl: publicUrlData.publicUrl
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error'
+    });
+  }
 };
 
 // Get all products with optional filtering and pagination

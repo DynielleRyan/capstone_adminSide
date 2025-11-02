@@ -6,24 +6,25 @@ import {
   updateSupplier,
   deleteSupplier
 } from '../controllers/supplierControllers';
+import { authenticate, adminOrPharmacist } from '../middleware/auth';
 
 const router = Router();
 
-// Supplier CRUD routes
+// Supplier CRUD routes - All protected, Admin and Pharmacist only
 
 // Create a new supplier
-router.post('/', createSupplier);
+router.post('/', authenticate, adminOrPharmacist, createSupplier);
 
 // Get all suppliers with pagination and filtering
-router.get('/', getSuppliers);
+router.get('/', authenticate, adminOrPharmacist, getSuppliers);
 
 // Get supplier by ID
-router.get('/:id', getSupplierById);
+router.get('/:id', authenticate, adminOrPharmacist, getSupplierById);
 
 // Update supplier
-router.put('/:id', updateSupplier);
+router.put('/:id', authenticate, adminOrPharmacist, updateSupplier);
 
 // Delete supplier
-router.delete('/:id', deleteSupplier);
+router.delete('/:id', authenticate, adminOrPharmacist, deleteSupplier);
 
 export default router;

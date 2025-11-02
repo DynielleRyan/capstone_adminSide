@@ -1,7 +1,7 @@
 import api from './api'
 
-// User role type based on schema constraint (Admin excluded from frontend)
-export type UserRole = 'Pharmacist' | 'Clerk';
+// User role type - includes Admin for authentication purposes
+export type UserRole = 'Admin' | 'Pharmacist' | 'Clerk';
 
 // Types for user operations
 export interface User {

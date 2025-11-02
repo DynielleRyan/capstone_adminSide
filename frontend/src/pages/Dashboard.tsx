@@ -1,4 +1,3 @@
-// frontend/src/pages/Dashboard.tsx
 import { useNavigate } from "react-router-dom";
 import { useDashboard } from "../hooks/dashboard_hooks";
 import {
@@ -46,9 +45,9 @@ export default function Dashboard() {
   const disableAnim = safeChartData.length > 60;
 
   return (
-    <>
-      <div className="space-y-6 m-4">
-        <h1 className="text-3xl font-bold text-blue-700">DASHBOARD</h1>
+    <div className="bg-gray-50">
+      <div className="space-y-6 m-4 ">
+        <h1 className="text-3xl font-bold text-blue-900">DASHBOARD</h1>
 
         {/* top metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -402,7 +401,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
