@@ -10,9 +10,5 @@ export const Transactions = () => {
     fetchTransactions().then(setTransactions);
   }, []);
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <TransactionTable transactions={transactions} />
-    </div>
-  );
+  return <TransactionTable transactions={transactions} />;
 };

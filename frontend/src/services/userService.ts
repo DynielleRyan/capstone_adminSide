@@ -18,6 +18,7 @@ export interface User {
   CreatedAt?: Date
   UpdatedAt?: Date
   AuthUserID?: string
+  IsActive?: boolean
 }
 
 export interface CreateUser {
@@ -70,6 +71,7 @@ export interface UserResponse {
   CreatedAt?: Date
   UpdatedAt?: Date
   AuthUserID?: string
+  IsActive?: boolean
 }
 
 export interface UserWithPharmacist extends UserResponse {

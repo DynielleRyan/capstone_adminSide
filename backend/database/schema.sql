@@ -19,7 +19,8 @@ CREATE TABLE "User" (
     "CreatedAt" TIMESTAMP DEFAULT NOW(),
     "UpdatedAt" TIMESTAMP DEFAULT NOW(),
     "Roles" VARCHAR(50) NOT NULL CHECK ("Roles" IN ('Admin','Pharmacist', 'Clerk')) DEFAULT 'Admin',
-    "AuthUserID" UUID  NOT NULL
+    "AuthUserID" UUID  NOT NULL,
+    "IsActive" BOOLEAN DEFAULT true
 );
 
 -- Pharmacist table (inherits from User)
@@ -178,7 +179,7 @@ CREATE INDEX idx_product_item_expiry ON "Product_Item"("ExpiryDate");
 -- Transaction indexes
 CREATE INDEX idx_transaction_user ON "Transaction"("UserID");
 CREATE INDEX idx_transaction_pharmacist ON "Transaction"("PharmacistID");
-CREATE INDEX idx_transaction_date ON "Transaction"("OrderDateTime");
+CREATE INDEX idx_transaction_date ON "Transacti-on"("OrderDateTime");
 CREATE INDEX idx_transaction_reference ON "Transaction"("ReferenceNo");
 
 -- Transaction_Item indexes

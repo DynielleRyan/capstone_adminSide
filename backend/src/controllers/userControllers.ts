@@ -497,7 +497,8 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     let query = supabase
       .from('User')
       .select('*', { count: 'exact' })
-      .neq('Roles', 'Admin'); // Exclude Admin users from results
+      .neq('Roles', 'Admin') // Exclude Admin users from results
+      .eq('IsActive', true); // Only show active users
 
     // Apply filters
     if (search) {
@@ -665,15 +666,15 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// Delete user (hard delete)
+// Delete user (soft delete - sets IsActive to false)
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    // First check if user exists and get the AuthUserID
+    // First check if user exists
     const { data: existingUser, error: fetchError } = await supabase
       .from('User')
-      .select('UserID, AuthUserID')
+      .select('UserID, IsActive')
       .eq('UserID', id)
       .single();
 
@@ -685,36 +686,34 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Delete user from our User table
+    // Check if user is already inactive
+    if (existingUser.IsActive === false) {
+      res.status(400).json({
+        success: false,
+        message: 'User is already inactive'
+      });
+      return;
+    }
+
+    // Soft delete: Set IsActive to false
     const { error } = await supabase
       .from('User')
-      .delete()
+      .update({ IsActive: false, UpdatedAt: new Date() })
       .eq('UserID', id);
 
     if (error) {
-      console.error('Error deleting user from database:', error);
+      console.error('Error deactivating user:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to delete user from database',
+        message: 'Failed to deactivate user',
         error: error.message
       });
       return;
     }
 
-    // Also delete the user from Supabase Auth using AuthUserID
-    if (existingUser.AuthUserID) {
-      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.AuthUserID);
-      
-      if (authError) {
-        console.error('Error deleting user from auth:', authError);
-        // Don't fail the request if auth deletion fails, but log it
-        console.warn(`User ${id} deleted from database but not from auth: ${authError.message}`);
-      }
-    }
-
     res.status(200).json({
       success: true,
-      message: 'User deleted successfully'
+      message: 'User deactivated successfully'
     });
   } catch (error) {
     console.error('Error in deleteUser:', error);

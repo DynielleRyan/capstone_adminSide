@@ -16,6 +16,7 @@ export interface User {
   CreatedAt?: Date;
   UpdatedAt?: Date;
   AuthUserID?: string;
+  IsActive?: boolean;
 }
 
 // Interface for creating a new user (without auto-generated fields)
@@ -91,6 +92,7 @@ export interface UserResponse {
   CreatedAt?: Date;
   UpdatedAt?: Date;
   AuthUserID?: string;
+  IsActive?: boolean;
 }
 
 // User with pharmacist info

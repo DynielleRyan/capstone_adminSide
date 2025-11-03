@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import api from '../../services/api'
 import alertService from '../../services/alertService'
 import { authService } from '../../services/authService'
 import { productService, CreateProductData } from '../../services/productService'
+import { productItemService } from '../../services/productItemService'
+import api from '../../services/api'
 
 interface ProductFormData {
   name: string
@@ -182,8 +183,26 @@ const ProductUpload = () => {
       // Create product using product service
       const response = await productService.createProduct(productData)
 
-      if (response.success) {
-        alertService.success('Product added successfully!')
+      if (response.success && response.data && response.data.ProductID) {
+        // Create Product_Item for inventory tracking
+        try {
+          const productItemResponse = await productItemService.createProductItem({
+            ProductID: response.data.ProductID,
+            UserID: currentUser.UserID,
+            Stock: parseInt(formData.quantity),
+            ExpiryDate: formData.expiry,
+            IsActive: true
+          })
+
+          if (productItemResponse.success) {
+            alertService.success('Product and inventory added successfully!')
+          } else {
+            alertService.warning('Product created but inventory tracking failed')
+          }
+        } catch (inventoryError) {
+          console.error('Error creating product inventory:', inventoryError)
+          alertService.warning('Product created but inventory tracking failed')
+        }
         
         // Reset form
         setFormData({

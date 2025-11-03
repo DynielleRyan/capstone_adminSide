@@ -26,7 +26,7 @@ const RoleManagement = () => {
       
       const filters: UserFilters = {
         page,
-        limit: 50, // Increase limit to reduce API calls
+        limit: 10, // Display 10 items per page
         search: search || undefined
       }
       

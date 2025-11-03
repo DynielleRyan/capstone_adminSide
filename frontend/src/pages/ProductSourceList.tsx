@@ -21,7 +21,7 @@ const ProductSourceList = () => {
       
       const params: ProductSourceListParams = {
         page,
-        limit: 10,
+        limit: 10, // Display 10 items per page
         search: search || undefined,
         sortBy: sort !== 'none' ? sort : undefined
       }
