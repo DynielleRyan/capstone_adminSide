@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes'
 import userRoutes from './routes/userRoutes'
 import supplierRoutes from './routes/supplierRoutes'
 import productRoutes from './routes/productRoutes'
+import productItemRoutes from './routes/productItemRoutes'
 import transactionRoutes from './routes/transactionRoutes'
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes'
 import reportRoutes from './routes/report.routes'
@@ -50,6 +51,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/suppliers', supplierRoutes)
 app.use('/api/products', productRoutes)
+app.use('/api/product-items', productItemRoutes)
 app.use("/api/transactions", transactionRoutes)
 app.use("/api/purchase-orders", purchaseOrderRoutes)
 app.use("/api/reports", reportRoutes)

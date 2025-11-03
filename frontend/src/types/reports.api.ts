@@ -1,7 +1,7 @@
 import api from "../services/api";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/reports`; 
-// const API_BASE = import.meta.env.VITE_API_URL;
+// 🧩 Your base URL (make sure this points to your backend)
+const API_BASE = "/reports"; 
 
 // ---------------- TYPES ----------------
 

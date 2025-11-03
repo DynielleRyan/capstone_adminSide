@@ -1,6 +1,6 @@
 import { getDailySales, getExpiringCounts, getLowStockCount, getMonthlySales, getTotalSales, getTransactionsCount, getWeeklySales, getYearlySales, listExpiringBatches, listLowStock } from "../controllers/dashboard.controllers";
 import { Router } from "express";
-import { authenticate, adminOrPharmacist, adminOnly } from "../middleware/auth";
+import { authenticate, adminOrPharmacist } from "../middleware/auth";
 
 const router = Router();
 

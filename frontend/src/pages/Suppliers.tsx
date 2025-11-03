@@ -40,7 +40,7 @@ const Suppliers = () => {
 
         const filters: SupplierFilters = {
           page,
-          limit: 10, // Match the image pagination
+          limit: 10, // Display 10 items per page
           search: search || undefined,
         };
 

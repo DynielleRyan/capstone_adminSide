@@ -76,6 +76,11 @@ const Sidebar = () => {
               item.children.some((child) => location.pathname === child.path));
 
           if (item.children) {
+            // Determine navigation path: for Suppliers, go to parent; for others, go to first child
+            const navigationPath = item.path === "/suppliers" 
+              ? item.path 
+              : item.children[0].path;
+
             return (
               <li key={item.path}>
                 <details open={isActive}>
@@ -85,7 +90,7 @@ const Sidebar = () => {
                     }`}
                   >
                     <Link
-                      to={item.path}
+                      to={navigationPath}
                       className="flex items-center gap-3 flex-1"
                       onClick={(e) => e.stopPropagation()}
                     >
