@@ -1,76 +1,32 @@
-// src/services/notificationServices.ts
+// frontend/src/services/notificationServices.ts
 import api from "./api";
 
-// ========== TYPES ==========
-export interface LowStockItem {
-  rowNo: number;
-  productId: string;
-  name: string;
-  qty: number;
-  expiry: string | null;
+export type BellNotif = {
+  id: string;
+  title: string;
+  message: string;
+  severity: "info" | "warning" | "danger";
+  created_at: string;
+  is_read: boolean;
+};
+
+export async function fetchNotifications(unread = true, limit = 20) {
+  const { data } = await api.get<{ items: BellNotif[]; unread: number }>(
+    "/notifications",
+    { params: { unread: unread ? 1 : 0, limit } }
+  );
+  return data;
 }
 
-export interface ExpiringBatch {
-  productItemId: string;
-  productId: string;
-  productName: string;
-  expiryDate: string;
-  daysLeft: number;
-  qty: number;
-  expiryLevel: "warn" | "danger";
+export async function markNotificationsRead(ids: string[]) {
+  const { data } = await api.patch<{ updated: number; unread: number }>(
+    "/notifications/read",
+    { ids }
+  );
+  return data;
 }
 
-// Response shapes from backend
-interface LowStockCountResponse {
-  count: number;
-}
-
-interface ExpiringCountResponse {
-  total: number;
-  warn: number;
-  danger: number;
-}
-
-// ========== API CALLS ==========
-
-// 🔔 Badge counts
-export async function getNotificationCounts(): Promise<{
-  lowCount: number;
-  expTotal: number;
-  expWarn: number;
-  expDanger: number;
-}> {
-  const [low, exp] = await Promise.all([
-    api.get<LowStockCountResponse>("/dashboard/lowstock").then((r) => r.data),
-    api.get<ExpiringCountResponse>("/dashboard/expire").then((r) => r.data),
-  ]);
-
-  return {
-    lowCount: low?.count ?? 0,
-    expTotal: exp?.total ?? 0,
-    expWarn: exp?.warn ?? 0,
-    expDanger: exp?.danger ?? 0,
-  };
-}
-
-// 📋 Lists for dropdown
-export async function getNotificationLists(
-  limit = 10
-): Promise<{
-  lowList: LowStockItem[];
-  expList: ExpiringBatch[];
-}> {
-  const [lowList, expList] = await Promise.all([
-    api
-      .get<LowStockItem[]>("/dashboard/lowstock_list", { params: { limit } })
-      .then((r) => r.data),
-    api
-      .get<ExpiringBatch[]>("/dashboard/expire_list", { params: { limit } })
-      .then((r) => r.data),
-  ]);
-
-  return {
-    lowList: Array.isArray(lowList) ? lowList : [],
-    expList: Array.isArray(expList) ? expList : [],
-  };
+export async function triggerScan() {
+  const { data } = await api.post<{ inserted: number }>("/notifications/scan");
+  return data;
 }

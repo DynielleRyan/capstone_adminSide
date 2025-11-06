@@ -14,7 +14,7 @@ import transactionRoutes from './routes/transactionRoutes'
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes'
 import reportRoutes from './routes/report.routes'
 import dashboard from './routes/dashboard.routes'
-
+import notifRoutes from './routes/notifications.routes'
 
 
 // Load environment variables
@@ -56,7 +56,7 @@ app.use("/api/transactions", transactionRoutes)
 app.use("/api/purchase-orders", purchaseOrderRoutes)
 app.use("/api/reports", reportRoutes)
 app.use("/api/dashboard", dashboard)
-
+app.use("/api/notifications", notifRoutes)
 
 // Error handling middleware
 

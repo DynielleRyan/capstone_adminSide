@@ -1,5 +1,5 @@
 // ===============================
-// 🧭 Dashboard Hooks
+//  Dashboard Hooks
 // ===============================
 // - Fetches top metrics (low stock, expiring, transactions, total sales)
 // - Optional: Preload lists for inline pages (no modals)

@@ -27,7 +27,7 @@ function DownloadModal({
   if (!isOpen) return null;
 
   return (
-    <div className="drawer-content transform-none ">
+    <div className="drawer-content transform-none  ">
       <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50">
         <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
           <div className="px-6 py-4 border-b border-gray-200">
@@ -106,7 +106,7 @@ export default function Reports() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Total Transactions */}
           <div className="flex-1">
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-gray-50 ">
               <div className="px-6 py-4 flex justify-end border-b border-gray-200">
                 <button
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -178,7 +178,7 @@ export default function Reports() {
 
           {/* Top Selling */}
           <div className="flex-1">
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-gray-50 ">
               <div className="px-6 py-4 flex justify-end border-b border-gray-200">
                 <button
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -259,8 +259,8 @@ export default function Reports() {
         </div>
 
         {/* Reorder Level */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 flex justify-end border-b border-gray-200">
+        <div className="bg-gray-50 ">
+          <div className="px-6 py-4 flex justify-end border-b border-gray-200 ">
             <button
               className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
               onClick={() =>
@@ -271,7 +271,7 @@ export default function Reports() {
             </button>
           </div>
 
-          <div className="bg-white rounded-lg p-6 min-w-0">
+          <div className="bg-white rounded-lg p-6 min-w-0 shadow">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-lg">
                 Reorder Level for Low on Stock

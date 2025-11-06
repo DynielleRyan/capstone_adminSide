@@ -124,7 +124,7 @@ export function report_hooks() {
   );
 
   // ===============================
-  // 💾 CSV EXPORT FUNCTIONS
+  //  CSV EXPORT FUNCTIONS
   // ===============================
   const downloadChartCSV = () => {
     if (mode === "month") {

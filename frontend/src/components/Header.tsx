@@ -1,20 +1,14 @@
 import { useState, useEffect } from "react";
-import {
-  Bell,
-  User,
-  Search,
-  LogOut,
-  UserCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { Bell, User, Search, LogOut, UserCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
+
+// ✅ Keep only these two
 import {
-  getNotificationCounts,
-  getNotificationLists,
-  type LowStockItem,
-  type ExpiringBatch,
+  fetchNotifications,
+  markNotificationsRead,
+  triggerScan,
 } from "../services/notificationServices";
 
 const Header = () => {
@@ -22,15 +16,20 @@ const Header = () => {
   const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
-  //  Notifications
+  // 🔔 Notifications state
   const [notifOpen, setNotifOpen] = useState(false);
-  const [lowStock, setLowStock] = useState<LowStockItem[]>([]);
-  const [expiring, setExpiring] = useState<ExpiringBatch[]>([]);
-  const [lowCount, setLowCount] = useState(0);
-  const [expCount, setExpCount] = useState(0);
+  const [notifications, setNotifications] = useState<
+    Array<{
+      id: string;
+      title: string;
+      message: string;
+      severity: "info" | "warning" | "danger";
+      created_at: string;
+      is_read: boolean;
+    }>
+  >([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotif, setLoadingNotif] = useState(false);
-
-  // Load user from localStorage
 
   const handleProfileClick = () => {
     setShowDropdown(false);
@@ -46,55 +45,65 @@ const Header = () => {
     }
   };
 
-  const getUserDisplayName = () => {
-    if (!user) return "User";
-    return `${user.FirstName} ${user.LastName}`;
-  };
+  const getUserDisplayName = () =>
+    !user ? "User" : `${user.FirstName} ${user.LastName}`;
 
   // =====================
   // 🔔 Notification logic
   // =====================
-
-  // Fetch counts for the badge
-  async function loadNotifCounts() {
+  async function loadNotifications() {
     try {
-      const { lowCount, expTotal } = await getNotificationCounts();
-      setLowCount(lowCount);
-      setExpCount(expTotal);
+      setLoadingNotif(true);
+      const { items, unread } = await fetchNotifications(); // GET /api/notifications
+
+      const list = items ?? [];
+      setNotifications(list);
+
+      // Fallback: if server sends 0, compute from the list
+      const computed = list.filter((n) => !n.is_read).length;
+      setUnreadCount(unread ?? computed);
     } catch (err) {
-      console.error("Notif count error:", err);
+      console.error("Notification fetch error:", err);
+    } finally {
+      setLoadingNotif(false);
     }
   }
 
-  // Fetch item details for dropdown
-  async function loadNotifList() {
-    setLoadingNotif(true);
+  async function handleMarkAllRead() {
     try {
-      const { lowList, expList } = await getNotificationLists();
-      setLowStock(lowList);
-      setExpiring(expList);
+      const ids = notifications.filter((n) => !n.is_read).map((n) => n.id);
+      if (!ids.length) return;
+
+      await markNotificationsRead(ids); // PATCH /api/notifications/read
+      // re-fetch to recompute the unread count and list
+      await loadNotifications();
     } catch (err) {
-      console.error("Notif list error:", err);
+      console.error("Mark all read failed:", err);
+    }
+  }
+
+  async function handleRefresh() {
+    try {
+      setLoadingNotif(true);
+      await triggerScan();
+      await loadNotifications(); // ✅ just reload
+    } catch (err) {
+      console.error("Refresh failed:", err);
     } finally {
       setLoadingNotif(false);
     }
   }
 
   useEffect(() => {
-    loadNotifCounts();
-    const interval = setInterval(loadNotifCounts, 30_000); // refresh every 30s
-    return () => clearInterval(interval);
+    loadNotifications(); // initial load
+    const id = setInterval(loadNotifications, 60_000); // auto refresh every 60s
+    return () => clearInterval(id);
   }, []);
 
-  const badgeCount = lowCount + expCount;
-
-  // When user opens the notification bell
   const toggleNotif = async () => {
     const next = !notifOpen;
     setNotifOpen(next);
-    if (next) {
-      await loadNotifList();
-    }
+    if (next) await loadNotifications();
   };
 
   return (
@@ -126,80 +135,63 @@ const Header = () => {
               className="p-2 hover:bg-gray-100 rounded-full relative"
             >
               <Bell className="w-6 h-6 text-gray-600" />
-              {badgeCount > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {badgeCount > 99 ? "99+" : badgeCount}
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Dropdown */}
             {notifOpen && (
-              <div className="absolute right-0 mt-2 w-96 max-h-[400px] overflow-y-auto bg-white border rounded-xl shadow-lg z-50">
-                <div className="p-3 font-semibold border-b">Notifications</div>
+              <div className="absolute right-0 mt-2 w-96 max-h-[420px] overflow-y-auto bg-white border rounded-xl shadow-lg z-50">
+                <div className="p-3 font-semibold border-b flex items-center justify-between">
+                  <span>Notifications</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Mark all as read
+                    </button>
+                    <button
+                      onClick={handleRefresh}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
                 {loadingNotif && (
                   <div className="p-3 text-sm text-gray-500">Loading…</div>
                 )}
-                {!loadingNotif && (
-                  <div className="divide-y text-sm">
-                    {/* Low Stock */}
-                    {lowStock.length > 0 && (
-                      <div className="p-3">
-                        <div className="text-xs font-semibold mb-2 uppercase text-gray-500">
-                          Low Stock
-                        </div>
-                        {lowStock.map((item) => (
-                          <div key={item.productId} className="mb-2">
-                            <div className="font-medium">{item.name}</div>
-                            <div className="text-xs text-gray-600">
-                              Quantity: {item.qty}{" "}
-                              {item.expiry &&
-                                `| Earliest Expiry: ${item.expiry}`}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
-                    {/* Expiring Soon */}
-                    {expiring.length > 0 && (
-                      <div className="p-3">
-                        <div className="text-xs font-semibold mb-2 uppercase text-gray-500">
-                          Expiring Soon
-                        </div>
-                        {expiring.map((batch) => (
-                          <div key={batch.productItemId} className="mb-2">
-                            <div className="font-medium flex items-center gap-1">
-                              {batch.expiryLevel === "danger" && (
-                                <AlertTriangle className="w-4 h-4 text-red-500" />
-                              )}
-                              {batch.productName}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              Expires on: {batch.expiryDate} | Days left:{" "}
-                              {batch.daysLeft} | Qty: {batch.qty}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* If nothing */}
-                    {lowStock.length === 0 && expiring.length === 0 && (
-                      <div className="p-3 text-gray-500 text-sm">
-                        No notifications 🎉
-                      </div>
-                    )}
+                {!loadingNotif && notifications.length === 0 && (
+                  <div className="p-3 text-gray-500 text-sm">
+                    No notifications 🎉
                   </div>
                 )}
-                <div className="p-2 border-t text-right">
-                  <button
-                    onClick={loadNotifList}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Refresh
-                  </button>
-                </div>
+
+                {!loadingNotif && notifications.length > 0 && (
+                  <div className="divide-y text-sm">
+                    {notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-3 ${
+                          !n.is_read ? "bg-blue-50" : ""
+                        } hover:bg-gray-50 transition-colors`}
+                      >
+                        <div className="font-medium text-gray-800">
+                          {n.title}
+                        </div>
+                        <div className="text-xs text-gray-600">{n.message}</div>
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          {new Date(n.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -218,7 +210,6 @@ const Header = () => {
               </span>
             </button>
 
-            {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                 <button
@@ -242,7 +233,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Click outside to close dropdowns */}
       {(showDropdown || notifOpen) && (
         <div
           className="fixed inset-0 z-40"
