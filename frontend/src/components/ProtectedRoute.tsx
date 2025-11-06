@@ -1,59 +1,59 @@
-import { useState, useEffect } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
-import { authService } from '../services/authService'
+import { useState, useEffect } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { authService } from "../services/authService";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
-  requiredRoles?: string[] // Optional: specify which roles can access this route
+  children: React.ReactNode;
+  requiredRoles?: string[]; // Optional: specify which roles can access this route
 }
 
 const ProtectedRoute = ({ children, requiredRoles }: ProtectedRouteProps) => {
-  const location = useLocation()
-  const [isAuthenticating, setIsAuthenticating] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [hasPermission, setHasPermission] = useState(false)
+  const location = useLocation();
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         // First, do a quick check
-        const quickCheck = authService.isAuthenticated()
-        
+        const quickCheck = authService.isAuthenticated();
+
         if (!quickCheck) {
-          setIsAuthenticated(false)
-          setIsAuthenticating(false)
-          return
+          setIsAuthenticated(false);
+          setIsAuthenticating(false);
+          return;
         }
 
         // If quick check passes, validate and potentially refresh token
-        const isValid = await authService.validateAndRefreshToken()
-        setIsAuthenticated(isValid)
+        const isValid = await authService.validateAndRefreshToken();
+        setIsAuthenticated(isValid);
 
         // Check role-based permissions if required
         if (isValid && requiredRoles && requiredRoles.length > 0) {
-          const user = authService.getStoredUser()
+          const user = authService.getStoredUser();
           if (user && user.Roles) {
             // Check if user's role is in the required roles list
-            const userHasRole = requiredRoles.includes(user.Roles)
-            setHasPermission(userHasRole)
+            const userHasRole = requiredRoles.includes(user.Roles);
+            setHasPermission(userHasRole);
           } else {
-            setHasPermission(false)
+            setHasPermission(false);
           }
         } else {
           // No specific role required, or user is valid
-          setHasPermission(true)
+          setHasPermission(true);
         }
       } catch (error) {
-        console.error('Authentication check failed:', error)
-        setIsAuthenticated(false)
-        setHasPermission(false)
+        console.error("Authentication check failed:", error);
+        setIsAuthenticated(false);
+        setHasPermission(false);
       } finally {
-        setIsAuthenticating(false)
+        setIsAuthenticating(false);
       }
-    }
+    };
 
-    checkAuth()
-  }, [requiredRoles])
+    checkAuth();
+  }, [requiredRoles]);
 
   // Show loading state while checking authentication
   if (isAuthenticating) {
@@ -64,12 +64,12 @@ const ProtectedRoute = ({ children, requiredRoles }: ProtectedRouteProps) => {
           <p className="mt-4 text-gray-600">Authenticating...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isAuthenticated) {
     // Redirect to login page but save the location they were trying to access
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (!hasPermission) {
@@ -91,7 +91,9 @@ const ProtectedRoute = ({ children, requiredRoles }: ProtectedRouteProps) => {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Access Denied
+            </h2>
             <p className="text-gray-600 mb-4">
               You do not have permission to access this page.
             </p>
@@ -104,11 +106,10 @@ const ProtectedRoute = ({ children, requiredRoles }: ProtectedRouteProps) => {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  return <>{children}</>
-}
+  return <>{children}</>;
+};
 
-export default ProtectedRoute
-
+export default ProtectedRoute;

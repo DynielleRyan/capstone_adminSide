@@ -21,3 +21,9 @@ export const fetchTransactionWithItems = async (id: string): Promise<Transaction
     return null;
   }
 };  
+
+export const fetchTransactionQtyMap = async (ids?: string[]) => {
+  const qs = ids?.length ? `?ids=${ids.join(',')}` : '';
+  const { data } = await api.get<Record<string, number>>(`/transactions/quantities${qs}`);
+  return data;
+};

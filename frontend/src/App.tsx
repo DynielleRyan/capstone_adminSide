@@ -1,48 +1,48 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ToastContainer } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
-import Layout from './components/Layout'
-import ProtectedRoute from './components/ProtectedRoute'
-import ConfirmDialog from './components/ConfirmDialog'
-import Dashboard from './pages/Dashboard'
-import Inventory from './pages/Inventory'
+import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ConfirmDialog from "./components/ConfirmDialog";
+import Dashboard from "./pages/Dashboard";
+import Inventory from "./pages/Inventory";
 // import Customers from './pages/Customers'
-import Reports from './pages/Reports'
-import RoleManagement from './pages/RoleManagement'
-import Suppliers from './pages/Suppliers'
-import ProductSourceList from './pages/ProductSourceList'
-import UserProfile from './pages/UserProfile'
-import Login from './pages/Login'
-import alertService from './services/alertService'
-import { Transactions } from './pages/Transactions'
-import { PurchaseOrders } from './pages/PurchaseOrder'
-import { NewPurchaseOrder } from './pages/NewPurchaseOrder'
-import { UpdatePurchaseOrder } from './pages/UpdatePurchaseOrder'
-import AddUser from './pages/AddUser'
-import EditUser from './pages/EditUser'
-import AddSupplier from './pages/AddSupplier'
-import EditSupplier from './pages/EditSupplier'
-import ProductList from './pages/pharmacist/ProductList'
-import ProductUpload from './pages/pharmacist/ProductUpload'
-import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
+import Reports from "./pages/Reports";
+import RoleManagement from "./pages/RoleManagement";
+import Suppliers from "./pages/Suppliers";
+import ProductSourceList from "./pages/ProductSourceList";
+import UserProfile from "./pages/UserProfile";
+import Login from "./pages/Login";
+import alertService from "./services/alertService";
+import { Transactions } from "./pages/Transactions";
+import { PurchaseOrders } from "./pages/PurchaseOrder";
+import { NewPurchaseOrder } from "./pages/NewPurchaseOrder";
+import { UpdatePurchaseOrder } from "./pages/UpdatePurchaseOrder";
+import AddUser from "./pages/AddUser";
+import EditUser from "./pages/EditUser";
+import AddSupplier from "./pages/AddSupplier";
+import EditSupplier from "./pages/EditSupplier";
+import ProductList from "./pages/pharmacist/ProductList";
+import ProductUpload from "./pages/pharmacist/ProductUpload";
+import PharmacistDashboard from "./pages/pharmacist/PharmacistDashboard";
 
 function App() {
   const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean
-    message: string
-    title?: string
-    confirmText?: string
-    cancelText?: string
-    variant?: 'danger' | 'warning' | 'info'
-    onConfirm: () => void
-    onCancel: () => void
+    isOpen: boolean;
+    message: string;
+    title?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: "danger" | "warning" | "info";
+    onConfirm: () => void;
+    onCancel: () => void;
   }>({
     isOpen: false,
-    message: '',
+    message: "",
     onConfirm: () => {},
-    onCancel: () => {}
-  })
+    onCancel: () => {},
+  });
 
   // Set up the confirm handler for alertService
   useEffect(() => {
@@ -56,17 +56,17 @@ function App() {
           cancelText: options?.cancelText,
           variant: options?.variant,
           onConfirm: () => {
-            setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-            resolve(true)
+            setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+            resolve(true);
           },
           onCancel: () => {
-            setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-            resolve(false)
-          }
-        })
-      })
-    })
-  }, [])
+            setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+            resolve(false);
+          },
+        });
+      });
+    });
+  }, []);
 
   return (
     <Router>
@@ -99,39 +99,60 @@ function App() {
       <Routes>
         {/* Login route without Layout */}
         <Route path="/login" element={<Login />} />
-        
+
         {/* Protected routes with Layout */}
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/inventory" element={<Inventory />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/role-management" element={<RoleManagement />} />
-                <Route path="/role-management/add" element={<AddUser />} />
-                <Route path="/role-management/edit" element={<EditUser />} />
-                <Route path="/suppliers" element={<Suppliers />} />
-                <Route path="/suppliers/add" element={<AddSupplier />} />
-                <Route path="/suppliers/edit" element={<EditSupplier />} />
-                <Route path="/product-source-list" element={<ProductSourceList />} />
-                <Route path="/profile" element={<UserProfile />} />
-                <Route path="/transactions" element={<Transactions />} />
-                <Route path="/purchase-orders" element={<PurchaseOrders />} />
-                <Route path="/purchase-orders/new" element={<NewPurchaseOrder />} />
-                <Route path="/purchase-orders/:id" element={<UpdatePurchaseOrder />} />
-                
-                {/* Pharmacist Routes */}
-                <Route path="/pharmacist/dashboard" element={<PharmacistDashboard />} />
-                <Route path="/pharmacist/products/list" element={<ProductList />} />
-                <Route path="/pharmacist/products/upload" element={<ProductUpload />} />
-              </Routes>
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/role-management" element={<RoleManagement />} />
+                  <Route path="/role-management/add" element={<AddUser />} />
+                  <Route path="/role-management/edit" element={<EditUser />} />
+                  <Route path="/suppliers" element={<Suppliers />} />
+                  <Route path="/suppliers/add" element={<AddSupplier />} />
+                  <Route path="/suppliers/edit" element={<EditSupplier />} />
+                  <Route
+                    path="/product-source-list"
+                    element={<ProductSourceList />}
+                  />
+                  <Route path="/profile" element={<UserProfile />} />
+                  <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                  <Route
+                    path="/purchase-orders/new"
+                    element={<NewPurchaseOrder />}
+                  />
+                  <Route
+                    path="/purchase-orders/:id"
+                    element={<UpdatePurchaseOrder />}
+                  />
+
+                  {/* Pharmacist Routes */}
+                  <Route
+                    path="/pharmacist/dashboard"
+                    element={<PharmacistDashboard />}
+                  />
+                  <Route
+                    path="/pharmacist/products/list"
+                    element={<ProductList />}
+                  />
+                  <Route
+                    path="/pharmacist/products/upload"
+                    element={<ProductUpload />}
+                  />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;

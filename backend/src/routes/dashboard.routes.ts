@@ -1,4 +1,4 @@
-import { getExpiringCounts, getLowStockCount, getMonthlySales, getTotalSales, getTransactionsCount, listExpiringBatches, listLowStock } from "../controllers/dashboard.controllers";
+import { getDailySales, getExpiringCounts, getLowStockCount, getMonthlySales, getTotalSales, getTransactionsCount, getWeeklySales, getYearlySales, listExpiringBatches, listLowStock } from "../controllers/dashboard.controllers";
 import { Router } from "express";
 import { authenticate, adminOrPharmacist } from "../middleware/auth";
 
@@ -13,5 +13,8 @@ router.get("/expire_list", authenticate, adminOrPharmacist, listExpiringBatches)
 router.get("/transac_total", authenticate, adminOrPharmacist, getTransactionsCount);
 router.get("/sales", authenticate, adminOrPharmacist, getTotalSales);
 router.get("/sales_month", authenticate, adminOrPharmacist, getMonthlySales);
+router.get("/sales_day",authenticate, adminOrPharmacist, getDailySales);
+router.get("/sales_week",authenticate, adminOrPharmacist, getWeeklySales);
+router.get("/sales_year",authenticate, adminOrPharmacist, getYearlySales);
 
 export default router;
