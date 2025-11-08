@@ -1,11 +1,10 @@
 /* eslint-disable react/forbid-dom-props */
-import { useMemo, useState, useEffect } from "react";
-import { Transaction } from "../types/transactions";
-import { TransactionItem } from "../types/transactionItems";
-import { fetchTransactionWithItems } from "../services/transactionService";
-import { fetchTransactionQtyMap } from "../services/transactionService";
-import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState, useEffect } from 'react';
+import { Transaction } from '../types/transactions';
+import { TransactionItem } from '../types/transactionItems';
+import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
+import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
   transactions: Transaction[];
@@ -30,6 +29,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       .then(setQtyMap)
       .catch(() => setQtyMap({}));
   }, [transactions]);
+    
 
   const handleView = async (id: string) => {
     const result = await fetchTransactionWithItems(id);
@@ -48,6 +48,17 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     ) as HTMLDialogElement;
     modal?.showModal();
   };
+
+  // Calculate the total discount in each transaction
+  const calculateTotalDiscount = (items: TransactionItem[]): number => {
+    return items.reduce((sum, item) => {
+      const discountPercent = item.DiscountID ? item.Discount?.DiscountPercent || 0 : 0;
+      const discountAmount = (discountPercent / 100) * (item.Product.SellingPrice*item.Quantity);
+      return sum + discountAmount;
+    }, 0);
+  };
+  
+  
 
   const handleDownloadCSV = () => {
     // Prepare CSV headers for all Transaction table columns (excluding User table)
@@ -107,12 +118,9 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
 
     return transactions.filter((tx) => {
       const txnId = String(tx.TransactionID).toLowerCase();
-      const staffName =
-        `${tx.User.FirstName} ${tx.User.LastName}`.toLowerCase();
-      const payment = String(tx.PaymentMethod).toLowerCase(); // static for now
-      const date = new Date(tx.OrderDateTime)
-        .toLocaleDateString()
-        .toLowerCase();
+      const staffName = `${tx.User.FirstName} ${tx.User.LastName}`.toLowerCase();
+      const payment = String(tx.PaymentMethod).toLowerCase();
+      const date = new Date(tx.OrderDateTime).toLocaleDateString().toLowerCase();
       const total = tx.Total.toFixed(2).toLowerCase();
 
       return (
@@ -230,73 +238,70 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
 
       {/* Transaction Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-blue-900 text-white">
-              <tr>
-                <th className="px-6 py-4 text-left font-semibold">TXN ID</th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  DATE ORDERED
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">STAFF</th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  PAYMENT METHOD
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">QTY</th>
-                <th className="px-6 py-4 text-left font-semibold">TOTAL</th>
-                <th className="px-6 py-4 text-left font-semibold">VIEW</th>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-blue-900 text-white">
+            <tr>
+              <th className="px-6 py-4 text-left font-semibold">TXN ID</th>
+              <th className="px-6 py-4 text-left font-semibold">DATE ORDERED</th>
+              <th className="px-6 py-4 text-left font-semibold">STAFF</th>
+              <th className="px-6 py-4 text-left font-semibold">PAYMENT METHOD</th>
+              <th className="px-6 py-4 text-left font-semibold">QTY</th>
+              <th className="px-6 py-4 text-left font-semibold">TOTAL</th>
+              <th className="px-6 py-4 text-left font-semibold">VIEW</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.map((tx, index) => (
+              <tr 
+                key={tx.TransactionID} 
+                className={`${
+                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                } hover:bg-blue-100 transition-colors`}
+              >
+                <td className="px-6 py-4 text-gray-700">
+                  {String(tx.TransactionID).padStart(2, '0')}
+                </td>
+                <td className="px-6 py-4 text-gray-700">
+                  <div>
+                    {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
+                      month: 'numeric', 
+                      day: 'numeric', 
+                      year: 'numeric'
+                    })}
+                    <br />
+                    {new Date(tx.OrderDateTime).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true
+                    })}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-gray-700">
+                  <div className="font-medium">{tx.User.FirstName} {tx.User.LastName}</div>
+                </td>
+                <td className="px-6 py-4 text-gray-700">{tx.PaymentMethod}</td>
+                <td className="px-6 py-4 text-gray-700">
+                  {qtyMap[tx.TransactionID] ?? 0}
+                </td>
+                <td className="px-6 py-4 text-gray-700">
+                  ₱{tx.Total.toFixed(2)}
+                </td>
+                <td className="px-6 py-4">
+                  <button
+                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
+                    onClick={() => handleView(tx.TransactionID)}
+                    title="View Transaction Details"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((tx, index) => (
-                <tr
-                  key={tx.TransactionID}
-                  className={`${
-                    index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                  } hover:bg-blue-100 transition-colors`}
-                >
-                  <td className="px-6 py-4 text-gray-700">
-                    {String(tx.TransactionID).padStart(2, "0")}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    <div>
-                      {new Date(tx.OrderDateTime).toLocaleDateString("en-US", {
-                        month: "numeric",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                      <br />
-                      00:00:00
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    <div className="font-medium">
-                      {tx.User.FirstName} {tx.User.LastName}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {tx.PaymentMethod}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {qtyMap[tx.TransactionID] ?? 0}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    P{tx.Total.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700"
-                      onClick={() => handleView(tx.TransactionID)}
-                      title="View Transaction Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
       </div>
 
       {/* Pagination */}
@@ -412,20 +417,10 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                 </div>
 
                 <div className="mt-6 space-y-2 text-sm text-right">
-                  <p className="text-gray-700">
-                    <strong>SUBTOTAL:</strong> ₱
-                    {items
-                      .reduce((sum, item) => sum + item.Subtotal, 0)
-                      .toFixed(2)}
-                  </p>
-                  <p className="text-gray-700">
-                    <strong>VAT AMOUNT:</strong> ₱
-                    {selectedTransaction.VATAmount.toFixed(2)}
-                  </p>
-                  <p className="text-lg font-semibold text-gray-900">
-                    <strong>TOTAL:</strong> ₱
-                    {selectedTransaction.Total.toFixed(2)}
-                  </p>
+                  <p className="text-gray-700"><strong>SUBTOTAL:</strong> ₱{items.reduce((sum, item) => sum + (item.Product.SellingPrice*item.Quantity), 0).toFixed(2)}</p>
+                  <p className="text-gray-700"><strong>DISCOUNT:</strong> ₱{calculateTotalDiscount(items).toFixed(2)}</p>
+                  <p className="text-gray-700"><strong>VAT AMOUNT:</strong> ₱{selectedTransaction.VATAmount.toFixed(2)}</p>
+                  <p className="text-lg font-semibold text-gray-900"><strong>TOTAL:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
                 </div>
               </div>
 

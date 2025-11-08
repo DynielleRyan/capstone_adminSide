@@ -151,103 +151,84 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
             />
           </div>
         </div>
-        <button
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-          onClick={() => navigate("/purchase-orders/new")}
-        >
-          + ADD PURCHASE ORDER
-        </button>
-      </div>
+    <button
+      className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+      onClick={() => navigate('/purchase-orders/new')}
+    >
+      + ADD PURCHASE ORDER
+    </button>
+  </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-blue-900 text-white">
-              <tr>
-                <th className="px-6 py-4 text-left font-semibold">ORDER ID</th>
-                <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  SUPPLIER NAME
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  DATE ORDERED
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">ETA</th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  DATE ARRIVED
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">QUANTITY</th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  TOTAL COST
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((order, index) => (
-                <tr
-                  key={order.PurchaseOrderID}
-                  className={`${
-                    index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                  } hover:bg-blue-100 transition-colors`}
-                >
-                  <td className="px-6 py-4 text-gray-700">
-                    {String(order.PurchaseOrderID).padStart(2, "0")}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    <div className="flex items-center gap-3">
-                      {order.Product.Image ? (
-                        <img
-                          src={order.Product.Image}
-                          alt={order.Product.Name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
-                          <span className="text-blue-600 text-sm">
-                            {order.Product.Name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
-                      <span className="font-medium">{order.Product.Name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {order.Supplier.Name}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {new Date(order.OrderPlacedDateTime).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {new Date(order.ETA).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {order.OrderArrivalDateTime
-                      ? new Date(
-                          order.OrderArrivalDateTime
-                        ).toLocaleDateString()
-                      : "—"}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">{order.Quantity}</td>
-                  <td className="px-6 py-4 text-gray-700">
-                    ₱{order.TotalPurchaseCost.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700"
-                      onClick={() =>
-                        navigate(`/purchase-orders/${order.PurchaseOrderID}`)
-                      }
-                    >
-                      <PenSquare className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+
+  <div className="bg-white rounded-lg shadow overflow-hidden">
+  <div className="overflow-x-auto">
+    <table className="w-full">
+      <thead className="bg-blue-900 text-white">
+        <tr>
+          <th className="px-6 py-4 text-left font-semibold">ID</th>
+          <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
+          <th className="px-6 py-4 text-left font-semibold">SUPPLIER NAME</th>
+          <th className="px-6 py-4 text-left font-semibold">DATE ORDERED</th>
+          <th className="px-6 py-4 text-left font-semibold">ETA</th>
+          <th className="px-6 py-4 text-left font-semibold">DATE ARRIVED</th>
+          <th className="px-6 py-4 text-left font-semibold">QUANTITY</th>
+          <th className="px-6 py-4 text-left font-semibold">TOTAL COST</th>
+          <th className="px-6 py-4 text-left font-semibold">ACTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        {paginatedData.map((order, index) => (
+          <tr 
+            key={order.PurchaseOrderID} 
+            className={`${
+              index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+            } hover:bg-blue-100 transition-colors`}
+          >
+            <td className="px-6 py-4 text-gray-700">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
+            <td className="px-6 py-4 text-gray-700">
+              <div className="flex items-center gap-3">
+                        {order.Product.Image ? (
+                          <img
+                            src={order.Product.Image}
+                            alt={order.Product.Name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
+                            <span className="text-blue-600 text-sm">
+                              {order.Product.Name.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                        <span className="font-medium">
+                          {order.Product.Name}
+                        </span>
+                </div>
+              </td>
+            <td className="px-6 py-4 text-gray-700">{order.Supplier.Name}</td>
+            <td className="px-6 py-4 text-gray-700">{new Date(order.OrderPlacedDateTime).toLocaleDateString()}</td>
+            <td className="px-6 py-4 text-gray-700">{new Date(order.ETA).toLocaleDateString()}</td>
+            <td className="px-6 py-4 text-gray-700">
+              {order.OrderArrivalDateTime
+                ? new Date(order.OrderArrivalDateTime).toLocaleDateString()
+                : '—'}
+            </td>
+            <td className="px-6 py-4 text-gray-700">{order.Quantity}</td>
+            <td className="px-6 py-4 text-gray-700">₱{order.TotalPurchaseCost.toFixed(2)}</td>
+            <td className="px-6 py-4">
+              <button
+                className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
+                onClick={() => navigate(`/purchase-orders/${order.PurchaseOrderID}`)}
+              >
+                <PenSquare className="w-4 h-4" />
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
 
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">

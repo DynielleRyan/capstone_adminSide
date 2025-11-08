@@ -8,24 +8,24 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 // import Customers from './pages/Customers'
-import Reports from "./pages/Reports";
-import RoleManagement from "./pages/RoleManagement";
-import Suppliers from "./pages/Suppliers";
-import ProductSourceList from "./pages/ProductSourceList";
-import UserProfile from "./pages/UserProfile";
-import Login from "./pages/Login";
-import alertService from "./services/alertService";
-import { Transactions } from "./pages/Transactions";
-import { PurchaseOrders } from "./pages/PurchaseOrder";
-import { NewPurchaseOrder } from "./pages/NewPurchaseOrder";
-import { UpdatePurchaseOrder } from "./pages/UpdatePurchaseOrder";
-import AddUser from "./pages/AddUser";
-import EditUser from "./pages/EditUser";
-import AddSupplier from "./pages/AddSupplier";
-import EditSupplier from "./pages/EditSupplier";
-import ProductList from "./pages/pharmacist/ProductList";
-import ProductUpload from "./pages/pharmacist/ProductUpload";
-import PharmacistDashboard from "./pages/pharmacist/PharmacistDashboard";
+import Reports from './pages/Reports'
+import RoleManagement from './pages/RoleManagement'
+import Suppliers from './pages/Suppliers'
+import ProductSourceList from './pages/ProductSourceList'
+import UserProfile from './pages/UserProfile'
+import Login from './pages/Login'
+import alertService from './services/alertService'
+import { Transactions } from './pages/Transactions'
+import { PurchaseOrders } from './pages/PurchaseOrder'
+import { NewPurchaseOrder } from './pages/NewPurchaseOrder'
+import { UpdatePurchaseOrder } from './pages/UpdatePurchaseOrder'
+import AddUser from './pages/AddUser'
+import EditUser from './pages/EditUser'
+import AddSupplier from './pages/AddSupplier'
+import EditSupplier from './pages/EditSupplier'
+import { ProductList } from './pages/pharmacist/ProductList'
+import ProductUpload from './pages/pharmacist/ProductUpload'
+import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
 
 function App() {
   const [confirmDialog, setConfirmDialog] = useState<{

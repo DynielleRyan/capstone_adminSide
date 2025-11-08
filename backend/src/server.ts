@@ -12,6 +12,7 @@ import productRoutes from './routes/productRoutes'
 import productItemRoutes from './routes/productItemRoutes'
 import transactionRoutes from './routes/transactionRoutes'
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes'
+import productListRoutes from './routes/productListRoutes'
 import reportRoutes from './routes/report.routes'
 import dashboard from './routes/dashboard.routes'
 import notifRoutes from './routes/notifications.routes'
@@ -54,6 +55,7 @@ app.use('/api/products', productRoutes)
 app.use('/api/product-items', productItemRoutes)
 app.use("/api/transactions", transactionRoutes)
 app.use("/api/purchase-orders", purchaseOrderRoutes)
+app.use("/api/product-list", productListRoutes)
 app.use("/api/reports", reportRoutes)
 app.use("/api/dashboard", dashboard)
 app.use("/api/notifications", notifRoutes)
