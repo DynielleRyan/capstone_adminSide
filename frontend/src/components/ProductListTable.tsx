@@ -294,21 +294,21 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => handleView(primary.ProductItemID)}
+                    onClick={() => handleView(item.ProductItemID)}
                     title="View Product Details"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => navigate(`/products/upload/${primary.ProductItemID}`)}
+                    onClick={() => navigate(`/products/upload/${item.ProductItemID}`)}
                     title="Upload Product Image"
                   >
                     <PenSquare className="w-4 h-4" />
                   </button>
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => navigate(`/products/upload/${primary.ProductItemID}`)}
+                    onClick={() => handleView(item.ProductItemID)}
                     title="Upload Product Image"
                   >
                     <Trash2 className="w-4 h-4" />
