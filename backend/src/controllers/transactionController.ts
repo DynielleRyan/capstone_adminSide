@@ -27,7 +27,7 @@ export const getTransactionAndItemsByID: RequestHandler = async (req, res, next)
         }
         const { data: items, error: itemsError } = await supabase
             .from('Transaction_Item')
-            .select('*, Product(Name, Image, SellingPrice)')
+            .select('*, Product(Name, Image, SellingPrice), Discount(DiscountPercent)')
             .eq('TransactionID',id);
         if (itemsError) throw itemsError;
         res.status(200).json({transaction, items});
@@ -35,3 +35,26 @@ export const getTransactionAndItemsByID: RequestHandler = async (req, res, next)
         next(error);
 }};
 
+export const getTransactionQtyMap: RequestHandler = async (req, res, next) => {
+    try {
+      const ids = (req.query.ids as string | undefined)?.split(','); // optional filter
+  
+      let query = supabase
+        .from('Transaction_Item')
+        .select('TransactionID, Quantity');
+  
+      if (ids?.length) query = query.in('TransactionID', ids);
+  
+      const { data, error } = await query;
+      if (error) throw error;
+  
+      const qtyMap = data.reduce<Record<string, number>>((acc, row) => {
+        acc[row.TransactionID] = (acc[row.TransactionID] ?? 0) + row.Quantity;
+        return acc;
+      }, {});
+  
+      res.status(200).json(qtyMap);
+    } catch (err) {
+      next(err);
+    }
+  };

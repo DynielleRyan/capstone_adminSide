@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
-import { fetchTransactionWithItems } from '../services/transactionService';
+import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
 import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +19,15 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
+  const [qtyMap, setQtyMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!transactions.length) return;
+    const ids = transactions.map((t) => t.TransactionID);
+    fetchTransactionQtyMap(ids)
+      .then(setQtyMap)
+      .catch(() => setQtyMap({}));
+  }, [transactions]);
     
 
   const handleView = async (id: string) => {
@@ -36,6 +45,17 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     const modal = document.getElementById('transaction_modal') as HTMLDialogElement;
     modal?.showModal();
   };
+
+  // Calculate the total discount in each transaction
+  const calculateTotalDiscount = (items: TransactionItem[]): number => {
+    return items.reduce((sum, item) => {
+      const discountPercent = item.DiscountID ? item.Discount?.DiscountPercent || 0 : 0;
+      const discountAmount = (discountPercent / 100) * (item.Product.SellingPrice*item.Quantity);
+      return sum + discountAmount;
+    }, 0);
+  };
+  
+  
 
   const handleDownloadCSV = () => {
     // Prepare CSV headers for all Transaction table columns (excluding User table)
@@ -88,7 +108,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     return transactions.filter((tx) => {
       const txnId = String(tx.TransactionID).toLowerCase();
       const staffName = `${tx.User.FirstName} ${tx.User.LastName}`.toLowerCase();
-      const payment = String(tx.PaymentMethod).toLowerCase();; // static for now
+      const payment = String(tx.PaymentMethod).toLowerCase();
       const date = new Date(tx.OrderDateTime).toLocaleDateString().toLowerCase();
       const total = tx.Total.toFixed(2).toLowerCase();
 
@@ -227,10 +247,15 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
                       month: 'numeric', 
                       day: 'numeric', 
-                      year: 'numeric' 
+                      year: 'numeric'
                     })}
                     <br />
-                    00:00:00
+                    {new Date(tx.OrderDateTime).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true
+                    })}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-gray-700">
@@ -238,10 +263,10 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                 </td>
                 <td className="px-6 py-4 text-gray-700">{tx.PaymentMethod}</td>
                 <td className="px-6 py-4 text-gray-700">
-                  {Math.floor(Math.random() * 20) + 1}
+                  {qtyMap[tx.TransactionID] ?? 0}
                 </td>
                 <td className="px-6 py-4 text-gray-700">
-                  P{tx.Total.toFixed(2)}
+                  ₱{tx.Total.toFixed(2)}
                 </td>
                 <td className="px-6 py-4">
                   <button
@@ -345,7 +370,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                 </div>
 
                 <div className="mt-6 space-y-2 text-sm text-right">
-                  <p className="text-gray-700"><strong>SUBTOTAL:</strong> ₱{items.reduce((sum, item) => sum + item.Subtotal, 0).toFixed(2)}</p>
+                  <p className="text-gray-700"><strong>SUBTOTAL:</strong> ₱{items.reduce((sum, item) => sum + (item.Product.SellingPrice*item.Quantity), 0).toFixed(2)}</p>
+                  <p className="text-gray-700"><strong>DISCOUNT:</strong> ₱{calculateTotalDiscount(items).toFixed(2)}</p>
                   <p className="text-gray-700"><strong>VAT AMOUNT:</strong> ₱{selectedTransaction.VATAmount.toFixed(2)}</p>
                   <p className="text-lg font-semibold text-gray-900"><strong>TOTAL:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
                 </div>

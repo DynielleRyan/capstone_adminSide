@@ -23,7 +23,7 @@ import AddUser from './pages/AddUser'
 import EditUser from './pages/EditUser'
 import AddSupplier from './pages/AddSupplier'
 import EditSupplier from './pages/EditSupplier'
-import ProductList from './pages/pharmacist/ProductList'
+import { ProductList } from './pages/pharmacist/ProductList'
 import ProductUpload from './pages/pharmacist/ProductUpload'
 import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
 

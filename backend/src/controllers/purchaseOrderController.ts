@@ -1,4 +1,3 @@
-import createHttpError from 'http-errors';
 import { supabase } from '../config/database';
 import { RequestHandler } from 'express';
 

@@ -1,6 +1,7 @@
 export interface TransactionItem {
     TransactionItemID: string;
     TransactionID: string;
+    DiscountID: string;
     Quantity: number;
     Subtotal: number;
     Product: {
@@ -8,4 +9,7 @@ export interface TransactionItem {
         Image: string;
         SellingPrice: number;
       };
+    Discount: {
+        DiscountPercent: number;
+    }
   }

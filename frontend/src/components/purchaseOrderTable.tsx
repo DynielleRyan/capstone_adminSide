@@ -155,7 +155,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
     <table className="w-full">
       <thead className="bg-blue-900 text-white">
         <tr>
-          <th className="px-6 py-4 text-left font-semibold">ORDER ID</th>
+          <th className="px-6 py-4 text-left font-semibold">ID</th>
           <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
           <th className="px-6 py-4 text-left font-semibold">SUPPLIER NAME</th>
           <th className="px-6 py-4 text-left font-semibold">DATE ORDERED</th>

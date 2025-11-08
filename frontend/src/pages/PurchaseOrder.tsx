@@ -11,7 +11,7 @@ export const PurchaseOrders = () => {
   }, []);
 
   return (
-    <div className="p-6 bg-white text-black min-h-screen">
+    <div>
       <PurchaseOrderTable orders={orders} />
     </div>
   );
