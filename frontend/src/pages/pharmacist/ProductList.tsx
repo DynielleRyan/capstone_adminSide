@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ProductItem } from '../../types/productItem';
-import { fetchProductList } from '../../services/productItemService';
+import { fetchProductList } from '../../services/productListService';
 import { ProductListTable } from '../../components/ProductListTable';
 
 export const ProductList = () => {

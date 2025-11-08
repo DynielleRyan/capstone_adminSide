@@ -1,9 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-import { PurchaseOrder } from '../types/purchaseOrder';
-import { Search, PenSquare, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
-
-
+import { useNavigate } from "react-router-dom";
+import { PurchaseOrder } from "../types/purchaseOrder";
+import { Search, PenSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 
 interface Props {
   orders: PurchaseOrder[];
@@ -11,28 +9,32 @@ interface Props {
 
 export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('none');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("none");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
-  
 
-   // 🔍 Search function
-   function filterPurchaseOrders(orders: PurchaseOrder[], searchTerm: string): PurchaseOrder[] {
+  // 🔍 Search function
+  function filterPurchaseOrders(
+    orders: PurchaseOrder[],
+    searchTerm: string
+  ): PurchaseOrder[] {
     const term = searchTerm.toLowerCase();
-  
+
     return orders.filter((po) => {
       const poID = String(po.PurchaseOrderID).toLowerCase();
       const product = po.Product.Name.toLowerCase();
       const supplierName = po.Supplier.Name.toLowerCase();
-      const orderDate = new Date(po.OrderPlacedDateTime).toLocaleDateString().toLowerCase();
+      const orderDate = new Date(po.OrderPlacedDateTime)
+        .toLocaleDateString()
+        .toLowerCase();
       const ETA = new Date(po.ETA).toLocaleDateString().toLowerCase();
       const orderArrival = po.OrderArrivalDateTime
         ? new Date(po.OrderArrivalDateTime).toLocaleDateString().toLowerCase()
-        : '';
+        : "";
       const quantity = String(po.Quantity).toLowerCase();
       const total = po.TotalPurchaseCost.toFixed(2).toLowerCase();
-  
+
       return (
         poID.includes(term) ||
         product.includes(term) ||
@@ -45,37 +47,39 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
       );
     });
   }
-  
 
   // 🔃 Sort function
-  function sortPurchaseOrders(orders: PurchaseOrder[], sortBy: string): PurchaseOrder[] {
-    if (sortBy === 'none') return orders;
-  
+  function sortPurchaseOrders(
+    orders: PurchaseOrder[],
+    sortBy: string
+  ): PurchaseOrder[] {
+    if (sortBy === "none") return orders;
+
     const sorted = [...orders];
-  
-    if (sortBy === 'total-asc') {
+
+    if (sortBy === "total-asc") {
       sorted.sort((a, b) => a.TotalPurchaseCost - b.TotalPurchaseCost);
-    } else if (sortBy === 'total-desc') {
+    } else if (sortBy === "total-desc") {
       sorted.sort((a, b) => b.TotalPurchaseCost - a.TotalPurchaseCost);
-    } else if (sortBy === 'date-asc') {
+    } else if (sortBy === "date-asc") {
       sorted.sort(
         (a, b) =>
-          new Date(a.OrderPlacedDateTime).getTime() - new Date(b.OrderPlacedDateTime).getTime()
+          new Date(a.OrderPlacedDateTime).getTime() -
+          new Date(b.OrderPlacedDateTime).getTime()
       );
-    } else if (sortBy === 'date-desc') {
+    } else if (sortBy === "date-desc") {
       sorted.sort(
         (a, b) =>
-          new Date(b.OrderPlacedDateTime).getTime() - new Date(a.OrderPlacedDateTime).getTime()
+          new Date(b.OrderPlacedDateTime).getTime() -
+          new Date(a.OrderPlacedDateTime).getTime()
       );
-    } else if (sortBy === 'eta-asc') {
+    } else if (sortBy === "eta-asc") {
       sorted.sort(
-        (a, b) =>
-          new Date(a.ETA).getTime() - new Date(b.ETA).getTime()
+        (a, b) => new Date(a.ETA).getTime() - new Date(b.ETA).getTime()
       );
-    } else if (sortBy === 'eta-desc') {
+    } else if (sortBy === "eta-desc") {
       sorted.sort(
-        (a, b) =>
-          new Date(b.ETA).getTime() - new Date(a.ETA).getTime()
+        (a, b) => new Date(b.ETA).getTime() - new Date(a.ETA).getTime()
       );
     }
 
@@ -91,41 +95,47 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   const totalPages = Math.ceil(displayedOrders.length / itemsPerPage);
 
   const paginatedData = useMemo(() => {
-  const start = (currentPage - 1) * itemsPerPage;
-  return displayedOrders.slice(start, start + itemsPerPage);
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedOrders.slice(start, start + itemsPerPage);
   }, [displayedOrders, currentPage]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, sortBy]);
-  
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <>
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">PURCHASE ORDER</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">
+          PURCHASE ORDER
+        </h1>
       </div>
 
-        {/* Search, Sort, and Downlaod*/}
+      {/* Search, Sort, and Downlaod*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Sort By */}
           <div className="flex items-center gap-2">
-            <label htmlFor="sortBy" className="text-sm font-medium text-gray-700">Sort By:</label>
+            <label
+              htmlFor="sortBy"
+              className="text-sm font-medium text-gray-700"
+            >
+              Sort By:
+            </label>
             <select
               id="sortBy"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-            <option value="none">None</option>
-            <option value="total-asc">Total Cost (Low to High)</option>
-            <option value="total-desc">Total Cost (High to Low)</option>
-            <option value="date-asc">Date Ordered (Oldest First)</option>
-            <option value="date-desc">Date Ordered (Newest First)</option>
-            <option value="eta-asc">ETA (Oldest First)</option>
-            <option value="eta-desc">ETA (Newest First)</option>
+              <option value="none">None</option>
+              <option value="total-asc">Total Cost (Low to High)</option>
+              <option value="total-desc">Total Cost (High to Low)</option>
+              <option value="date-asc">Date Ordered (Oldest First)</option>
+              <option value="date-desc">Date Ordered (Newest First)</option>
+              <option value="eta-asc">ETA (Oldest First)</option>
+              <option value="eta-desc">ETA (Newest First)</option>
             </select>
           </div>
 
@@ -220,32 +230,31 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   </div>
 </div>
 
-  {/* Pagination */}
-  <div className="flex justify-between items-center mt-6">
-    <div className="text-sm text-gray-700">
-      Showing {paginatedData.length} of {displayedOrders.length} orders
-    </div>
-    <div className="flex items-center gap-2">
-      <button 
-        onClick={() => setCurrentPage((prev) => prev - 1)}
-        disabled={currentPage === 1}
-        className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <ChevronLeft className="w-4 h-4" />
-      </button>
-      <span className="px-4 py-2 text-sm">
-        Page {currentPage} of {totalPages}
-      </span>
-      <button 
-        onClick={() => setCurrentPage((prev) => prev + 1)}
-        disabled={currentPage === totalPages}
-        className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
-    </div>
-  </div>
-
-</div>
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm text-gray-700">
+          Showing {paginatedData.length} of {displayedOrders.length} orders
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+            disabled={currentPage === 1}
+            className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="px-4 py-2 text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            disabled={currentPage === totalPages}
+            className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </>
   );
 };

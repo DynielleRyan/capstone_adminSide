@@ -11,12 +11,13 @@ interface Props {
 }
 
 export const TransactionTable: React.FC<Props> = ({ transactions }) => {
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [items, setItems] = useState<TransactionItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('none');
+  const [sortBy, setSortBy] = useState("none");
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
   const [qtyMap, setQtyMap] = useState<Record<string, number>>({});
@@ -33,7 +34,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const handleView = async (id: string) => {
     const result = await fetchTransactionWithItems(id);
     if (!result) {
-      setErrorMessage('Transaction not found or failed to load.');
+      setErrorMessage("Transaction not found or failed to load.");
       setSelectedTransaction(null);
       setItems([]);
     } else {
@@ -42,7 +43,9 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       setErrorMessage(null);
     }
 
-    const modal = document.getElementById('transaction_modal') as HTMLDialogElement;
+    const modal = document.getElementById(
+      "transaction_modal"
+    ) as HTMLDialogElement;
     modal?.showModal();
   };
 
@@ -60,15 +63,16 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const handleDownloadCSV = () => {
     // Prepare CSV headers for all Transaction table columns (excluding User table)
     const headers = [
-      'TransactionID',
-      'UserID',
-      'Total',
-      'PaymentMethod',
-      'VATAmount',
-      'OrderDateTime',
-      'CashReceived',
-      'PaymentChange',
-      'ReferenceNo'
+      "TransactionID",
+      "UserID",
+      "Total",
+      "PaymentMethod",
+      "VATAmount",
+      "OrderDateTime",
+      "CashReceived",
+      "PaymentChange",
+      "ReferenceNo",
+      "QTY",
     ];
 
     // Prepare CSV data with all Transaction table fields
@@ -81,28 +85,35 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       tx.OrderDateTime,
       tx.CashReceived,
       tx.PaymentChange,
-      tx.ReferenceNo
+      tx.ReferenceNo,
+      qtyMap[tx.TransactionID] ?? 0,
     ]);
 
     // Combine headers and data
     const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
+      .map((row) => row.map((field) => `"${field}"`).join(","))
+      .join("\n");
 
     // Create and download the file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `transactions_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   // 🔍 Search function
-  function filterTransactions(transactions: Transaction[], searchTerm: string): Transaction[] {
+  function filterTransactions(
+    transactions: Transaction[],
+    searchTerm: string
+  ): Transaction[] {
     const term = searchTerm.toLowerCase();
 
     return transactions.filter((tx) => {
@@ -123,24 +134,29 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   }
 
   // 🔃 Sort function
-  function sortTransactions(transactions: Transaction[], sortBy: string): Transaction[] {
-    if (sortBy === 'none') return transactions;
+  function sortTransactions(
+    transactions: Transaction[],
+    sortBy: string
+  ): Transaction[] {
+    if (sortBy === "none") return transactions;
 
     const sorted = [...transactions];
 
-    if (sortBy === 'total-asc') {
+    if (sortBy === "total-asc") {
       sorted.sort((a, b) => a.Total - b.Total);
-    } else if (sortBy === 'total-desc') {
+    } else if (sortBy === "total-desc") {
       sorted.sort((a, b) => b.Total - a.Total);
-    } else if (sortBy === 'date-asc') {
+    } else if (sortBy === "date-asc") {
       sorted.sort(
         (a, b) =>
-          new Date(a.OrderDateTime).getTime() - new Date(b.OrderDateTime).getTime()
+          new Date(a.OrderDateTime).getTime() -
+          new Date(b.OrderDateTime).getTime()
       );
-    } else if (sortBy === 'date-desc') {
+    } else if (sortBy === "date-desc") {
       sorted.sort(
         (a, b) =>
-          new Date(b.OrderDateTime).getTime() - new Date(a.OrderDateTime).getTime()
+          new Date(b.OrderDateTime).getTime() -
+          new Date(a.OrderDateTime).getTime()
       );
     }
 
@@ -156,8 +172,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const totalPages = Math.ceil(displayedTransactions.length / itemsPerPage);
 
   const paginatedData = useMemo(() => {
-  const start = (currentPage - 1) * itemsPerPage;
-  return displayedTransactions.slice(start, start + itemsPerPage);
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedTransactions.slice(start, start + itemsPerPage);
   }, [displayedTransactions, currentPage]);
 
   useEffect(() => {
@@ -171,23 +187,28 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         <h1 className="text-3xl font-bold text-blue-900 mb-2">TRANSACTION</h1>
       </div>
 
-        {/* Search, Sort, and Downlaod*/}
+      {/* Search, Sort, and Downlaod*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Sort By */}
           <div className="flex items-center gap-2">
-            <label htmlFor="sortBy" className="text-sm font-medium text-gray-700">Sort By:</label>
+            <label
+              htmlFor="sortBy"
+              className="text-sm font-medium text-gray-700"
+            >
+              Sort By:
+            </label>
             <select
               id="sortBy"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-            <option value="none">None</option>
-            <option value="total-asc">Total (Low to High)</option>
-            <option value="total-desc">Total (High to Low)</option>
-            <option value="date-asc">Date (Oldest First)</option>
-            <option value="date-desc">Date (Newest First)</option>
+              <option value="none">None</option>
+              <option value="total-asc">Total (Low to High)</option>
+              <option value="total-desc">Total (High to Low)</option>
+              <option value="date-asc">Date (Oldest First)</option>
+              <option value="date-desc">Date (Newest First)</option>
             </select>
           </div>
 
@@ -206,15 +227,14 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
 
         {/* Download CSV Button */}
         <div className="flex gap-3">
-          <button 
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2" 
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
             onClick={handleDownloadCSV}
           >
             DOWNLOAD CSV
           </button>
-          </div>
         </div>
-      
+      </div>
 
       {/* Transaction Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -287,10 +307,11 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {paginatedData.length} of {displayedTransactions.length} transactions
+          Showing {paginatedData.length} of {displayedTransactions.length}{" "}
+          transactions
         </div>
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setCurrentPage((prev) => prev - 1)}
             disabled={currentPage === 1}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -300,7 +321,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <span className="px-4 py-2 text-sm">
             Page {currentPage} of {totalPages}
           </span>
-          <button 
+          <button
             onClick={() => setCurrentPage((prev) => prev + 1)}
             disabled={currentPage === totalPages}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -315,9 +336,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         <div className="modal-box bg-white rounded-lg w-full max-w-4xl max-h-[90vh] p-0 text-black flex flex-col">
           {errorMessage ? (
             <div className="p-6">
-              <div className="text-red-500 font-semibold">
-                {errorMessage}
-              </div>
+              <div className="text-red-500 font-semibold">{errorMessage}</div>
               <div className="mt-6 flex justify-end">
                 <form method="dialog">
                   <button className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors">
@@ -330,11 +349,23 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
             <>
               {/* Header */}
               <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-gray-900">Transaction Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Transaction Details
+                </h3>
                 <div className="mt-2 space-y-1 text-sm text-gray-700">
-                  <p><strong>ID:</strong> {selectedTransaction.TransactionID}</p>
-                  <p><strong>Date:</strong> {new Date(selectedTransaction.OrderDateTime).toLocaleString()}</p>
-                  <p><strong>Staff:</strong> {selectedTransaction.User.FirstName} {selectedTransaction.User.LastName}</p>
+                  <p>
+                    <strong>ID:</strong> {selectedTransaction.TransactionID}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{" "}
+                    {new Date(
+                      selectedTransaction.OrderDateTime
+                    ).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>Staff:</strong> {selectedTransaction.User.FirstName}{" "}
+                    {selectedTransaction.User.LastName}
+                  </p>
                 </div>
               </div>
 
@@ -345,24 +376,40 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                   <table className="w-full text-sm">
                     <thead className="bg-blue-900 text-white">
                       <tr>
-                        <th className="px-6 py-3 text-left font-semibold">ITEM</th>
-                        <th className="px-6 py-3 text-left font-semibold">PRICE</th>
-                        <th className="px-6 py-3 text-left font-semibold">QUANTITY</th>
-                        <th className="px-6 py-3 text-left font-semibold">SUBTOTAL</th>
+                        <th className="px-6 py-3 text-left font-semibold">
+                          ITEM
+                        </th>
+                        <th className="px-6 py-3 text-left font-semibold">
+                          PRICE
+                        </th>
+                        <th className="px-6 py-3 text-left font-semibold">
+                          QUANTITY
+                        </th>
+                        <th className="px-6 py-3 text-left font-semibold">
+                          SUBTOTAL
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((item, index) => (
-                        <tr 
+                        <tr
                           key={item.TransactionItemID}
                           className={`${
-                            index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                            index % 2 === 0 ? "bg-blue-50" : "bg-white"
                           } hover:bg-blue-100 transition-colors`}
                         >
-                          <td className="px-6 py-4 text-gray-700">{item.Product.Name}</td>
-                          <td className="px-6 py-4 text-gray-700">₱{item.Product.SellingPrice.toFixed(2)}</td>
-                          <td className="px-6 py-4 text-gray-700">{item.Quantity}</td>              
-                          <td className="px-6 py-4 text-gray-700">₱{item.Subtotal.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {item.Product.Name}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            ₱{item.Product.SellingPrice.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {item.Quantity}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            ₱{item.Subtotal.toFixed(2)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

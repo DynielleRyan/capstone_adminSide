@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { ProductItem } from '../types/productItem';
-import { fetchProductItemByID } from '../services/productItemService';
+import { fetchProductItemByID } from '../services/productListService';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X  } from 'lucide-react';
 
