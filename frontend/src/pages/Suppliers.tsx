@@ -121,46 +121,48 @@ const Suppliers = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Page Header */}
+    <div className="p-6 bg-blue-50 min-h-screen">
+      {/* Page Header with Title */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">SUPPLIERS</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">SUPPLIERS</h1>
 
-      {/* Controls and Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Sort By:
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="name">Name</option>
-              <option value="status">Status</option>
-            </select>
+        {/* Sort, Search, and Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="name">Name</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="SEARCH"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3">
           {Permissions.canCreateSupplier() && (
             <button
               onClick={() => navigate("/suppliers/add")}
@@ -176,20 +178,20 @@ const Suppliers = () => {
       {/* Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-blue-900 text-white">
+          <table className="w-full border-collapse">
+            <thead className="bg-blue-800 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold">
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">
                   SUPPLIER ID
                 </th>
-                <th className="px-6 py-4 text-left font-semibold">NAME</th>
-                <th className="px-6 py-4 text-left font-semibold">
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">NAME</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">
                   CONTACT PERSON
                 </th>
-                <th className="px-6 py-4 text-left font-semibold">
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">
                   CONTACT NUMBER
                 </th>
-                <th className="px-6 py-4 text-left font-semibold">STATUS</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">STATUS</th>
                 <th className="px-6 py-4 text-left font-semibold">ACTION</th>
               </tr>
             </thead>
@@ -229,17 +231,17 @@ const Suppliers = () => {
                       index % 2 === 0 ? "bg-blue-50" : "bg-white"
                     } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                       {formatSupplierId(supplier.SupplierID!)}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{supplier.Name}</td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{supplier.Name}</td>
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                       {supplier.ContactPerson || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                       {supplier.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border-r border-gray-200">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           supplier.IsActiveYN

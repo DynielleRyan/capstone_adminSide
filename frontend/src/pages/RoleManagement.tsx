@@ -121,46 +121,48 @@ const RoleManagement = () => {
   }, [users, searchTerm, sortBy]);
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Page Header */}
+    <div className="p-6 bg-blue-50 min-h-screen">
+      {/* Page Header with Title */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">MANAGE ROLES</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">MANAGE ROLES</h1>
 
-      {/* Controls and Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Sort By:
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="name">Name</option>
-              <option value="role">Role</option>
-            </select>
+        {/* Sort, Search, and Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="name">Name</option>
+                <option value="role">Role</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="SEARCH"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3">
           {Permissions.canCreateUser() && (
             <button
               onClick={() => navigate("/role-management/add")}
@@ -216,12 +218,14 @@ const RoleManagement = () => {
       {/* Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-blue-900 text-white">
+          <table className="w-full border-collapse">
+            <thead className="bg-blue-800 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold">Name</th>
-                <th className="px-6 py-4 text-left font-semibold">CONTACT</th>
-                <th className="px-6 py-4 text-left font-semibold">USERNAME</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">USER ID</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">Name</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">CONTACT</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">USERNAME</th>
+                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PASSWORD</th>
                 <th className="px-6 py-4 text-left font-semibold">ROLE</th>
               </tr>
             </thead>
@@ -229,7 +233,7 @@ const RoleManagement = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Loading users...
@@ -238,7 +242,7 @@ const RoleManagement = () => {
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-red-500"
                   >
                     Error: {error}
@@ -247,7 +251,7 @@ const RoleManagement = () => {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No users found
@@ -261,13 +265,19 @@ const RoleManagement = () => {
                       index % 2 === 0 ? "bg-blue-50" : "bg-white"
                     } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                      {user.UserID}
+                    </td>
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                       {user.FirstName} {user.MiddleInitial} {user.LastName}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                       {user.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{user.Username}</td>
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{user.Username}</td>
+                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                      ********
+                    </td>
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${

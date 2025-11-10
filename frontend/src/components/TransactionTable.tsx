@@ -4,7 +4,6 @@ import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
 import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface Props {
   transactions: Transaction[];
@@ -16,7 +15,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const [items, setItems] = useState<TransactionItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("none");
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
@@ -181,73 +179,74 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   }, [searchTerm, sortBy]);
 
   return (
-    <div >
-      {/* Page Header */}
+    <div className="bg-blue-50 min-h-screen p-6">
+      {/* Page Header with Title */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">TRANSACTION</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">TRANSACTION</h1>
 
-      {/* Search, Sort, and Downlaod*/}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="sortBy"
-              className="text-sm font-medium text-gray-700"
-            >
-              Sort By:
-            </label>
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="total-asc">Total (Low to High)</option>
-              <option value="total-desc">Total (High to Low)</option>
-              <option value="date-asc">Date (Oldest First)</option>
-              <option value="date-desc">Date (Newest First)</option>
-            </select>
+        {/* Sort, Search, and Download */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="sortBy"
+                className="text-sm font-medium text-gray-700"
+              >
+                Sort By
+              </label>
+              <select
+                id="sortBy"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="total-asc">Total (Low to High)</option>
+                <option value="total-desc">Total (High to Low)</option>
+                <option value="date-asc">Date (Oldest First)</option>
+                <option value="date-desc">Date (Newest First)</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search transactions"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-
-        {/* Download CSV Button */}
-        <div className="flex gap-3">
+          {/* Download CSV Button */}
           <button
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
             onClick={handleDownloadCSV}
           >
-            DOWNLOAD CSV
+            DOWNLOAD CSV 
           </button>
         </div>
       </div>
 
       {/* Transaction Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-blue-900 text-white">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="bg-blue-800 text-white">
             <tr>
-              <th className="px-6 py-4 text-left font-semibold">TXN ID</th>
-              <th className="px-6 py-4 text-left font-semibold">DATE ORDERED</th>
-              <th className="px-6 py-4 text-left font-semibold">STAFF</th>
-              <th className="px-6 py-4 text-left font-semibold">PAYMENT METHOD</th>
-              <th className="px-6 py-4 text-left font-semibold">QTY</th>
-              <th className="px-6 py-4 text-left font-semibold">TOTAL</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">TXN ID</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">DATE ORDERED</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">STAFF</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PAYMENT METHOD</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">QTY</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">TOTAL</th>
               <th className="px-6 py-4 text-left font-semibold">VIEW</th>
             </tr>
           </thead>
@@ -259,10 +258,10 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                   index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
                 } hover:bg-blue-100 transition-colors`}
               >
-                <td className="px-6 py-4 text-gray-700">
+                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                   {String(tx.TransactionID).padStart(2, '0')}
                 </td>
-                <td className="px-6 py-4 text-gray-700">
+                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
                       month: 'numeric', 
@@ -278,14 +277,14 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     })}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-700">
+                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                   <div className="font-medium">{tx.User.FirstName} {tx.User.LastName}</div>
                 </td>
-                <td className="px-6 py-4 text-gray-700">{tx.PaymentMethod}</td>
-                <td className="px-6 py-4 text-gray-700">
+                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{tx.PaymentMethod}</td>
+                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                   {qtyMap[tx.TransactionID] ?? 0}
                 </td>
-                <td className="px-6 py-4 text-gray-700">
+                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                   ₱{tx.Total.toFixed(2)}
                 </td>
                 <td className="px-6 py-4">
@@ -299,9 +298,9 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -373,16 +372,16 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
               <div className="flex-1 overflow-y-auto p-6">
                 <h4 className="font-semibold text-gray-900 mb-3">Items</h4>
                 <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-900 text-white">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="bg-blue-800 text-white">
                       <tr>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           ITEM
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           PRICE
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           QUANTITY
                         </th>
                         <th className="px-6 py-3 text-left font-semibold">
@@ -398,13 +397,13 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                             index % 2 === 0 ? "bg-blue-50" : "bg-white"
                           } hover:bg-blue-100 transition-colors`}
                         >
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                             {item.Product.Name}
                           </td>
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                             ₱{item.Product.SellingPrice.toFixed(2)}
                           </td>
-                          <td className="px-6 py-4 text-gray-700">
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                             {item.Quantity}
                           </td>
                           <td className="px-6 py-4 text-gray-700">

@@ -131,60 +131,63 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
 
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-blue-900">Product List</h1>
+    <div className="bg-blue-50 min-h-screen p-6">
+      {/* Page Header with Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">Product List</h1>
+
+        {/* Sort and Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="sortBy" className="text-sm font-medium text-gray-700">Sort By</label>
+              <select
+                id="sortBy"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="total-asc">Quantity (Low to High)</option>
+                <option value="total-desc">Quantity (High to Low)</option>
+                <option value="date-asc">Expiry Date (Oldest First)</option>
+                <option value="date-desc">Expiry Date (Newest First)</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {/* Search and Sort*/}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="sortBy" className="text-sm font-medium text-gray-700">Sort By:</label>
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-            <option value="none">None</option>
-            <option value="total-asc">Quantity (Low to High)</option>
-            <option value="total-desc">Quantity (High to Low)</option>
-            <option value="date-asc">Expiry Date (Oldest First)</option>
-            <option value="date-desc">Expiry Date (Newest First)</option>
-            </select>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search Product"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-        </div>
       
 
       {/* Product List Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-blue-900 text-white">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="bg-blue-800 text-white">
             <tr>
-              <th className="px-6 py-4 text-left font-semibold">ID</th>
-              <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
-              <th className="px-6 py-4 text-left font-semibold">CATEGORY</th>
-              <th className="px-6 py-4 text-left font-semibold">BRAND</th>
-              <th className="px-6 py-4 text-left font-semibold">PRICE</th>
-              <th className="px-6 py-4 text-left font-semibold">QUANTITY</th>
-              <th className="px-6 py-4 text-left font-semibold">EXPIRY</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">ID</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PRODUCT</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">CATEGORY</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">BRAND</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PRICE</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">QUANTITY</th>
+              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">EXPIRY</th>
               <th className="px-6 py-4 text-left font-semibold">ACTION</th>
             </tr>
           </thead>
@@ -202,8 +205,8 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
     
             return [
             <tr key={primary.ProductItemID} className="bg-white hover:bg-blue-50">
-              <td className="px-6 py-4 text-gray-700">{primary.ProductID}</td>
-              <td className="px-6 py-4 text-gray-700">
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{primary.ProductID}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                 <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
                           <img
@@ -232,11 +235,11 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                       </span>
                 </div>
               </td>
-              <td className="px-6 py-4 text-gray-700">{primary.Product.Category}</td>
-              <td className="px-6 py-4 text-gray-700">{primary.Product.Brand}</td>
-              <td className="px-6 py-4 text-gray-700">₱{primary.Product.SellingPrice.toFixed(2)}</td>
-              <td className="px-6 py-4 text-gray-700">{primary.Stock}</td>
-              <td className="px-6 py-4 text-gray-700">{new Date(primary.ExpiryDate).toLocaleDateString('en-US')}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{primary.Product.Category}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{primary.Product.Brand}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">₱{primary.Product.SellingPrice.toFixed(2)}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{primary.Stock}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{new Date(primary.ExpiryDate).toLocaleDateString('en-US')}</td>
               <td className="px-6 py-4">
                 <div className="flex gap-2">
                   <button
@@ -265,8 +268,8 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
             </tr>,
             ...(isOpen ? rest.map(item => (
             <tr key={item.ProductItemID} className="bg-blue-50 hover:bg-blue-100">
-              <td className="px-6 py-4 text-gray-700"> </td>
-              <td className="px-6 py-4 text-gray-700">
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200"> </td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                 <div className="flex items-center gap-3">
                         {item.Product.Image ? (
                           <img
@@ -286,11 +289,11 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                       </span>
                 </div>
               </td>
-              <td className="px-6 py-4 text-gray-700">{item.Product.Category}</td>
-              <td className="px-6 py-4 text-gray-700">{item.Product.Brand}</td>
-              <td className="px-6 py-4 text-gray-700">₱{item.Product.SellingPrice.toFixed(2)}</td>
-              <td className="px-6 py-4 text-gray-700">{item.Stock}</td>
-              <td className="px-6 py-4 text-gray-700">{new Date(item.ExpiryDate).toLocaleDateString('en-US')}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{item.Product.Category}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{item.Product.Brand}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">₱{item.Product.SellingPrice.toFixed(2)}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{item.Stock}</td>
+              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{new Date(item.ExpiryDate).toLocaleDateString('en-US')}</td>
               <td className="px-6 py-4">
                 <div className="flex gap-2">
                   <button
@@ -322,9 +325,9 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
             }
             ))
           }
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
