@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   return (
     <div className="bg-gray-50">
-      <div className="space-y-6 m-4 ">
+      <div className="space-y-6 p-6">
         <h1 className="text-3xl font-bold text-blue-900">DASHBOARD</h1>
 
         {/* top metrics */}

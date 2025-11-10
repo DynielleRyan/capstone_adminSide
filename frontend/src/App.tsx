@@ -25,6 +25,7 @@ import AddSupplier from './pages/AddSupplier'
 import EditSupplier from './pages/EditSupplier'
 import { ProductList } from './pages/pharmacist/ProductList'
 import ProductUpload from './pages/pharmacist/ProductUpload'
+import { EditProductList } from './pages/pharmacist/EditProductList'
 import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
 
 function App() {
@@ -144,6 +145,19 @@ function App() {
                   <Route
                     path="/pharmacist/products/upload"
                     element={<ProductUpload />}
+                  />
+                  <Route
+                    path="/pharmacist/products/edit/:id"
+                    element={<EditProductList />}
+                  />
+                  <Route path="/products/list" element={<ProductList />} />
+                  <Route
+                    path="/products/upload/:id"
+                    element={<ProductUpload />}
+                  />
+                  <Route
+                    path="/products/edit/:id"
+                    element={<EditProductList />}
                   />
                 </Routes>
               </Layout>
