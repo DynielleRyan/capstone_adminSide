@@ -11,7 +11,7 @@ export const ProductList = () => {
   }, []);
 
   return (
-    <div>
+    <div className="p-6 space-y-8">
       <ProductListTable productList={productList} />
     </div>
   );

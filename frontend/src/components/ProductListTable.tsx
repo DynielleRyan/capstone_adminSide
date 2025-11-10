@@ -131,10 +131,11 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
 
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        </div>
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-blue-900">Product List</h1>
+      </div>
 
       {/* Search and Sort*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -247,8 +248,8 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                   </button>
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => navigate(`/products/upload/${primary.ProductItemID}`)}
-                    title="Upload Product Image"
+                    onClick={() => navigate(`/products/edit/${primary.ProductItemID}`)}
+                    title="Edit Product Item"
                   >
                     <PenSquare className="w-4 h-4" />
                   </button>
@@ -301,8 +302,8 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                   </button>
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => navigate(`/products/upload/${item.ProductItemID}`)}
-                    title="Upload Product Image"
+                    onClick={() => navigate(`/products/edit/${item.ProductItemID}`)}
+                    title="Edit Product Item"
                   >
                     <PenSquare className="w-4 h-4" />
                   </button>
