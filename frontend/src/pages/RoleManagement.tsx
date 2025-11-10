@@ -24,7 +24,7 @@ const RoleManagement = () => {
 
   // Fetch users from API
   const fetchUsers = useCallback(
-    async (page = 1, search = searchTerm) => {
+    async (page = 1, search?: string) => {
       try {
         setLoading(true);
         setError(null);
@@ -48,24 +48,22 @@ const RoleManagement = () => {
       } catch (err) {
         console.error("Error fetching users:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch users");
-        // Don't clear users on error unless it's a critical error
-        if (!users.length) {
-          setUsers([]);
-        }
       } finally {
         setLoading(false);
       }
     },
-    [searchTerm]
+    []
   );
 
   // Load users on component mount
   useEffect(() => {
     fetchUsers();
-  }, []); // Empty dependency array to run only on mount
+  }, [fetchUsers]);
 
   // Debounced search effect
   useEffect(() => {
+    if (!searchTerm) return;
+    
     const timeoutId = setTimeout(() => {
       fetchUsers(1, searchTerm);
     }, 500);
@@ -212,6 +210,7 @@ const RoleManagement = () => {
               Admin-only features are restricted
             </div>
           )}
+        </div>
         </div>
       </div>
 

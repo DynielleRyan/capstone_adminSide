@@ -15,6 +15,8 @@ import ProductSourceList from './pages/ProductSourceList'
 import UserProfile from './pages/UserProfile'
 import Login from './pages/Login'
 import alertService from './services/alertService'
+import authService from './services/authService'
+import activityService from './services/activityService'
 import { Transactions } from './pages/Transactions'
 import { PurchaseOrders } from './pages/PurchaseOrder'
 import { NewPurchaseOrder } from './pages/NewPurchaseOrder'
@@ -67,6 +69,23 @@ function App() {
         });
       });
     });
+  }, []);
+
+  // Initialize activity tracking for existing sessions
+  useEffect(() => {
+    // Check if user is already authenticated (e.g., after page refresh)
+    if (authService.isAuthenticated()) {
+      // Initialize activity tracking
+      activityService.initialize(() => {
+        // Auto-logout callback on inactivity
+        authService.signOut().catch(console.error);
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      activityService.cleanup();
+    };
   }, []);
 
   return (

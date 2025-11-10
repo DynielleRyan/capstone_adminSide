@@ -33,7 +33,7 @@ const Suppliers = () => {
 
   // Fetch suppliers from API
   const fetchSuppliers = useCallback(
-    async (page = 1, search = searchTerm) => {
+    async (page = 1, search?: string) => {
       try {
         setLoading(true);
         setError(null);
@@ -59,23 +59,22 @@ const Suppliers = () => {
         setError(
           err instanceof Error ? err.message : "Failed to fetch suppliers"
         );
-        if (!suppliers.length) {
-          setSuppliers([]);
-        }
       } finally {
         setLoading(false);
       }
     },
-    [searchTerm]
+    []
   );
 
   // Load suppliers on component mount
   useEffect(() => {
     fetchSuppliers();
-  }, []);
+  }, [fetchSuppliers]);
 
   // Debounced search effect
   useEffect(() => {
+    if (!searchTerm) return;
+    
     const timeoutId = setTimeout(() => {
       fetchSuppliers(1, searchTerm);
     }, 500);
@@ -172,6 +171,7 @@ const Suppliers = () => {
               ADD SUPPLIER
             </button>
           )}
+        </div>
         </div>
       </div>
 
