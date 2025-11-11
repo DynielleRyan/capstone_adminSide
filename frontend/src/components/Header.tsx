@@ -109,11 +109,6 @@ const Header = () => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 relative">
       <div className="flex items-center justify-between">
-        {/* Pharmacy Name */}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-blue-600">Jambo's Pharmacy</h1>
-        </div>
-
         {/* Search Bar */}
         <div className="flex-1 max-w-md mx-8">
           <div className="relative">

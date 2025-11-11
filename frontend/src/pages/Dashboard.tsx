@@ -99,7 +99,14 @@ export default function Dashboard() {
                     <XAxis dataKey="label" />
                     <YAxis yAxisId="left" />
                     <YAxis yAxisId="right" orientation="right" />
-                    <Tooltip />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (typeof value === "number" && name === "total") {
+                          return [`₱${value.toFixed(2)}`, "total"];
+                        }
+                        return [value, name];
+                      }}
+                    />
                     <Bar
                       yAxisId="left"
                       dataKey="units"
