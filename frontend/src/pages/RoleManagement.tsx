@@ -24,7 +24,7 @@ const RoleManagement = () => {
 
   // Fetch users from API
   const fetchUsers = useCallback(
-    async (page = 1, search = searchTerm) => {
+    async (page = 1, search?: string) => {
       try {
         setLoading(true);
         setError(null);
@@ -48,24 +48,22 @@ const RoleManagement = () => {
       } catch (err) {
         console.error("Error fetching users:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch users");
-        // Don't clear users on error unless it's a critical error
-        if (!users.length) {
-          setUsers([]);
-        }
       } finally {
         setLoading(false);
       }
     },
-    [searchTerm]
+    []
   );
 
   // Load users on component mount
   useEffect(() => {
     fetchUsers();
-  }, []); // Empty dependency array to run only on mount
+  }, [fetchUsers]);
 
   // Debounced search effect
   useEffect(() => {
+    if (!searchTerm) return;
+    
     const timeoutId = setTimeout(() => {
       fetchUsers(1, searchTerm);
     }, 500);
@@ -126,43 +124,45 @@ const RoleManagement = () => {
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">MANAGE ROLES</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">MANAGE ROLES</h1>
 
-      {/* Controls and Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Sort By:
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="name">Name</option>
-              <option value="role">Role</option>
-            </select>
+        {/* Sort, Search, and Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="name">Name</option>
+                <option value="role">Role</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="SEARCH"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3">
           {Permissions.canCreateUser() && (
             <button
               onClick={() => navigate("/role-management/add")}
@@ -213,13 +213,14 @@ const RoleManagement = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Table */}
       <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-blue-900 text-white">
+          <table className="w-full border-collapse">
+            <thead className="bg-blue-800 text-white">
               <tr>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">Name</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
@@ -231,7 +232,7 @@ const RoleManagement = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Loading users...
@@ -240,7 +241,7 @@ const RoleManagement = () => {
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-red-500"
                   >
                     Error: {error}
@@ -249,7 +250,7 @@ const RoleManagement = () => {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No users found

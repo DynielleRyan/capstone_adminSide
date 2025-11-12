@@ -109,10 +109,9 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">
           PURCHASE ORDER
         </h1>
-      </div>
 
       {/* Search and Sort */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -254,6 +253,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 };

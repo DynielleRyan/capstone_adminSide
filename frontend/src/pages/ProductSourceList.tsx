@@ -87,37 +87,40 @@ const ProductSourceList = () => {
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">PRODUCT SOURCE LIST</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">PRODUCT SOURCE LIST</h1>
 
-      {/* Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Sort By</label>
-            <select
-              value={sortBy}
-              onChange={handleSortChange}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
-            >
-              <option value="none">None</option>
-              <option value="ProductName">Product Name</option>
-              <option value="SupplierName">Supplier Name</option>
-              <option value="LastPurchaseDate">Last Purchase Date</option>
-            </select>
-          </div>
+        {/* Sort and Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={handleSortChange}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+              >
+                <option value="none">None</option>
+                <option value="ProductName">Product Name</option>
+                <option value="SupplierName">Supplier Name</option>
+                <option value="LastPurchaseDate">Last Purchase Date</option>
+              </select>
+            </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="SEARCH"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -125,8 +128,8 @@ const ProductSourceList = () => {
       {/* Table */}
       <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-blue-900 text-white">
+          <table className="w-full border-collapse">
+            <thead className="bg-blue-800 text-white">
               <tr>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT ID</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>

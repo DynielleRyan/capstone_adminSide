@@ -15,6 +15,8 @@ import ProductSourceList from './pages/ProductSourceList'
 import UserProfile from './pages/UserProfile'
 import Login from './pages/Login'
 import alertService from './services/alertService'
+import authService from './services/authService'
+import activityService from './services/activityService'
 import { Transactions } from './pages/Transactions'
 import { PurchaseOrders } from './pages/PurchaseOrder'
 import { NewPurchaseOrder } from './pages/NewPurchaseOrder'
@@ -25,6 +27,7 @@ import AddSupplier from './pages/AddSupplier'
 import EditSupplier from './pages/EditSupplier'
 import { ProductList } from './pages/pharmacist/ProductList'
 import ProductUpload from './pages/pharmacist/ProductUpload'
+import { EditProductList } from './pages/pharmacist/EditProductList'
 import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
 
 function App() {
@@ -66,6 +69,23 @@ function App() {
         });
       });
     });
+  }, []);
+
+  // Initialize activity tracking for existing sessions
+  useEffect(() => {
+    // Check if user is already authenticated (e.g., after page refresh)
+    if (authService.isAuthenticated()) {
+      // Initialize activity tracking
+      activityService.initialize(() => {
+        // Auto-logout callback on inactivity
+        authService.signOut().catch(console.error);
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      activityService.cleanup();
+    };
   }, []);
 
   return (
@@ -144,6 +164,19 @@ function App() {
                   <Route
                     path="/pharmacist/products/upload"
                     element={<ProductUpload />}
+                  />
+                  <Route
+                    path="/pharmacist/products/edit/:id"
+                    element={<EditProductList />}
+                  />
+                  <Route path="/products/list" element={<ProductList />} />
+                  <Route
+                    path="/products/upload/:id"
+                    element={<ProductUpload />}
+                  />
+                  <Route
+                    path="/products/edit/:id"
+                    element={<EditProductList />}
                   />
                 </Routes>
               </Layout>

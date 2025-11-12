@@ -15,7 +15,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const [items, setItems] = useState<TransactionItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("none");
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
@@ -183,8 +182,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">TRANSACTION</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">TRANSACTION</h1>
 
       {/* Search, Sort, and Download*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -211,26 +209,28 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
             </select>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search transactions"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Download CSV Button */}
-        <div className="flex gap-3">
+          {/* Download CSV Button */}
           <button
             className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-500 transition-colors flex items-center gap-2"
             onClick={handleDownloadCSV}
           >
-            DOWNLOAD CSV
+            DOWNLOAD CSV 
           </button>
         </div>
       </div>
