@@ -76,10 +76,10 @@ const ProductSourceList = () => {
     })
   }
 
-  // Format product ID to a shorter display format
-  const formatProductId = (index: number) => {
-    return String(index + 1).padStart(2, '0')
-  }
+  // Format sequential number for display (not actual product ID)
+  // const formatSequentialNumber = (index: number) => {
+  //   return String(index + 1).padStart(2, '0')
+  // }
 
   return (
     <div className="p-6 bg-blue-50 min-h-screen">
@@ -164,7 +164,9 @@ const ProductSourceList = () => {
                     } hover:bg-blue-100 transition-colors`}
                   >
                     <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                      {formatProductId((currentPage - 1) * 10 + index)}
+                      {/* Sequential number for display purposes */}
+                      {/* {formatSequentialNumber((currentPage - 1) * 10 + index)} */}
+                      {product.ProductID}
                     </td>
                     <td className="px-6 py-4 border-r border-gray-200">
                       <div className="flex items-center gap-3">
