@@ -107,8 +107,9 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     }
 
     return sorted;
-  }  
+  };
 
+  // Determine danger level of expiry date
   function getExpiryColor(expiryDate: string): string {
     const now = new Date();
     const expiry = new Date(expiryDate);
@@ -119,7 +120,58 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     if (diffMonths <= 3) return 'bg-red-100 text-red-800';
     if (diffMonths <= 6) return 'bg-yellow-100 text-yellow-800';
     return '';
-  }
+  };
+  
+  // Prepare CSV headers for all Product List table columns
+  const handleDownloadCSV = () => {
+    const headers = [
+      'ProductItemID', 
+      'ProductID', 
+      'Stock', 
+      'ExpiryDate',
+      'Name', 
+      'Category', 
+      'Brand', 
+      'SellingPrice'
+    ];
+  
+    // Prepare CSV data with all Product List table fields
+    const rows = productList.map(item => {
+      const row: Record<string, string | number | boolean> = {
+        ProductItemID: item.ProductItemID,
+        ProductID: item.ProductID,
+        Stock: item.Stock,
+        ExpiryDate: item.ExpiryDate,
+        Name: item.Product.Name,
+        Category: item.Product.Category,
+        Brand: item.Product.Brand,
+        SellingPrice: item.Product.SellingPrice,
+      };
+      return row;
+    });
+    
+    
+    // Combine headers and data
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => headers.map(h => `"${row[h]}"`).join(','))
+    ].join('\n');
+  
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `product_list_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden"
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   
 
   // Combine search and sort in render logic
@@ -136,6 +188,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     item => item.IsActive === true && item.Stock > 0
   );
 
+  // Groups product items based on their ProductID
   const grouped: Record<string, ProductItem[]> = {};
   
   validItems.forEach(item => {
@@ -169,7 +222,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
 
   return (
     <div className="p-6 bg-white min-h-screen">
-
+      {/* Legend */}
       <div className="px-6 py-4 mb-8 bg-blue-50 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-2xl font-bold text-blue-900">
@@ -193,6 +246,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
       {/* Search and Sort*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
+
           {/* Sort By */}
           <div className="flex items-center gap-2">
             <label htmlFor="sortBy" className="text-sm font-medium text-gray-700">Sort By:</label>
@@ -224,7 +278,17 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
                 />
               </div>
             </div>
-          </div>
+        </div>
+             {/* Download CSV Button */}
+             <div className="flex justify-end gap-2"> 
+              <button
+                className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-500 transition-colors flex items-center gap-2"
+                onClick={handleDownloadCSV}
+              >
+                DOWNLOAD CSV 
+              </button>
+            </div>
+          
         </div>
       </div>
       

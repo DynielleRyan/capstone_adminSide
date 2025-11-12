@@ -187,6 +187,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       {/* Search, Sort, and Download*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
+          
           {/* Sort By */}
           <div className="flex items-center gap-2">
             <label
