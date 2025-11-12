@@ -73,15 +73,15 @@ const PharmacistDashboard = () => {
           <table className="w-full text-sm">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-3 text-left font-semibold">ID</th>
-                <th className="px-6 py-3 text-left font-semibold">Product</th>
-                <th className="px-6 py-3 text-left font-semibold">Category</th>
-                <th className="px-6 py-3 text-left font-semibold">Brand</th>
-                <th className="px-6 py-3 text-left font-semibold">Expiry</th>
-                <th className="px-6 py-3 text-left font-semibold">Qty</th>
+                <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Product</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Category</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Brand</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Expiry</th>
+                <th className="px-6 py-4 text-center font-semibold">Qty</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-gray-100">
               {loadingExp ? (
                 <tr>
                   <td
@@ -104,15 +104,12 @@ const PharmacistDashboard = () => {
                 expRows.slice(0, limit).map((r, i) => (
                   <tr
                     key={r.productItemId}
-                    className={`${
-                      i % 2 === 0 ? "bg-blue-50" : "bg-white"
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">{r.productId}</td>
-                    <td className="px-6 py-4 text-gray-700">{r.productName}</td>
-                    <td className="px-6 py-4 text-gray-700">{r.category}</td>
-                    <td className="px-6 py-4 text-gray-700">{r.brand}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-gray-700 border border-white">{r.productId}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.productName}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.category}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.brand}</td>
+                    <td className="px-6 py-4 text-center border border-white">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           r.expiryLevel === "danger"
@@ -123,7 +120,7 @@ const PharmacistDashboard = () => {
                         {r.expiryDate}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{r.qty ?? 0}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.qty ?? 0}</td>
                   </tr>
                 ))
               )}
@@ -153,16 +150,16 @@ const PharmacistDashboard = () => {
           <table className="w-full text-sm">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-3 text-left font-semibold">ID</th>
-                <th className="px-6 py-3 text-left font-semibold">Product</th>
-                <th className="px-6 py-3 text-left font-semibold">Category</th>
-                <th className="px-6 py-3 text-left font-semibold">Brand</th>
-                <th className="px-6 py-3 text-left font-semibold">Price</th>
-                <th className="px-6 py-3 text-left font-semibold">Expiry</th>
-                <th className="px-6 py-3 text-left font-semibold">Qty</th>
+                <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Product</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Category</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Brand</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Price</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Expiry</th>
+                <th className="px-6 py-4 text-center font-semibold">Qty</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-gray-100">
               {loadingLow ? (
                 <tr>
                   <td
@@ -185,13 +182,10 @@ const PharmacistDashboard = () => {
                 lowRows.slice(0, limit).map((r, index) => (
                   <tr
                     key={r.productId}
-                    className={`${
-                      index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">{r.productId}</td>
-                    <td className="px-6 py-4 text-gray-700">
-                      <div className="flex items-center gap-2">
+                    <td className="px-6 py-4 text-gray-700 border border-white">{r.productId}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                      <div className="flex items-center text-center gap-2">
                         {r.image && (
                           <img
                             src={r.image}
@@ -202,16 +196,16 @@ const PharmacistDashboard = () => {
                         <span>{r.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{r.category}</td>
-                    <td className="px-6 py-4 text-gray-700">{r.brand}</td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.category}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.brand}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {currency}
                       {(r.price ?? 0).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {r.expiry ?? "—"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{r.qty ?? 0}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.qty ?? 0}</td>
                   </tr>
                 ))
               )}

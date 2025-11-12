@@ -109,6 +109,19 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     return sorted;
   }  
 
+  function getExpiryColor(expiryDate: string): string {
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+    const diffMonths =
+      (expiry.getFullYear() - now.getFullYear()) * 12 +
+      (expiry.getMonth() - now.getMonth());
+  
+    if (diffMonths <= 3) return 'bg-red-100 text-red-800';
+    if (diffMonths <= 6) return 'bg-yellow-100 text-yellow-800';
+    return '';
+  }
+  
+
   // Combine search and sort in render logic
   const displayedProductList = useMemo(() => {
     const filtered = filterProductList(productList, searchTerm);
@@ -156,11 +169,26 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
 
   return (
     <div className="p-6 bg-white min-h-screen">
+
+      <div className="px-6 py-4 mb-8 bg-blue-50 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h3 className="text-2xl font-bold text-blue-900">
+              LEGEND
+            </h3>
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span className="inline-block w-4 h-4 rounded bg-yellow-300" />
+              <span className="text-blue-900 font-medium text-base">Yellow - 6 months</span>
+              <span className="inline-block w-4 h-4 rounded bg-red-400 ml-2" />
+              <span className="text-blue-900 font-semibold text-base">Red - 3 months</span>
+            </div>
+          </div>
+      </div>
+
       {/* Blue background div */}
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-4">Product List</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">Products</h1>
 
       {/* Search and Sort*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -206,7 +234,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
         <table className="w-full">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">ID</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">CATEGORY</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">BRAND</th>
@@ -232,13 +260,13 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
             return [
             <tr key={primary.ProductItemID}>
               <td className="px-6 py-4 text-gray-700 border border-white">{primary.ProductID}</td>
-              <td className="px-4 py-4 text-gray-700 text-center border border-white">
-                <div className="flex items-center gap-3">
+              <td className=" w-[50px] px-6 py-4 text-gray-700 text-center border border-white">
+                <div className="flex items-center gap-3 flex-shrink-0">
                         {primary.Product.Image ? (
                           <img
                             src={primary.Product.Image}
                             alt={primary.Product.Name}
-                            className="w-12 h-12 object-cover rounded"
+                            className="w-10 h-10 object-cover rounded"
                           />
                         ) : (
                           <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
@@ -258,14 +286,18 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
                           <ChevronDown className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                         </button>
                         )}
-                      </span>
+                        </span>
                 </div>
               </td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Category}</td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Brand}</td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">₱{primary.Product.SellingPrice.toFixed(2)}</td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Stock}</td>
-              <td className="px-6 py-4 text-gray-700 text-center border border-white">{new Date(primary.ExpiryDate).toLocaleDateString('en-US')}</td>
+              <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                <span className={`px-3 py-1 rounded-full font-medium ${getExpiryColor(primary.ExpiryDate)}`}>
+                {new Date(primary.ExpiryDate).toLocaleDateString('en-US')}
+                </span>
+              </td>              
               <td className="px-6 py-4 border border-white">
                 <div className="flex gap-2">
                   <button
@@ -323,7 +355,11 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
               <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Brand}</td>
               <td className="px-6 py-4 text-gray-700 text-center">₱{item.Product.SellingPrice.toFixed(2)}</td>
               <td className="px-6 py-4 text-gray-700 text-center">{item.Stock}</td>
-              <td className="px-6 py-4 text-gray-700 text-center">{new Date(item.ExpiryDate).toLocaleDateString('en-US')}</td>
+              <td className="px-6 py-4 text-gray-700 text-center">
+                <span className={`px-3 py-1 rounded-full font-medium ${getExpiryColor(item.ExpiryDate)}`}>
+                {new Date(item.ExpiryDate).toLocaleDateString('en-US')}
+                </span>
+              </td>
               <td className="px-6 py-4">
                 <div className="flex gap-2">
                   <button

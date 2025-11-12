@@ -19,13 +19,13 @@ export const deleteProductItemByID = async (id: string): Promise<string> => {
 };
 
 
-// export const searchProductByName = async (name: string): Promise<ProductItem[]> => {
-//   const response = await api.get('/product-list');
-//   const allProducts: ProductItem[] = response.data;
+export const searchProductByName = async (name: string): Promise<ProductItem[]> => {
+  const response = await api.get('/product-list');
+  const allProducts: ProductItem[] = response.data;
   
-//   // Filter products by name (case-insensitive)
-//   const searchTerm = name.toLowerCase().trim();
-//   return allProducts.filter(item => 
-//     item.Product.Name.toLowerCase().includes(searchTerm)
-//   );
-// };
+  // Filter products by name (case-insensitive)
+  const searchTerm = name.toLowerCase().trim();
+  return allProducts.filter(item => 
+    item.Product.Name.toLowerCase().includes(searchTerm)
+  );
+};
