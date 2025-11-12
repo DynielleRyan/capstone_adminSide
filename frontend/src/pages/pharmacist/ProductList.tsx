@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ProductItem } from '../../types/productItem';
 import { fetchProductList } from '../../services/productListService';
 import { ProductListTable } from '../../components/ProductListTable';
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 
 export const ProductList = () => {
   const [productList, setproductList] = useState<ProductItem[]>([]);
@@ -13,6 +15,7 @@ export const ProductList = () => {
   return (
     <div>
       <ProductListTable productList={productList} />
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

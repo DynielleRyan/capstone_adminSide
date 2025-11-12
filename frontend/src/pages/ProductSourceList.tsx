@@ -83,6 +83,8 @@ const ProductSourceList = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">PRODUCT SOURCE LIST</h1>
@@ -121,19 +123,19 @@ const ProductSourceList = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold">PRODUCT ID</th>
-                <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
-                <th className="px-6 py-4 text-left font-semibold">SUPPLIER NAME</th>
-                <th className="px-6 py-4 text-left font-semibold">CONTACT NUMBER</th>
-                <th className="px-6 py-4 text-left font-semibold">LAST PURCHASE DATE</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT ID</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">SUPPLIER NAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT NUMBER</th>
+                <th className="px-6 py-4 text-center font-semibold">LAST PURCHASE DATE</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-blue-50">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
@@ -156,14 +158,11 @@ const ProductSourceList = () => {
                 products.map((product, index) => (
                   <tr
                     key={product.ProductID}
-                    className={`${
-                      index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {formatProductId((currentPage - 1) * 10 + index)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <div className="flex items-center gap-3">
                         {product.ProductImage ? (
                           <img
@@ -183,13 +182,13 @@ const ProductSourceList = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {product.SupplierName}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {product.ContactNumber || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {formatDate(product.LastPurchaseDate)}
                     </td>
                   </tr>
@@ -198,6 +197,7 @@ const ProductSourceList = () => {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Pagination */}

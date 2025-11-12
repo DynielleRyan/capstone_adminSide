@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
 import { ProductItem } from '../types/productItem';
-import { fetchProductItemByID } from '../services/productListService';
+import { fetchProductItemByID, deleteProductItemByID } from '../services/productListService';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X  } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface Props {
   productList: ProductItem[];
@@ -17,8 +18,25 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-
-    
+  const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
+  
+  // Delete product item from list
+  const handleDeleteConfirmed = async () => {
+    if (!DeleteItem) return;
+    try {
+      const message = await deleteProductItemByID(DeleteItem.ProductItemID);
+      toast.success(message);
+      setDeleteItem(null);
+      const modal = document.getElementById('delete_modal') as HTMLDialogElement;
+      modal?.close();
+      // Optionally refresh product list here
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete product');
+    }
+  };
+   
+  // View product details
   const handleView = async (id: string) => {
     const result = await fetchProductItemByID(id);
     if (!result) {
@@ -27,7 +45,9 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     } else {
       setSelectedProductItem(result);
       setErrorMessage(null);
-    }
+    };
+    
+    
 
     const modal = document.getElementById('transaction_modal') as HTMLDialogElement;
     modal?.showModal();
@@ -40,7 +60,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     }));
   };
   
-  // 🔍 Search function
+  // Search products
   function filterProductList(productList: ProductItem[], searchTerm: string): ProductItem[] {
     const term = searchTerm.toLowerCase();
 
@@ -63,16 +83,16 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     });
   }
 
-  // 🔃 Sort function
+  // Sort products
   function sortProductList(productList: ProductItem[], sortBy: string): ProductItem[] {
     const sorted = [...productList];
   
     if (sortBy === 'none') {
       // Default alphabetical sort by product name
       sorted.sort((a, b) => a.Product.Name.localeCompare(b.Product.Name));
-    } else if (sortBy === 'total-asc') {
+    } else if (sortBy === 'stock-asc') {
       sorted.sort((a, b) => a.Stock - b.Stock);
-    } else if (sortBy === 'total-desc') {
+    } else if (sortBy === 'stock-desc') {
       sorted.sort((a, b) => b.Stock - a.Stock);
     } else if (sortBy === 'date-asc') {
       sorted.sort(
@@ -89,26 +109,29 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     return sorted;
   }  
 
-  // 🧠 Combine search and sort in render logic
+  // Combine search and sort in render logic
   const displayedProductList = useMemo(() => {
     const filtered = filterProductList(productList, searchTerm);
     return sortProductList(filtered, sortBy);
   }, [productList, searchTerm, sortBy]);
 
 
+  // Group product items based on their ProductID
   const groupedProducts = useMemo(() => {
+  // Product item will only be displayed if it satisfies the condition
   const validItems = displayedProductList.filter(
     item => item.IsActive === true && item.Stock > 0
   );
 
   const grouped: Record<string, ProductItem[]> = {};
-
+  
   validItems.forEach(item => {
     const productId = item.ProductID;
     if (!grouped[productId]) grouped[productId] = [];
     grouped[productId].push(item);
   });
 
+  // Sort each product group from earliest to latest expiry
   Object.values(grouped).forEach(group => {
     group.sort((a, b) => new Date(a.ExpiryDate).getTime() - new Date(b.ExpiryDate).getTime());
   });
@@ -116,10 +139,11 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
   return grouped;
 }, [displayedProductList]);
 
-const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage);
+  const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage);
 
+  // Count products for pagination per ProductID, not per product item
   const groupedEntries = useMemo(() => {
-    const entries = Object.entries(groupedProducts); // groupedProducts is a Record<string, ProductItem[]>
+    const entries = Object.entries(groupedProducts); 
     const start = (currentPage - 1) * itemsPerPage;
     return entries.slice(start, start + itemsPerPage);
   }, [groupedProducts, currentPage]);
@@ -131,7 +155,10 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
 
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-white min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
+      {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
         </div>
@@ -149,8 +176,8 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
             <option value="none">None</option>
-            <option value="total-asc">Quantity (Low to High)</option>
-            <option value="total-desc">Quantity (High to Low)</option>
+            <option value="stock-asc">Quantity (Low to High)</option>
+            <option value="stock-desc">Quantity (High to Low)</option>
             <option value="date-asc">Expiry Date (Oldest First)</option>
             <option value="date-desc">Expiry Date (Newest First)</option>
             </select>
@@ -168,26 +195,26 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
             />
           </div>
         </div>
-        </div>
+      </div>
       
-
       {/* Product List Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white shadow overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-6 py-4 text-left font-semibold">ID</th>
-              <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
-              <th className="px-6 py-4 text-left font-semibold">CATEGORY</th>
-              <th className="px-6 py-4 text-left font-semibold">BRAND</th>
-              <th className="px-6 py-4 text-left font-semibold">PRICE</th>
-              <th className="px-6 py-4 text-left font-semibold">QUANTITY</th>
-              <th className="px-6 py-4 text-left font-semibold">EXPIRY</th>
-              <th className="px-6 py-4 text-left font-semibold">ACTION</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">ID</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">CATEGORY</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">BRAND</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">PRICE</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">EXPIRY</th>
+              <th className="px-6 py-4 text-center font-semibold">ACTION</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className=" bg-blue-50">
+          {/* Check if products exist */}
           {groupedEntries.length === 0 ? (
             <tr>
               <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
@@ -200,9 +227,9 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
             const isOpen = openGroups[productId] ?? false;
     
             return [
-            <tr key={primary.ProductItemID} className="bg-white hover:bg-blue-50">
-              <td className="px-6 py-4 text-gray-700">{primary.ProductID}</td>
-              <td className="px-6 py-4 text-gray-700">
+            <tr key={primary.ProductItemID}>
+              <td className="px-6 py-4 text-gray-700 border border-white">{primary.ProductID}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">
                 <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
                           <img
@@ -222,7 +249,7 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                         {rest.length > 0 && (
                         <button
                           onClick={() => toggleGroup(productId)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-800 pl-2"
                           aria-label="Toggle group"
                         >
                           <ChevronDown className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -231,12 +258,12 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                       </span>
                 </div>
               </td>
-              <td className="px-6 py-4 text-gray-700">{primary.Product.Category}</td>
-              <td className="px-6 py-4 text-gray-700">{primary.Product.Brand}</td>
-              <td className="px-6 py-4 text-gray-700">₱{primary.Product.SellingPrice.toFixed(2)}</td>
-              <td className="px-6 py-4 text-gray-700">{primary.Stock}</td>
-              <td className="px-6 py-4 text-gray-700">{new Date(primary.ExpiryDate).toLocaleDateString('en-US')}</td>
-              <td className="px-6 py-4">
+              <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Category}</td>
+              <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Brand}</td>
+              <td className="px-6 py-4 text-gray-700 text-center border border-white">₱{primary.Product.SellingPrice.toFixed(2)}</td>
+              <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Stock}</td>
+              <td className="px-6 py-4 text-gray-700 text-center border border-white">{new Date(primary.ExpiryDate).toLocaleDateString('en-US')}</td>
+              <td className="px-6 py-4 border border-white">
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
@@ -254,7 +281,11 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                   </button>
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => navigate(`/products/upload/${primary.ProductItemID}`)}
+                    onClick={() => {
+                      setDeleteItem(primary);
+                      const modal = document.getElementById('delete_modal') as HTMLDialogElement;
+                      modal?.showModal();
+                    }}
                     title="Upload Product Image"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -263,9 +294,9 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
               </td>
             </tr>,
             ...(isOpen ? rest.map(item => (
-            <tr key={item.ProductItemID} className="bg-blue-50 hover:bg-blue-100">
-              <td className="px-6 py-4 text-gray-700"> </td>
-              <td className="px-6 py-4 text-gray-700">
+            <tr key={item.ProductItemID} className="bg-white">
+              <td className="px-6 py-4 text-gray-700 text-center"> </td>
+              <td className="px-4 py-4 text-gray-700 text-center">
                 <div className="flex items-center gap-3">
                         {item.Product.Image ? (
                           <img
@@ -285,11 +316,11 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                       </span>
                 </div>
               </td>
-              <td className="px-6 py-4 text-gray-700">{item.Product.Category}</td>
-              <td className="px-6 py-4 text-gray-700">{item.Product.Brand}</td>
-              <td className="px-6 py-4 text-gray-700">₱{item.Product.SellingPrice.toFixed(2)}</td>
-              <td className="px-6 py-4 text-gray-700">{item.Stock}</td>
-              <td className="px-6 py-4 text-gray-700">{new Date(item.ExpiryDate).toLocaleDateString('en-US')}</td>
+              <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Category}</td>
+              <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Brand}</td>
+              <td className="px-6 py-4 text-gray-700 text-center">₱{item.Product.SellingPrice.toFixed(2)}</td>
+              <td className="px-6 py-4 text-gray-700 text-center">{item.Stock}</td>
+              <td className="px-6 py-4 text-gray-700 text-center">{new Date(item.ExpiryDate).toLocaleDateString('en-US')}</td>
               <td className="px-6 py-4">
                 <div className="flex gap-2">
                   <button
@@ -308,7 +339,11 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                   </button>
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                    onClick={() => handleView(item.ProductItemID)}
+                    onClick={() => {
+                      setDeleteItem(item);
+                      const modal = document.getElementById('delete_modal') as HTMLDialogElement;
+                      modal?.showModal();
+                    }}
                     title="Upload Product Image"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -323,6 +358,7 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
           }
           </tbody>
         </table>
+      </div>
       </div>
       </div>
 
@@ -352,7 +388,7 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
         </div>
       </div>
 
-      {/* Transaction Modal */}
+      {/* Product Details Modal */}
       <dialog id="transaction_modal" className="modal">
         <div className="modal-box bg-white rounded-lg w-full max-w-3xl max-h-[90vh] p-0 text-black flex flex-col">
           {errorMessage ? (
@@ -411,6 +447,7 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
                       year: 'numeric' 
                     })}
                   </p>
+                  <p className="text-xl font-normal">{selectedProductItem.Product.IsVATExemptYN? "Vatable" : "NonVatable"}</p>
                 </div>
               </div>
             </>
@@ -428,6 +465,30 @@ const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage)
           )}
         </div>
       </dialog>
+
+      {/*Delete Product Modal */}
+      <dialog id="delete_modal" className="modal">
+        <div className="modal-box bg-white rounded-lg w-full max-w-md p-6 text-black">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Confirmation</h3>
+          <p className="text-sm text-gray-700 mb-6">
+            ARE YOU SURE YOU WANT TO DELETE THIS ITEM?
+          </p>
+          <div className="flex justify-end gap-4">
+            <button
+              onClick={handleDeleteConfirmed}
+              className="px-4 py-2 bg-blue-800 text-white border-blue-800 rounded-md"
+            >
+              Yes
+            </button>
+            <form method="dialog">
+              <button className="px-4 py-2 bg-white text-blue-800 border-blue-800 rounded-md">
+                No
+              </button>
+            </form>
+          </div>
+        </div>
+      </dialog>
+
     </div>
   );
 };

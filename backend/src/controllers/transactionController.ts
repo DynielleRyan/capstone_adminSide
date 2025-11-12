@@ -1,8 +1,9 @@
-import createHttpError from 'http-errors';
 import { supabase } from '../config/database';
 import { RequestHandler } from 'express';
 
-export const getTransactions: RequestHandler = async (req, res, next) => {
+
+// get all transactions
+export const getTransactions: RequestHandler = async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('Transaction')
@@ -10,11 +11,12 @@ export const getTransactions: RequestHandler = async (req, res, next) => {
         if (error) throw error;
         res.status(200).json(data);
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
-export const getTransactionAndItemsByID: RequestHandler = async (req, res, next) => {
+// get specific transaction by its id and all transaction items under it
+export const getTransactionAndItemsByID: RequestHandler = async (req, res) => {
     try {
         const id = req.params.id;
         const { data: transaction, error: txnError } = await supabase
@@ -23,7 +25,7 @@ export const getTransactionAndItemsByID: RequestHandler = async (req, res, next)
             .eq('TransactionID',id)
             .single();
         if (txnError) {
-            throw createHttpError(404,'Transaction Not Found.');
+            res.status(404).json({success: false, message: 'Transaction Not Found.'});
         }
         const { data: items, error: itemsError } = await supabase
             .from('Transaction_Item')
@@ -32,10 +34,12 @@ export const getTransactionAndItemsByID: RequestHandler = async (req, res, next)
         if (itemsError) throw itemsError;
         res.status(200).json({transaction, items});
     } catch (error) {
-        next(error);
-}};
+        res.status(500).json({ message: 'Internal Server Error' });
+    }};
 
-export const getTransactionQtyMap: RequestHandler = async (req, res, next) => {
+
+// get quantity of all transaction items per transaction
+export const getTransactionQtyMap: RequestHandler = async (req, res) => {
     try {
       const ids = (req.query.ids as string | undefined)?.split(','); // optional filter
   
@@ -55,6 +59,6 @@ export const getTransactionQtyMap: RequestHandler = async (req, res, next) => {
   
       res.status(200).json(qtyMap);
     } catch (err) {
-      next(err);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
   };
