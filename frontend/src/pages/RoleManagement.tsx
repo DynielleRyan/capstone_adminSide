@@ -220,7 +220,7 @@ const RoleManagement = () => {
       <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead className="bg-blue-800 text-white">
+            <thead className="bg-blue-900 text-white">
               <tr>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">Name</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>

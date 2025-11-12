@@ -468,7 +468,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {groupedEntries.length} of {Object.keys(groupedProducts).length} products
+          Showing {groupedEntries.length} of {itemsPerPage} products
         </div>
         <div className="flex items-center gap-2">
           <button 
