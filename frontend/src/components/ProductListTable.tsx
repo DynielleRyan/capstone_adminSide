@@ -375,6 +375,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
             onClick={() => setCurrentPage((prev) => prev - 1)}
             disabled={currentPage === 1}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Go to previous page"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -385,6 +386,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
             onClick={() => setCurrentPage((prev) => prev + 1)}
             disabled={currentPage === totalPages}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Go to next page"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
