@@ -33,7 +33,7 @@ const Suppliers = () => {
 
   // Fetch suppliers from API
   const fetchSuppliers = useCallback(
-    async (page = 1, search = searchTerm) => {
+    async (page = 1, search?: string) => {
       try {
         setLoading(true);
         setError(null);
@@ -59,23 +59,22 @@ const Suppliers = () => {
         setError(
           err instanceof Error ? err.message : "Failed to fetch suppliers"
         );
-        if (!suppliers.length) {
-          setSuppliers([]);
-        }
       } finally {
         setLoading(false);
       }
     },
-    [searchTerm]
+    []
   );
 
   // Load suppliers on component mount
   useEffect(() => {
     fetchSuppliers();
-  }, []);
+  }, [fetchSuppliers]);
 
   // Debounced search effect
   useEffect(() => {
+    if (!searchTerm) return;
+    
     const timeoutId = setTimeout(() => {
       fetchSuppliers(1, searchTerm);
     }, 500);
@@ -122,45 +121,49 @@ const Suppliers = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">SUPPLIERS</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">SUPPLIERS</h1>
 
-      {/* Controls and Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Sort By:
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="name">Name</option>
-              <option value="status">Status</option>
-            </select>
+        {/* Sort, Search, and Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="name">Name</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="SEARCH"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3">
           {Permissions.canCreateSupplier() && (
             <button
               onClick={() => navigate("/suppliers/add")}
@@ -171,29 +174,30 @@ const Suppliers = () => {
             </button>
           )}
         </div>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold">
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   SUPPLIER ID
                 </th>
-                <th className="px-6 py-4 text-left font-semibold">NAME</th>
-                <th className="px-6 py-4 text-left font-semibold">
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   CONTACT PERSON
                 </th>
-                <th className="px-6 py-4 text-left font-semibold">
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   CONTACT NUMBER
                 </th>
-                <th className="px-6 py-4 text-left font-semibold">STATUS</th>
-                <th className="px-6 py-4 text-left font-semibold">ACTION</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">STATUS</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ACTION</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-blue-50">
               {loading ? (
                 <tr>
                   <td
@@ -225,21 +229,18 @@ const Suppliers = () => {
                 filteredSuppliers.map((supplier, index) => (
                   <tr
                     key={supplier.SupplierID}
-                    className={`${
-                      index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {formatSupplierId(supplier.SupplierID!)}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{supplier.Name}</td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{supplier.Name}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {supplier.ContactPerson || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {supplier.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border text-center border-white">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           supplier.IsActiveYN
@@ -250,8 +251,8 @@ const Suppliers = () => {
                         {supplier.IsActiveYN ? "ACTIVE" : "INACTIVE"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-6 py-4 border border-white">
+                      <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={() => {
                             setSelectedSupplierId(supplier.SupplierID!);
@@ -283,6 +284,7 @@ const Suppliers = () => {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Pagination */}

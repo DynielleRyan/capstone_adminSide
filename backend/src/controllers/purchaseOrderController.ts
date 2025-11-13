@@ -1,12 +1,12 @@
-import createHttpError from 'http-errors';
 import { supabase } from '../config/database';
 import { RequestHandler } from 'express';
 
+// get all purchase orders
 export const getPurchaseOrders: RequestHandler = async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('Purchase_Order')
-            .select('*, Product(Name), Supplier(Name)');
+            .select('*, Product(Name, Image), Supplier(Name)');
         if (error) throw error;
         res.status(200).json(data);
     } catch (error) {
@@ -14,12 +14,13 @@ export const getPurchaseOrders: RequestHandler = async (req, res) => {
     }
 };
 
+//get specific purchase oder by its id
 export const getPurchaseOrderByID: RequestHandler = async (req, res) => {
     try {
         const id = req.params.id;
         const { data, error } = await supabase
             .from('Purchase_Order')
-            .select('*, Product(Name), Supplier(Name)')
+            .select('*, Product(Name, Image), Supplier(Name)')
             .eq('PurchaseOrderID',id)
             .single();
         if (error) throw error;
@@ -28,6 +29,7 @@ export const getPurchaseOrderByID: RequestHandler = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });  
 }};
 
+// get all existing products to create a purchase order
 export const getProducts: RequestHandler = async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -41,6 +43,7 @@ export const getProducts: RequestHandler = async (req, res) => {
     }
 };
 
+// create a new purchase order
 export const createPurchaseOrder: RequestHandler = async (req, res) => {
     try {
         const order = req.body;
@@ -56,6 +59,7 @@ export const createPurchaseOrder: RequestHandler = async (req, res) => {
         }
 };
 
+// edit a specific purchase order's details
 export const updatePurchaseOrder: RequestHandler = async (req, res) => {
     try {
       const id = req.params.id;
@@ -68,7 +72,6 @@ export const updatePurchaseOrder: RequestHandler = async (req, res) => {
       console.log('Purchase Order updated successfully');
         res.json(data);
     } catch (error) {
-        console.error('Error updating purchase order:', error);
         res.status(500).json({message: "Internal Server Error"});
     }
   }
