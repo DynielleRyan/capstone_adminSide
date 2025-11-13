@@ -244,7 +244,7 @@ export default function Dashboard() {
                               } hover:bg-blue-100 transition-colors`}
                             >
                               <td className="px-6 py-4 text-gray-700">
-                                {r.rowNo.toString().padStart(2, "0")}
+                                {r.productId}
                               </td>
                               <td className="px-6 py-4 text-gray-700">
                                 <div className="flex items-center gap-2">
@@ -325,7 +325,9 @@ export default function Dashboard() {
                   <table className="w-full text-sm">
                     <thead className="bg-blue-900 text-white">
                       <tr>
-                        <th className="px-6 py-3 text-left font-semibold">#</th>
+                        <th className="px-6 py-3 text-left font-semibold w-[20%]">
+                          ID
+                        </th>
                         <th className="px-6 py-3 text-left font-semibold">
                           Product
                         </th>
@@ -371,8 +373,9 @@ export default function Dashboard() {
                               i % 2 === 0 ? "bg-blue-50" : "bg-white"
                             } hover:bg-blue-100 transition-colors`}
                           >
-                            <td className="px-6 py-4 text-gray-700">
-                              {(i + 1).toString().padStart(2, "0")}
+                            <td className="px-6 py-4 text-gray-700 ">
+                              {/* {(i + 1).toString().padStart(2, "0")} */}
+                              {r.productId}
                             </td>
                             <td className="px-6 py-4 text-gray-700">
                               {r.productName}

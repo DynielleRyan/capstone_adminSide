@@ -396,7 +396,7 @@ const PharmacistDashboard = () => {
                                 } hover:bg-blue-50`}
                               >
                                 <td className="px-6 py-3 text-gray-700 max-w-[140px] truncate">
-                                  {r.productItemId}
+                                  {r.productId}
                                 </td>
                                 <td className="px-6 py-3 text-gray-700">
                                   {r.productName}

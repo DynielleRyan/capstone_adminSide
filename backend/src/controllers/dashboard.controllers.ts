@@ -6,108 +6,77 @@ import { supabase } from "../config/database";
  * is <= threshold (default 20).
  */
 export const getLowStockCount: RequestHandler = async (req, res) => {
-    try {
-      const threshold = Number(req.query.threshold ?? 20);
-  
-      // Build totals from Product_Item (active)
-      const { data: items, error: iErr } = await supabase
-        .from("Product_Item")
-        .select("ProductID, Stock, IsActive")
-        .eq("IsActive", true);
-      if (iErr) return res.status(500).json({ message: iErr.message });
-  
-      const totals: Record<string, number> = {};
-      for (const r of items ?? []) {
-        const pid = r.ProductID as string;
-        totals[pid] = (totals[pid] ?? 0) + (Number(r.Stock) || 0);
-      }
-  
-      // Count over active products (default 0 if no batches)
-      const { data: products, error: pErr } = await supabase
-        .from("Product")
-        .select("ProductID, IsActive")
-        .eq("IsActive", true);
-      if (pErr) return res.status(500).json({ message: pErr.message });
-  
-      let count = 0;
-      for (const p of products ?? []) {
-        const qty = totals[p.ProductID] ?? 0;
-        if (qty <= threshold) count++;
-      }
-      return res.json({ count, threshold });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? "Internal Server Error" });
-    }
-  };
+  try {
+    const threshold = Number(req.query.threshold ?? 20);
+
+    const { count, error } = await supabase
+      .from("Product_Item")
+      .select("*", { count: "exact", head: true })
+      .eq("IsActive", true)
+      .lte("Stock", threshold);
+
+    if (error) return res.status(500).json({ message: error.message });
+
+    return res.json({ count: count ?? 0, threshold });
+  } catch (err: any) {
+    return res.status(500).json({ message: err.message || "Internal Server Error" });
+  }
+};
+
   export const listLowStock: RequestHandler = async (req, res) => {
-    try {
-      const threshold = Number(req.query.threshold ?? 20);
-      const limit = Number(req.query.limit ?? 100);
-      const offset = Number(req.query.offset ?? 0);
-  
-      // 1) Grab all active products with basic info
-      const { data: products, error: pErr } = await supabase
-        .from("Product")
-        .select("ProductID, Name, Category, Brand, Image, SellingPrice, IsActive")
-        .eq("IsActive", true);
-      if (pErr) return res.status(500).json({ message: pErr.message });
-  
-      // 2) Grab all active product-item rows (stock + expiry)
-      const { data: items, error: iErr } = await supabase
-        .from("Product_Item")
-        .select("ProductID, Stock, ExpiryDate, IsActive")
-        .eq("IsActive", true);
-      if (iErr) return res.status(500).json({ message: iErr.message });
-  
-      // 3) Aggregate totals and earliest expiry per product
-      const totals: Record<string, number> = {};
-      const earliestExpiry: Record<string, string | null> = {};
-  
-      for (const r of items ?? []) {
-        const pid = r.ProductID as string;
-        const qty = Number(r.Stock) || 0;
-        totals[pid] = (totals[pid] ?? 0) + qty;
-  
-        const expStr = r.ExpiryDate as unknown as string | null;
-        if (expStr) {
-          const prev = earliestExpiry[pid];
-          earliestExpiry[pid] =
-            !prev || new Date(expStr) < new Date(prev) ? expStr : prev;
-        } else if (!(pid in earliestExpiry)) {
-          earliestExpiry[pid] = null;
-        }
-      }
-  
-      // 4) Build rows, filter by threshold, sort by qty asc
-      const rows = (products ?? [])
-        .map((p) => {
-          const pid = p.ProductID as string;
-          const qty = totals[pid] ?? 0;
-          return {
-            productId: pid,
-            name: p.Name as string,
-            category: (p.Category as string) || "",
-            brand: (p.Brand as string) || "",
-            price: Number(p.SellingPrice) || 0,
-            expiry: earliestExpiry[pid] ?? null, // earliest expiry across batches
-            qty,                                  // total qty across batches
-            image: (p.Image as string) || null,   // optional for thumbnail
-          };
-        })
-        .filter((r) => r.qty <= threshold)
-        .sort((a, b) => a.qty - b.qty);
-  
-      // 5) Page and add 1-based "rowNo" for the leftmost ID column
-      const page = rows.slice(offset, offset + limit).map((r, idx) => ({
+  try {
+    const threshold = Number(req.query.threshold ?? 20);
+    const limit = Number(req.query.limit ?? 100);
+    const offset = Number(req.query.offset ?? 0);
+
+    // 1️⃣ Get matching Product_Item rows (≤ threshold)
+    const { data: items, error: iErr } = await supabase
+      .from("Product_Item")
+      .select("ProductItemID, ProductID, Stock, ExpiryDate, IsActive")
+      .eq("IsActive", true)
+      .lte("Stock", threshold);
+
+    if (iErr) return res.status(500).json({ message: iErr.message });
+
+    if (!items || items.length === 0) return res.json([]);
+
+    // 2️⃣ Get Products related to these items
+    const productIds = [...new Set(items.map((it) => it.ProductID))]; // unique IDs into array
+
+    const { data: products, error: pErr } = await supabase
+      .from("Product")
+      .select("ProductID, Name, Category, Brand, SellingPrice, Image, IsActive")
+      .eq("IsActive", true)
+      .in("ProductID", productIds);
+
+    if (pErr) return res.status(500).json({ message: pErr.message });
+
+    const pMap = Object.fromEntries(products.map((p) => [p.ProductID, p]));
+
+    // 3️⃣ Merge ProductItem + Product
+    const rows = items.map((it, idx) => {
+      const prod = pMap[it.ProductID];
+
+      return {
         rowNo: offset + idx + 1,
-        ...r,
-      }));
-  
-      return res.json(page);
-    } catch (e: any) {
-      return res.status(500).json({ message: e?.message || "Internal Server Error" });
-    }
-  };
+        productItemId: it.ProductItemID,
+        productId: it.ProductID,
+        name: prod?.Name || "",
+        category: prod?.Category || "",
+        brand: prod?.Brand || "",
+        price: Number(prod?.SellingPrice || 0),
+        expiry: it.ExpiryDate,
+        qty: Number(it.Stock || 0),
+        image: prod?.Image || null,
+      };
+    });
+
+    return res.json(rows.slice(offset, offset + limit));
+  } catch (e: any) {
+    return res.status(500).json({ message: e.message || "Internal Server Error" });
+  }
+};
+
   /**
    * Count expiring product items.
    * - warn: expiry within <= 6 months and > 3 months
