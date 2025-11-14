@@ -130,15 +130,17 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   }
 
   // Sort function
-  function sortTransactions(
-    transactions: Transaction[],
-    sortBy: string
-  ): Transaction[] {
-    if (sortBy === "none") return transactions;
-
+  function sortTransactions(transactions: Transaction[],sortBy: string ): Transaction[] {
     const sorted = [...transactions];
 
-    if (sortBy === "total-asc") {
+    if (sortBy === 'none') {
+      // Default sort by latest transaction date
+      sorted.sort(
+        (a, b) =>
+          new Date(b.OrderDateTime).getTime() -
+          new Date(a.OrderDateTime).getTime()
+      );
+    } else if (sortBy === "total-asc") {
       sorted.sort((a, b) => a.Total - b.Total);
     } else if (sortBy === "total-desc") {
       sorted.sort((a, b) => b.Total - a.Total);
@@ -242,7 +244,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         <table className="w-full">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">TXN ID</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">TXN ID</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">STAFF</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">PAYMENT METHOD</th>
@@ -254,7 +256,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <tbody className=" bg-blue-50">
             {paginatedData.map((tx, index) => (
               <tr key={tx.TransactionID} >
-                <td className="px-6 py-4 text-gray-700 border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
                 <td className="px-6 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 

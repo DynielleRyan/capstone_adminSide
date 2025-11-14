@@ -166,7 +166,7 @@ const RoleManagement = () => {
           {Permissions.canCreateUser() && (
             <button
               onClick={() => navigate("/role-management/add")}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               ADD USER
@@ -190,7 +190,7 @@ const RoleManagement = () => {
                 navigate("/role-management/edit");
               }}
               disabled={loading || users.length === 0}
-              className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border border-blue-900 text-blue-900 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Edit3 className="w-4 h-4" />
               EDIT USER
@@ -222,7 +222,7 @@ const RoleManagement = () => {
           <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-center font-semibold border-r border-white">Name</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">USERNAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">ROLE</th>

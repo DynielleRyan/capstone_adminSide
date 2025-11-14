@@ -173,7 +173,6 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
     document.body.removeChild(link);
   };
   
-
   // Combine search and sort in render logic
   const displayedProductList = useMemo(() => {
     const filtered = filterProductList(productList, searchTerm);

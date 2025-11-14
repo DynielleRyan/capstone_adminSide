@@ -163,7 +163,7 @@ const ProductSourceList = () => {
                     key={product.ProductID}
                   >
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
-                      {formatProductId((currentPage - 1) * 10 + index)}
+                    {product.ProductID}
                     </td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <div className="flex items-center gap-3">

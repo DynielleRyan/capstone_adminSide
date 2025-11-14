@@ -123,7 +123,7 @@ const AddUser = () => {
       </div>
 
       {/* Form Card */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+      <div className="bg-white rounded-lg shadow-sm border border-blue-700 p-8">
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             {/* Name Fields */}
@@ -280,14 +280,14 @@ const AddUser = () => {
           <div className="flex justify-center gap-4 mt-8">
             <button
               type="submit"
-              className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+              className="px-8 py-3 bg-blue-900 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
             >
               CONFIRM
             </button>
             <button
               type="button"
               onClick={handleCancel}
-              className="px-8 py-3 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition-colors font-medium"
+              className="px-8 py-3 border border-blue-900 text-blue-900 rounded-md hover:bg-blue-50 transition-colors font-medium"
             >
               CANCEL
             </button>

@@ -153,7 +153,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
           </div>
         </div>
         <button
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="bg-blue-900 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
           onClick={() => navigate('/purchase-orders/new')}
         >
           + ADD PURCHASE ORDER
@@ -180,7 +180,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
             <tbody className=" bg-blue-50">
               {paginatedData.map((order, index) => (
               <tr key={order.PurchaseOrderID} >
-                <td className="px-4 py-4 text-gray-700  border border-white">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
                 <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div className="flex items-center gap-2">
                         {order.Product.Image ? (
