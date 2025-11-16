@@ -298,13 +298,13 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
           <thead className="bg-blue-900 text-white">
             <tr>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">CATEGORY</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">BRAND</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">PRICE</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">EXPIRY</th>
-              <th className="px-6 py-4 text-center font-semibold">ACTION</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">CATEGORY</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">BRAND</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">PRICE</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">EXPIRY</th>
+              <th className="px-4 py-4 text-center font-semibold">ACTION</th>
             </tr>
           </thead>
           <tbody className=" bg-blue-50">
@@ -323,8 +323,8 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
             return [
             <tr key={primary.ProductItemID}>
               <td className="px-6 py-4 text-gray-700 border border-white">{primary.ProductID}</td>
-              <td className=" w-[50px] px-6 py-4 text-gray-700 text-center border border-white">
-                <div className="flex items-center gap-3 flex-shrink-0">
+              <td className=" w-[50px] px-4 py-4 text-gray-700 text-center border border-white">
+                <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
                           <img
                             src={primary.Product.Image}
@@ -340,28 +340,29 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
                         )}
                         <span className="font-medium">
                         {primary.Product.Name}
+
+                        </span>
                         {rest.length > 0 && (
                         <button
                           onClick={() => toggleGroup(productId)}
-                          className="text-blue-600 hover:text-blue-800 pl-2"
+                          className="text-blue-600 hover:text-blue-800"
                           aria-label="Toggle group"
                         >
                           <ChevronDown className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                         </button>
                         )}
-                        </span>
                 </div>
               </td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Category}</td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Brand}</td>
-              <td className="px-6 py-4 text-gray-700 text-center border border-white">₱{primary.Product.SellingPrice.toFixed(2)}</td>
-              <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Stock}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{primary.Product.SellingPrice.toFixed(2)}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">{primary.Stock}</td>
               <td className="px-6 py-4 text-gray-700 text-center border border-white">
                 <span className={`px-3 py-1 rounded-full font-medium ${getExpiryColor(primary.ExpiryDate)}`}>
                 {new Date(primary.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>              
-              <td className="px-6 py-4 border border-white">
+              <td className="px-4 py-4 border border-white">
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
@@ -416,14 +417,14 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
               </td>
               <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Category}</td>
               <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Brand}</td>
-              <td className="px-6 py-4 text-gray-700 text-center">₱{item.Product.SellingPrice.toFixed(2)}</td>
-              <td className="px-6 py-4 text-gray-700 text-center">{item.Stock}</td>
+              <td className="px-4 py-4 text-gray-700 text-center">₱{item.Product.SellingPrice.toFixed(2)}</td>
+              <td className="px-4 py-4 text-gray-700 text-center">{item.Stock}</td>
               <td className="px-6 py-4 text-gray-700 text-center">
                 <span className={`px-3 py-1 rounded-full font-medium ${getExpiryColor(item.ExpiryDate)}`}>
                 {new Date(item.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>
-              <td className="px-6 py-4">
+              <td className="px-4 py-4">
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
