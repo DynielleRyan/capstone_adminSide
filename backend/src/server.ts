@@ -16,6 +16,7 @@ import productListRoutes from './routes/productListRoutes'
 import reportRoutes from './routes/report.routes'
 import dashboard from './routes/dashboard.routes'
 import notifRoutes from './routes/notifications.routes'
+import { startDailySmsCron } from "./cron/smsDailyCron";
 
 
 // Load environment variables
@@ -60,8 +61,9 @@ app.use("/api/reports", reportRoutes)
 app.use("/api/dashboard", dashboard)
 app.use("/api/notifications", notifRoutes)
 
-// Error handling middleware
 
+// Start Daily SMS Cron
+startDailySmsCron();
 
 // Start server
 app.listen(PORT, () => {
