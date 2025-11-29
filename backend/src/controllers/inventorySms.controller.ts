@@ -4,11 +4,11 @@ import { sendSMS } from "../services/sms";
 import { smsSentToday, logSmsSend } from "../services/smsLog";
 
 // ======================================================
-// 1️⃣ Manual Trigger (Postman) — HAS req + res
+//  Manual Trigger (Postman) — HAS req + res
 // ======================================================
 export const sendInventorySMSAlert: RequestHandler = async (req, res) => {
   try {
-    // ⭐ Force resend for testing
+    // Force resend for testing
     // Example: /api/notifications/sms-alert?force=1
     const force = req.query.force === "1";
 
@@ -20,7 +20,7 @@ export const sendInventorySMSAlert: RequestHandler = async (req, res) => {
 };
 
 // ======================================================
-// 2️⃣ Cron Version — NO req/res
+// Cron Version — NO req/res
 // Cron does not support req.query
 // ======================================================
 export async function sendInventorySMSAlertCron(force = false) {
@@ -78,7 +78,7 @@ export async function sendInventorySMSAlertCron(force = false) {
   // SEND SMS
   const sms = await sendSMS(ADMIN_PHONE, text);
 
-  // Log only if successful
+  // Log only if successful 
   if (sms) await logSmsSend();
 
   return { smsSent: !!sms, low, expiring, sms };
