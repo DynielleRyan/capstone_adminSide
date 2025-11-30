@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { InternalAxiosRequestConfig } from 'axios'
+import { activityService } from './activityService'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 
@@ -143,6 +144,11 @@ api.interceptors.response.use(
 
 // Helper function to clear auth data and redirect to login
 const clearAuthAndRedirect = () => {
+  // Clean up activity tracking
+  activityService.cleanup()
+  activityService.clearActivity()
+  
+  // Clear auth data
   localStorage.removeItem('token')
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('user')

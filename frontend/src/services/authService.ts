@@ -1,5 +1,6 @@
 import api from './api'
 import { UserResponse } from './userService'
+import { activityService } from './activityService'
 
 export interface SignInCredentials {
   usernameOrEmail: string
@@ -40,6 +41,12 @@ export const authService = {
         const expiresAt = response.data.data.session.expires_at || 
                          Math.floor(Date.now() / 1000) + response.data.data.session.expires_in
         localStorage.setItem('expires_at', expiresAt.toString())
+        
+        // Initialize activity tracking after successful login
+        activityService.initialize(() => {
+          // Auto-logout callback on inactivity
+          authService.signOut().catch(console.error)
+        })
       }
       
       return response.data
@@ -119,6 +126,11 @@ export const authService = {
 
   // Clear authentication data
   clearAuth: (): void => {
+    // Clean up activity tracking
+    activityService.cleanup()
+    activityService.clearActivity()
+    
+    // Clear auth data
     localStorage.removeItem('token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user')
