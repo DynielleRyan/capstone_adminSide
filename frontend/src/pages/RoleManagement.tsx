@@ -119,8 +119,10 @@ const RoleManagement = () => {
   }, [users, searchTerm, sortBy]);
 
   return (
-    <div className="p-6 bg-blue-50 min-h-screen">
-      {/* Page Header with Title */}
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
+      {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-blue-900 mb-4">MANAGE ROLES</h1>
 
@@ -215,20 +217,18 @@ const RoleManagement = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead className="bg-blue-800 text-white">
+            <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">USER ID</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">Name</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">CONTACT</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">USERNAME</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PASSWORD</th>
-                <th className="px-6 py-4 text-left font-semibold">ROLE</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">Name</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">USERNAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ROLE</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-blue-50">
               {loading ? (
                 <tr>
                   <td
@@ -260,24 +260,15 @@ const RoleManagement = () => {
                 filteredUsers.map((user, index) => (
                   <tr
                     key={user.UserID}
-                    className={`${
-                      index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                      {user.UserID}
-                    </td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {user.FirstName} {user.MiddleInitial} {user.LastName}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {user.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{user.Username}</td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                      ********
-                    </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{user.Username}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           user.Roles === "Pharmacist"
@@ -294,6 +285,7 @@ const RoleManagement = () => {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Pagination */}

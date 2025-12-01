@@ -104,99 +104,91 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   }, [searchTerm, sortBy]);
 
   return (
-    <div className="bg-blue-50 min-h-screen p-6">
-      {/* Page Header with Title */}
+    <div className="p-6 bg-white min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
+      {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-blue-900 mb-4">
           PURCHASE ORDER
         </h1>
 
-        {/* Sort, Search, and Button */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Sort By */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="sortBy"
-                className="text-sm font-medium text-gray-700"
-              >
-                Sort By
-              </label>
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="none">None</option>
-                <option value="total-asc">Total Cost (Low to High)</option>
-                <option value="total-desc">Total Cost (High to Low)</option>
-                <option value="date-asc">Date Ordered (Oldest First)</option>
-                <option value="date-desc">Date Ordered (Newest First)</option>
-                <option value="eta-asc">ETA (Oldest First)</option>
-                <option value="eta-desc">ETA (Newest First)</option>
-              </select>
-            </div>
-
-            {/* Search */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="None"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-                />
-              </div>
-            </div>
+      {/* Search and Sort */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Sort By */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="sortBy"
+              className="text-sm font-medium text-gray-700"
+            >
+              Sort By:
+            </label>
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="none">None</option>
+              <option value="total-asc">Total Cost (Low to High)</option>
+              <option value="total-desc">Total Cost (High to Low)</option>
+              <option value="date-asc">Date Ordered (Oldest First)</option>
+              <option value="date-desc">Date Ordered (Newest First)</option>
+              <option value="eta-asc">ETA (Oldest First)</option>
+              <option value="eta-desc">ETA (Newest First)</option>
+            </select>
           </div>
-          <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-            onClick={() => navigate('/purchase-orders/new')}
-          >
-            + ADD PURCHASE ORDER
-          </button>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search transactions"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+            />
+          </div>
         </div>
+        <button
+          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+          onClick={() => navigate('/purchase-orders/new')}
+        >
+          + ADD PURCHASE ORDER
+        </button>
       </div>
 
-
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Purchase Order Table */}
+      <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-blue-800 text-white">
+          <table className="w-full">
+            <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">ID</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PRODUCT</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">SUPPLIER NAME</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">DATE ORDERED</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">ETA</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">DATE ARRIVED</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">QUANTITY</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">TOTAL COST</th>
-                <th className="px-6 py-4 text-left font-semibold">ACTION</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ID</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">SUPPLIER NAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ETA</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ARRIVED</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">TOTAL COST</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ACTION</th>
               </tr>
             </thead>
-      <tbody>
-        {paginatedData.map((order, index) => (
-          <tr 
-            key={order.PurchaseOrderID} 
-            className={`${
-              index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-            } hover:bg-blue-100 transition-colors`}
-          >
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-              <div className="flex items-center gap-3">
+            <tbody className=" bg-blue-50">
+              {paginatedData.map((order, index) => (
+              <tr key={order.PurchaseOrderID} >
+                <td className="px-4 py-4 text-gray-700  border border-white">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
+                <td className="px-2 py-4 text-gray-700 text-center border border-white">
+                  <div className="flex items-center gap-2">
                         {order.Product.Image ? (
                           <img
-                            src={order.Product.Image}
-                            alt={order.Product.Name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
+                          src={order.Product.Image}
+                          alt={order.Product.Name}
+                          className="w-8 h-8 object-cover rounded"
+                        />
                         ) : (
                           <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
                             <span className="text-blue-600 text-sm">
@@ -207,37 +199,39 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
                         <span className="font-medium">
                           {order.Product.Name}
                         </span>
-                </div>
-              </td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{order.Supplier.Name}</td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{new Date(order.OrderPlacedDateTime).toLocaleDateString()}</td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{new Date(order.ETA).toLocaleDateString()}</td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-              {order.OrderArrivalDateTime
-                ? new Date(order.OrderArrivalDateTime).toLocaleDateString()
-                : '—'}
-            </td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{order.Quantity}</td>
-            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">₱{order.TotalPurchaseCost.toFixed(2)}</td>
-            <td className="px-6 py-4">
-              <button
-                className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                onClick={() => navigate(`/purchase-orders/${order.PurchaseOrderID}`)}
-              >
-                <PenSquare className="w-4 h-4" />
-              </button>
-            </td>
-          </tr>
-        ))}
-          </tbody>
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{order.Supplier.Name}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{new Date(order.OrderPlacedDateTime).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{new Date(order.ETA).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">
+                  {order.OrderArrivalDateTime
+                  ? new Date(order.OrderArrivalDateTime).toLocaleDateString()
+                  : '—'}
+                </td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{order.Quantity}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{order.TotalPurchaseCost.toFixed(2)}</td>
+                <td className="px-4 py-4 border border-white">
+                  <button
+                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700"
+                    onClick={() => navigate(`/purchase-orders/${order.PurchaseOrderID}`)}
+                    title="Edit Purchase Order Details"
+                  >
+                    <PenSquare className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+              ))}
+            </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {paginatedData.length} of {displayedOrders.length} orders
+          Showing {paginatedData.length} of {itemsPerPage} purchase orders
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -259,6 +253,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 };

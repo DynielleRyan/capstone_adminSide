@@ -63,7 +63,7 @@ const Sidebar = () => {
   const menuItems = isPharmacist ? pharmacistMenuItems : adminMenuItems;
 
   return (
-    <aside className="w-64 bg-blue-50 border-r border-blue-200 h-full">
+    <aside className="w-64 bg-blue-50 border-r border-blue-50 h-full">
       <div className="p-4">
         <h2 className="text-lg font-bold text-blue-600">Jambo's Pharmacy</h2>
       </div>

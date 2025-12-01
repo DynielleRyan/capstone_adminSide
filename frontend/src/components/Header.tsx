@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell, User, Search, LogOut, UserCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
+import { useGlobalSearch } from "../hooks/useGlobalSearch";
 
 // ✅ Keep only these two
 import {
@@ -15,6 +16,20 @@ const Header = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // 🔍 Search functionality
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    isSearching,
+    showResults,
+    setShowResults,
+    selectedIndex,
+    handleResultClick,
+    handleKeyDown,
+  } = useGlobalSearch();
 
   // 🔔 Notifications state
   const [notifOpen, setNotifOpen] = useState(false);
@@ -100,6 +115,18 @@ const Header = () => {
     return () => clearInterval(id);
   }, []);
 
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setShowResults]);
+
   const toggleNotif = async () => {
     const next = !notifOpen;
     setNotifOpen(next);
@@ -109,20 +136,81 @@ const Header = () => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 relative">
       <div className="flex items-center justify-between">
-        {/* Pharmacy Name */}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-blue-600">Jambo's Pharmacy</h1>
-        </div>
-
         {/* Search Bar */}
-        <div className="flex-1 max-w-md mx-8">
+        <div className="flex-1 max-w-md mx-8" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search here..."
+              placeholder="Search everything..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery && setShowResults(true)}
+              onKeyDown={handleKeyDown}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            
+            {/* Search Results Dropdown */}
+            {showResults && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50">
+                {isSearching && (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    Searching...
+                  </div>
+                )}
+                
+                {!isSearching && searchResults.length === 0 && searchQuery && (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    No results found for "{searchQuery}"
+                  </div>
+                )}
+                
+                {!isSearching && searchResults.length > 0 && (
+                  <div className="divide-y">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={`${result.category}-${result.id}`}
+                        onClick={() => handleResultClick(result)}
+                        className={`w-full text-left p-3 transition-colors ${
+                          selectedIndex === index
+                            ? 'bg-blue-100'
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-1">
+                            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700">
+                              {result.category}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 truncate">
+                              {result.title}
+                            </div>
+                            {result.subtitle && (
+                              <div className="text-sm text-gray-500 truncate">
+                                {result.subtitle}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {!isSearching && searchResults.length > 0 && (
+                  <div className="p-2 bg-gray-50 border-t">
+                    <div className="text-center text-xs text-gray-400">
+                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                    </div>
+                    <div className="text-center text-xs text-gray-400 mt-1">
+                      <span className="font-semibold">↑↓</span> Navigate · <span className="font-semibold">Enter</span> Select · <span className="font-semibold">Esc</span> Close
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -240,6 +328,13 @@ const Header = () => {
             setShowDropdown(false);
             setNotifOpen(false);
           }}
+        />
+      )}
+      
+      {showResults && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowResults(false)}
         />
       )}
     </header>

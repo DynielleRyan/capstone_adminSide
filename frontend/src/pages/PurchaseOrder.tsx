@@ -10,9 +10,6 @@ export const PurchaseOrders = () => {
     fetchPurchaseOrders().then(setOrders);
   }, []);
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <PurchaseOrderTable orders={orders} />
-    </div>
-  );
+  return <PurchaseOrderTable orders={orders} />;
+    
 };

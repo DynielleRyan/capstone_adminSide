@@ -120,8 +120,10 @@ const Suppliers = () => {
   };
 
   return (
-    <div className="p-6 bg-blue-50 min-h-screen">
-      {/* Page Header with Title */}
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
+      {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-blue-900 mb-4">SUPPLIERS</h1>
 
@@ -176,26 +178,26 @@ const Suppliers = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead className="bg-blue-800 text-white">
+            <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   SUPPLIER ID
                 </th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">NAME</th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   CONTACT PERSON
                 </th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   CONTACT NUMBER
                 </th>
-                <th className="px-6 py-4 text-left font-semibold border-r border-white/20">STATUS</th>
-                <th className="px-6 py-4 text-left font-semibold">ACTION</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">STATUS</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ACTION</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-blue-50">
               {loading ? (
                 <tr>
                   <td
@@ -227,21 +229,18 @@ const Suppliers = () => {
                 filteredSuppliers.map((supplier, index) => (
                   <tr
                     key={supplier.SupplierID}
-                    className={`${
-                      index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {formatSupplierId(supplier.SupplierID!)}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{supplier.Name}</td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{supplier.Name}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {supplier.ContactPerson || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {supplier.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4 border-r border-gray-200">
+                    <td className="px-6 py-4 border text-center border-white">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           supplier.IsActiveYN
@@ -252,8 +251,8 @@ const Suppliers = () => {
                         {supplier.IsActiveYN ? "ACTIVE" : "INACTIVE"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-6 py-4 border border-white">
+                      <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={() => {
                             setSelectedSupplierId(supplier.SupplierID!);
@@ -285,6 +284,7 @@ const Suppliers = () => {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Pagination */}

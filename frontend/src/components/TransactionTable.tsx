@@ -3,15 +3,15 @@ import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
-import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
   transactions: Transaction[];
 }
 
 export const TransactionTable: React.FC<Props> = ({ transactions }) => {
-  const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [items, setItems] = useState<TransactionItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("none");
@@ -28,11 +28,11 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       .catch(() => setQtyMap({}));
   }, [transactions]);
     
-
+  // View transaction details
   const handleView = async (id: string) => {
     const result = await fetchTransactionWithItems(id);
     if (!result) {
-      setErrorMessage("Transaction not found or failed to load.");
+      setErrorMessage("Transaction not found.");
       setSelectedTransaction(null);
       setItems([]);
     } else {
@@ -55,11 +55,9 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       return sum + discountAmount;
     }, 0);
   };
-  
-  
 
+  // Prepare CSV headers for all Transaction table columns
   const handleDownloadCSV = () => {
-    // Prepare CSV headers for all Transaction table columns (excluding User table)
     const headers = [
       "TransactionID",
       "UserID",
@@ -107,7 +105,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     document.body.removeChild(link);
   };
 
-  // 🔍 Search function
+  // Search function
   function filterTransactions(
     transactions: Transaction[],
     searchTerm: string
@@ -131,7 +129,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     });
   }
 
-  // 🔃 Sort function
+  // Sort function
   function sortTransactions(
     transactions: Transaction[],
     sortBy: string
@@ -161,7 +159,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     return sorted;
   }
 
-  // 🧠 Combine search and sort in render logic
+  // Combine search and sort in render logic
   const displayedTransactions = useMemo(() => {
     const filtered = filterTransactions(transactions, searchTerm);
     return sortTransactions(filtered, sortBy);
@@ -179,35 +177,38 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   }, [searchTerm, sortBy]);
 
   return (
-    <div className="bg-blue-50 min-h-screen p-6">
-      {/* Page Header with Title */}
+    <div className="p-6 bg-white min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
+      {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-blue-900 mb-4">TRANSACTION</h1>
 
-        {/* Sort, Search, and Download */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Sort By */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="sortBy"
-                className="text-sm font-medium text-gray-700"
-              >
-                Sort By
-              </label>
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="none">None</option>
-                <option value="total-asc">Total (Low to High)</option>
-                <option value="total-desc">Total (High to Low)</option>
-                <option value="date-asc">Date (Oldest First)</option>
-                <option value="date-desc">Date (Newest First)</option>
-              </select>
-            </div>
+      {/* Search, Sort, and Download*/}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          
+          {/* Sort By */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="sortBy"
+              className="text-sm font-medium text-gray-700"
+            >
+              Sort By:
+            </label>
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="none">None</option>
+              <option value="total-asc">Total (Low to High)</option>
+              <option value="total-desc">Total (High to Low)</option>
+              <option value="date-asc">Date (Oldest First)</option>
+              <option value="date-desc">Date (Newest First)</option>
+            </select>
+          </div>
 
             {/* Search */}
             <div className="flex items-center gap-2">
@@ -227,7 +228,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
 
           {/* Download CSV Button */}
           <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-500 transition-colors flex items-center gap-2"
             onClick={handleDownloadCSV}
           >
             DOWNLOAD CSV 
@@ -236,32 +237,25 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       </div>
 
       {/* Transaction Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-blue-800 text-white">
+      <div className="bg-white shadow overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">TXN ID</th>
-              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">DATE ORDERED</th>
-              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">STAFF</th>
-              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">PAYMENT METHOD</th>
-              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">QTY</th>
-              <th className="px-6 py-4 text-left font-semibold border-r border-white/20">TOTAL</th>
-              <th className="px-6 py-4 text-left font-semibold">VIEW</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">TXN ID</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">STAFF</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">PAYMENT METHOD</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">QTY</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">TOTAL</th>
+              <th className="px-6 py-4 text-center font-semibold">VIEW</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className=" bg-blue-50">
             {paginatedData.map((tx, index) => (
-              <tr 
-                key={tx.TransactionID} 
-                className={`${
-                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-                } hover:bg-blue-100 transition-colors`}
-              >
-                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                  {String(tx.TransactionID).padStart(2, '0')}
-                </td>
-                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+              <tr key={tx.TransactionID} >
+                <td className="px-6 py-4 text-gray-700 border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
+                <td className="px-6 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
                       month: 'numeric', 
@@ -277,17 +271,13 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     })}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
+                <td className="px-6 py-4 text-gray-700 text-center border border-white">
                   <div className="font-medium">{tx.User.FirstName} {tx.User.LastName}</div>
                 </td>
-                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">{tx.PaymentMethod}</td>
-                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                  {qtyMap[tx.TransactionID] ?? 0}
-                </td>
-                <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                  ₱{tx.Total.toFixed(2)}
-                </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 text-gray-700 text-center border border-white">{tx.PaymentMethod}</td>
+                <td className="px-6 py-4 text-gray-700 text-center border border-white">{qtyMap[tx.TransactionID] ?? 0}</td>
+                <td className="px-6 py-4 text-gray-700 text-center border border-white">₱{tx.Total.toFixed(2)}</td>
+                <td className="px-6 py-4 border border-white">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
                     onClick={() => handleView(tx.TransactionID)}
@@ -298,16 +288,16 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                 </td>
               </tr>
             ))}
-            </tbody>
-          </table>
-        </div>
+          </tbody>
+        </table>
+      </div>
+      </div>
       </div>
 
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {paginatedData.length} of {displayedTransactions.length}{" "}
-          transactions
+          Showing {paginatedData.length} of {itemsPerPage} transactions
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -332,7 +322,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
 
       {/* Transaction Modal */}
       <dialog id="transaction_modal" className="modal">
-        <div className="modal-box bg-white rounded-lg w-full max-w-4xl max-h-[90vh] p-0 text-black flex flex-col">
+        <div className="modal-box bg-white rounded-lg w-full max-w-4xl max-h-[90vh] p-4 text-black flex flex-col">
           {errorMessage ? (
             <div className="p-6">
               <div className="text-red-500 font-semibold">{errorMessage}</div>
@@ -346,91 +336,110 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
             </div>
           ) : selectedTransaction ? (
             <>
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Transaction Details
-                </h3>
-                <div className="mt-2 space-y-1 text-sm text-gray-700">
-                  <p>
-                    <strong>ID:</strong> {selectedTransaction.TransactionID}
-                  </p>
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(
-                      selectedTransaction.OrderDateTime
-                    ).toLocaleString()}
-                  </p>
-                  <p>
-                    <strong>Staff:</strong> {selectedTransaction.User.FirstName}{" "}
-                    {selectedTransaction.User.LastName}
-                  </p>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <h4 className="font-semibold text-gray-900 mb-3">Items</h4>
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="w-full text-sm border-collapse">
-                    <thead className="bg-blue-800 text-white">
-                      <tr>
-                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
-                          ITEM
-                        </th>
-                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
-                          PRICE
-                        </th>
-                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
-                          QUANTITY
-                        </th>
-                        <th className="px-6 py-3 text-left font-semibold">
-                          SUBTOTAL
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item, index) => (
-                        <tr
-                          key={item.TransactionItemID}
-                          className={`${
-                            index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                          } hover:bg-blue-100 transition-colors`}
-                        >
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                            {item.Product.Name}
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                            ₱{item.Product.SellingPrice.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                            {item.Quantity}
-                          </td>
-                          <td className="px-6 py-4 text-gray-700">
-                            ₱{item.Subtotal.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-6 space-y-2 text-sm text-right">
-                  <p className="text-gray-700"><strong>SUBTOTAL:</strong> ₱{items.reduce((sum, item) => sum + (item.Product.SellingPrice*item.Quantity), 0).toFixed(2)}</p>
-                  <p className="text-gray-700"><strong>DISCOUNT:</strong> ₱{calculateTotalDiscount(items).toFixed(2)}</p>
-                  <p className="text-gray-700"><strong>VAT AMOUNT:</strong> ₱{selectedTransaction.VATAmount.toFixed(2)}</p>
-                  <p className="text-lg font-semibold text-gray-900"><strong>TOTAL:</strong> ₱{selectedTransaction.Total.toFixed(2)}</p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end flex-shrink-0">
+            <div className="px-6 pt-2 flex-shrink-0">
                 <form method="dialog">
-                  <button className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors">
-                    Close
+                <button                     
+                    className="bg-transparent border-none cursor-pointer rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
+                  >
+                    <ArrowLeft className="w-8 h-8" />
                   </button>
                 </form>
+            </div>
+              {/* Header */}
+              <div className="px-6 pb-2 flex-shrink-0">
+                <h1 className="text-3xl text-center font-semibold text-gray-900">TRANSACTION DETAILS</h1>
+                  <hr className=" my-4 border-t-2 item-center border-gray-400"/>
+                  
+                  {/* Basic Details */}
+                  <div className="flex gap-6 items-start">
+                    <div className="flex-shrink-0 space-y-3">
+                      <p><strong>TRANSACTION ID:</strong></p>
+                      <p><strong>DATE ORDERED:</strong></p>
+                      <p><strong>STAFF:</strong></p>
+                      <p><strong>PAYMENT OPTION:</strong></p>
+                    </div>
+
+                    <div className="flex-shrink-0 pl-4 space-y-3">
+                      <p>{selectedTransaction.TransactionID}</p>
+                      <p>
+                        {" "}
+                        {new Date(
+                        selectedTransaction.OrderDateTime
+                        ).toLocaleString()}
+                      </p>
+                      <p>{selectedTransaction.User.FirstName}{" "}{selectedTransaction.User.LastName}</p>
+                      <p>{selectedTransaction.PaymentMethod}</p>
+                    </div>
+                  </div>
               </div>
+
+                {/* Item List */}
+                <div className="flex gap-6 px-6">
+                  <div className="flex-shrink-0 ">
+                    <p><strong>ITEM LIST:</strong></p>
+                  </div>
+
+                  <div className="flex-shrink-0 pl-20 pt-2">
+                    <table className="w-[610px] text-sm text-black border border-black">
+                      <thead className="border border-black">
+                      <tr>
+                        <th className="px-6 py-3 border border-black text-center font-semibold">ITEM</th>
+                        <th className="px-6 py-3 border border-black text-center font-semibold">PRICE</th>
+                        <th className="px-6 py-3 border border-black text-center font-semibold">QTY</th>
+                        <th className="px-6 py-3 border border-black text-center font-semibold">SUBTOTAL</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                      {items.map((item, index) => (
+                        <tr key={item.TransactionItemID}>
+                          <td className="px-6 py-4 text-gray-700 border border-black font-semibold"> 
+                            <div className="flex items-center gap-2">
+                              {item.Product.Image ? (
+                                <img
+                                  src={item.Product.Image}
+                                  alt={item.Product.Name}
+                                  className="w-8 h-8 object-cover rounded"
+                                />
+                              ) : (
+                              <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
+                                <span className="text-blue-600 text-sm">
+                                  {item.Product.Name.charAt(0)}
+                                </span>
+                              </div>
+                              )}
+                              <span className="font-medium">
+                                {item.Product.Name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold"> ₱{item.Product.SellingPrice.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold">{item.Quantity}</td>
+                          <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold">₱{item.Subtotal.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
+
+                <div className="flex gap-6 my-6 px-8 justify-end text-m">
+                    <div className="flex-shrink-0 space-y-2">
+                      <p><strong>SUBTOTAL:</strong></p>
+                      <p><strong>DISCOUNT:</strong></p>
+                      <p><strong>VAT AMOUNT:</strong></p>
+                      <p><strong>TOTAL:</strong></p>
+                    </div>
+
+                    <div className="flex-shrink-0 pl-4 space-y-2">
+                      <p>₱{items.reduce((sum, item) => sum + (item.Product.SellingPrice*item.Quantity), 0).toFixed(2)}</p>
+                      <p>₱{calculateTotalDiscount(items).toFixed(2)}</p>
+                      <p>₱{selectedTransaction.VATAmount.toFixed(2)}</p>
+                      <p><strong>₱{selectedTransaction.Total.toFixed(2)}</strong></p>
+                    </div>
+                  </div>
+      
+
             </>
           ) : (
             <div className="p-6">

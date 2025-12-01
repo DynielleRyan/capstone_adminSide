@@ -238,7 +238,7 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     downloadCSV(
       "low_on_stock.csv",
       lowRows.map((r) => ({
-        ID: r.rowNo,
+        ID: r.productId,
         Product: r.name,
         Category: r.category,
         Brand: r.brand,
@@ -252,8 +252,8 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   function downloadExpCSV() {
     downloadCSV(
       "expiring_batches.csv",
-      expRows.map((r, i) => ({
-        ID: i + 1,
+      expRows.map((r) => ({
+        ID: r.productId,
         Product: r.productName,
         Category: r.category,
         Brand: r.brand,
