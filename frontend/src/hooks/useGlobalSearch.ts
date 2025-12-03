@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
+import api from '../services/api';
 
 export interface SearchResult {
   id: string;
@@ -13,12 +14,6 @@ export interface SearchResult {
 
 const MAX_RESULTS_PER_CATEGORY = 5;
 const MAX_TOTAL_RESULTS = 20;
-
-// Helper to get the appropriate storage (same as authService)
-const getStorage = (): Storage => {
-  const rememberMe = localStorage.getItem('rememberMe') === 'true';
-  return rememberMe ? localStorage : sessionStorage;
-};
 
 export const useGlobalSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,22 +74,15 @@ export const useGlobalSearch = () => {
     // Search in product list
     try {
       console.log('[SEARCH] Searching pharmacist products for:', query);
-      const storage = getStorage();
-      const token = storage.getItem('token');
-      const response = await fetch('/api/product-list', {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-        }
-      });
       
-      if (!response.ok) {
+      const response = await api.get('/product-list');
+
+      if (!response.data.success) {
         console.error('[SEARCH] Product list API error:', response.status);
         return;
       }
       
-      const data = await response.json();
+      const data = response.data.data;
       console.log('[SEARCH] Product list API response:', data);
       console.log('[SEARCH] Is array?', Array.isArray(data));
       
@@ -141,28 +129,13 @@ export const useGlobalSearch = () => {
   };
 
   const searchAdminData = async (query: string, results: SearchResult[]) => {
-    const storage = getStorage();
-    const token = storage.getItem('token');
-    const authHeaders = {
-      'Accept': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-    };
-    
     // Search transactions
     try {
-      const response = await fetch('/api/transactions', {
-        credentials: 'include',
-        headers: authHeaders,
-      });
-      
-      if (!response.ok) {
-        console.error('Transaction API error:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
+      const response = await api.get('/transactions');
+      console.log('[SEARCH] Transaction API response:', response.data);
       
       // Transactions API returns array directly
+      const data = response.data;
       if (Array.isArray(data)) {
         let count = 0;
         data.forEach((transaction: any) => {
@@ -192,18 +165,11 @@ export const useGlobalSearch = () => {
 
     // Search suppliers
     try {
-      const response = await fetch('/api/suppliers?limit=100', {
-        credentials: 'include',
-        headers: authHeaders,
+      const response = await api.get('/suppliers', {
+        params: { limit: 100 }
       });
       
-      if (!response.ok) {
-        console.error('Suppliers API error:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
-      
+      const data = response.data;
       if (data.success && Array.isArray(data.data?.suppliers)) {
         let count = 0;
         data.data.suppliers.forEach((supplier: any) => {
@@ -235,19 +201,10 @@ export const useGlobalSearch = () => {
 
     // Search purchase orders
     try {
-      const response = await fetch('/api/purchase-orders', {
-        credentials: 'include',
-        headers: authHeaders,
-      });
-      
-      if (!response.ok) {
-        console.error('Purchase Orders API error:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
+      const response = await api.get('/purchase-orders');
       
       // Purchase orders API returns array directly
+      const data = response.data;
       if (Array.isArray(data)) {
         let count = 0;
         data.forEach((po: any) => {
@@ -276,18 +233,11 @@ export const useGlobalSearch = () => {
 
     // Search users
     try {
-      const response = await fetch('/api/users?limit=100', {
-        credentials: 'include',
-        headers: authHeaders,
+      const response = await api.get('/users', {
+        params: { limit: 100 }
       });
       
-      if (!response.ok) {
-        console.error('Users API error:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
-      
+      const data = response.data;
       if (data.success && Array.isArray(data.data?.users)) {
         let count = 0;
         data.data.users.forEach((user: any) => {
@@ -321,18 +271,11 @@ export const useGlobalSearch = () => {
 
     // Search products
     try {
-      const response = await fetch('/api/products/source-list?limit=100', {
-        credentials: 'include',
-        headers: authHeaders,
+      const response = await api.get('/products/source-list', {
+        params: { limit: 100 }
       });
       
-      if (!response.ok) {
-        console.error('Products API error:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
-      
+      const data = response.data;
       if (data.success && Array.isArray(data.data?.products)) {
         let count = 0;
         data.data.products.forEach((product: any) => {
