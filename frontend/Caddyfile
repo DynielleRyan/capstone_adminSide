@@ -2,7 +2,7 @@
 	auto_https off
 }
 
-:{$PORT} {
+{$PORT:8080} {
 	root * /app/dist
 	encode zstd gzip
 	file_server
