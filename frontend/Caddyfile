@@ -1,10 +1,10 @@
 {
-    auto_https off
+	auto_https off
 }
 
 :{$PORT} {
-    root * /app/dist
-    encode zstd gzip
-    file_server
-    try_files {path} /index.html
+	root * /app/dist
+	encode zstd gzip
+	file_server
+	try_files {path} /index.html
 }
