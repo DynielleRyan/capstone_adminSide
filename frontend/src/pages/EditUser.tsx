@@ -147,9 +147,12 @@ const EditUser = () => {
       <div className="p-6 bg-blue-50 rounded-lg">
         <h1 className="text-3xl font-bold text-blue-900">EDIT USERS</h1>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end mb-6 gap-4">
-          <button
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow p-8">
+        <form onSubmit={handleSubmit}>
+          {/* Action Buttons */}
+          <div className="flex justify-end mb-6 gap-4">
+            <button
               type="submit"
               disabled={loading || editedUsers.length === 0}
               className="px-6 py-2 bg-blue-900 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -164,12 +167,8 @@ const EditUser = () => {
             >
               CANCEL
             </button>
-            
           </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow p-8">
-        <form onSubmit={handleSubmit}>
           <div className="overflow-x-auto mb-6">
             <table className="w-full">
               <thead className="bg-blue-900 text-white">

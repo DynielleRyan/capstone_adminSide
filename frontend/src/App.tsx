@@ -16,6 +16,7 @@ import UserProfile from './pages/UserProfile'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import VerifyEmail from './pages/VerifyEmail'
 import alertService from './services/alertService'
 import authService from './services/authService'
 import activityService from './services/activityService'
@@ -123,6 +124,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected routes with Layout */}
         <Route
