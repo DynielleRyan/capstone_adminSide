@@ -5,6 +5,6 @@
     "buildCommand": "npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "caddy run --config Caddyfile --adapter caddyfile"
+    "startCommand": "npm start"
   }
 }
