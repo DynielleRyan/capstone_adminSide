@@ -24,7 +24,7 @@ const RoleManagement = () => {
 
   // Fetch users from API
   const fetchUsers = useCallback(
-    async (page = 1, search = searchTerm) => {
+    async (page = 1, search?: string) => {
       try {
         setLoading(true);
         setError(null);
@@ -48,24 +48,22 @@ const RoleManagement = () => {
       } catch (err) {
         console.error("Error fetching users:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch users");
-        // Don't clear users on error unless it's a critical error
-        if (!users.length) {
-          setUsers([]);
-        }
       } finally {
         setLoading(false);
       }
     },
-    [searchTerm]
+    []
   );
 
   // Load users on component mount
   useEffect(() => {
     fetchUsers();
-  }, []); // Empty dependency array to run only on mount
+  }, [fetchUsers]);
 
   // Debounced search effect
   useEffect(() => {
+    if (!searchTerm) return;
+    
     const timeoutId = setTimeout(() => {
       fetchUsers(1, searchTerm);
     }, 500);
@@ -122,49 +120,53 @@ const RoleManagement = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">MANAGE ROLES</h1>
-      </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">MANAGE ROLES</h1>
 
-      {/* Controls and Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Sort By */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Sort By:
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="none">None</option>
-              <option value="name">Name</option>
-              <option value="role">Role</option>
-            </select>
+        {/* Sort, Search, and Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">None</option>
+                <option value="name">Name</option>
+                <option value="role">Role</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="None"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="SEARCH"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3">
           {Permissions.canCreateUser() && (
             <button
               onClick={() => navigate("/role-management/add")}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               ADD USER
@@ -188,7 +190,7 @@ const RoleManagement = () => {
                 navigate("/role-management/edit");
               }}
               disabled={loading || users.length === 0}
-              className="border border-blue-600 text-blue-600 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border border-blue-900 text-blue-900 px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Edit3 className="w-4 h-4" />
               EDIT USER
@@ -211,25 +213,26 @@ const RoleManagement = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold">Name</th>
-                <th className="px-6 py-4 text-left font-semibold">CONTACT</th>
-                <th className="px-6 py-4 text-left font-semibold">USERNAME</th>
-                <th className="px-6 py-4 text-left font-semibold">ROLE</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">USERNAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ROLE</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className=" bg-blue-50">
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Loading users...
@@ -238,7 +241,7 @@ const RoleManagement = () => {
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-red-500"
                   >
                     Error: {error}
@@ -247,28 +250,25 @@ const RoleManagement = () => {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No users found
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user, index) => (
+                filteredUsers.map((user) => (
                   <tr
                     key={user.UserID}
-                    className={`${
-                      index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                    } hover:bg-blue-100 transition-colors`}
                   >
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {user.FirstName} {user.MiddleInitial} {user.LastName}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {user.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{user.Username}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{user.Username}</td>
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           user.Roles === "Pharmacist"
@@ -285,6 +285,7 @@ const RoleManagement = () => {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Pagination */}

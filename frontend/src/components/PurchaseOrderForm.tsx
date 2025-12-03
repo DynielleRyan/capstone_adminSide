@@ -13,8 +13,8 @@ export const PurchaseOrderForm = () => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState('');
   const [formData, setFormData] = useState({  quantity: '', orderDate: '', ETA: '', orderArrival: '', basePrice: '', totalCost: '' });
 
 
@@ -22,7 +22,20 @@ export const PurchaseOrderForm = () => {
     p.Name.toLowerCase().startsWith(searchTerm.toLowerCase())
   );
   
-  
+  // Handle input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  setSearchTerm(value);
+  setDropdownOpen(value.trim().length > 0); // Open dropdown if there's input
+  };
+
+  // Handle product selection
+  const handleSelectProduct = (product: Product) => {
+  setSelectedProduct(product);
+  setSearchTerm(product.Name);
+  setDropdownOpen(false); // Close dropdown
+  };
+
   useEffect(() => {
     fetchProducts().then(setProducts);
   }, []);
@@ -90,32 +103,31 @@ export const PurchaseOrderForm = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Search product name"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                   required
-                />
-                {searchTerm.length > 0 && (
+                  />
+
+                {/* Only show list if user typed something */}
+                {searchTerm.length > 0 && dropdownOpen && (
                   <ul className="absolute z-10 bg-white border border-gray-300 w-full mt-1 rounded-md shadow-lg max-h-60 overflow-auto">
-                    {filteredProducts.length === 0 ? (
-                      <li className="px-4 py-2 text-sm text-gray-500">No products found.</li>
-                    ) : (
-                      filteredProducts.map((p) => (
-                        <li key={p.ProductID}>
-                          <button
-                            type="button"
-                            className={`w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors ${
-                              selectedProduct?.ProductID === p.ProductID ? 'bg-blue-100 text-blue-900' : ''
-                            }`}
-                            onClick={() => {
-                              setSelectedProduct(p);
-                              setSearchTerm(p.Name);
-                            }}
-                          >
-                            {p.Name}
-                          </button>
-                        </li>
-                      ))
-                    )}
-                  </ul>
+                  {filteredProducts.length === 0 ? (
+                    <li className="px-4 py-2 text-sm text-gray-500">No products found.</li>
+                  ) : (
+                    filteredProducts.map((p) => (
+                      <li key={p.ProductID}>
+                        <button
+                          type="button"
+                          className={`w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors ${
+                            selectedProduct?.ProductID === p.ProductID ? 'bg-blue-100 text-blue-900' : ''
+                          }`}
+                          onClick={() => handleSelectProduct(p)}
+                        >
+                          {p.Name}
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
                 )}
               </div>
 

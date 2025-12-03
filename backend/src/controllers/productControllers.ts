@@ -526,11 +526,9 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
           SupplierName: supplier?.Name || 'Unknown',
           ContactNumber: supplier?.ContactNumber,
           TotalStock: totalStock,
-          LastPurchaseDate: lastPurchase?.OrderPlacedDateTime
+          LastPurchaseDate: lastPurchase?.OrderPlacedDateTime || null
         };
-      })
-      // Filter out products without a purchase history
-      .filter(product => product.LastPurchaseDate !== undefined && product.LastPurchaseDate !== null);
+      });
 
     // Apply sorting
     if (sortBy) {

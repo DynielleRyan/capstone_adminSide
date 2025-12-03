@@ -10,9 +10,6 @@ export const PurchaseOrders = () => {
     fetchPurchaseOrders().then(setOrders);
   }, []);
 
-  return (
-    <div>
-      <PurchaseOrderTable orders={orders} />
-    </div>
-  );
+  return <PurchaseOrderTable orders={orders} />;
+    
 };

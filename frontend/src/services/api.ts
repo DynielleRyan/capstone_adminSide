@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { InternalAxiosRequestConfig } from 'axios'
+import { activityService } from './activityService'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 
@@ -27,10 +28,17 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = []
 }
 
+// Helper to get the appropriate storage (same as authService)
+const getStorage = (): Storage => {
+  const rememberMe = localStorage.getItem('rememberMe') === 'true'
+  return rememberMe ? localStorage : sessionStorage
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token')
+    const storage = getStorage()
+    const token = storage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -74,7 +82,8 @@ api.interceptors.response.use(
         originalRequest._retry = true
         isRefreshing = true
 
-        const refreshToken = localStorage.getItem('refresh_token')
+        const storage = getStorage()
+        const refreshToken = storage.getItem('refresh_token')
 
         if (!refreshToken) {
           // No refresh token, clear auth and redirect to login
@@ -90,13 +99,13 @@ api.interceptors.response.use(
 
           if (response.data.success && response.data.data?.session) {
             const newToken = response.data.data.session.access_token
-            localStorage.setItem('token', newToken)
-            localStorage.setItem('refresh_token', response.data.data.session.refresh_token)
+            storage.setItem('token', newToken)
+            storage.setItem('refresh_token', response.data.data.session.refresh_token)
 
             const expiresAt =
               response.data.data.session.expires_at ||
               Math.floor(Date.now() / 1000) + response.data.data.session.expires_in
-            localStorage.setItem('expires_at', expiresAt.toString())
+            storage.setItem('expires_at', expiresAt.toString())
 
             // Update the authorization header
             api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
@@ -143,10 +152,21 @@ api.interceptors.response.use(
 
 // Helper function to clear auth data and redirect to login
 const clearAuthAndRedirect = () => {
+  // Clean up activity tracking
+  activityService.cleanup()
+  activityService.clearActivity()
+  
+  // Clear auth data from both storages
   localStorage.removeItem('token')
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('user')
   localStorage.removeItem('expires_at')
+  localStorage.removeItem('rememberMe')
+  
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('refresh_token')
+  sessionStorage.removeItem('user')
+  sessionStorage.removeItem('expires_at')
   
   // Only redirect if not already on login page
   if (window.location.pathname !== '/login') {

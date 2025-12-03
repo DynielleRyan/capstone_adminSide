@@ -104,15 +104,16 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   }, [searchTerm, sortBy]);
 
   return (
-    <>
+    <div className="p-6 bg-white min-h-screen">
+      {/* Blue background div */}
+      <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">
           PURCHASE ORDER
         </h1>
-      </div>
 
-      {/* Search, Sort, and Downlaod*/}
+      {/* Search and Sort */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Sort By */}
@@ -151,48 +152,43 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
             />
           </div>
         </div>
-    <button
-      className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-      onClick={() => navigate('/purchase-orders/new')}
-    >
-      + ADD PURCHASE ORDER
-    </button>
-  </div>
+        <button
+          className="bg-blue-900 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+          onClick={() => navigate('/purchase-orders/new')}
+        >
+          + ADD PURCHASE ORDER
+        </button>
+      </div>
 
-
-  <div className="bg-white rounded-lg shadow overflow-hidden">
-  <div className="overflow-x-auto">
-    <table className="w-full">
-      <thead className="bg-blue-900 text-white">
-        <tr>
-          <th className="px-6 py-4 text-left font-semibold">ID</th>
-          <th className="px-6 py-4 text-left font-semibold">PRODUCT</th>
-          <th className="px-6 py-4 text-left font-semibold">SUPPLIER NAME</th>
-          <th className="px-6 py-4 text-left font-semibold">DATE ORDERED</th>
-          <th className="px-6 py-4 text-left font-semibold">ETA</th>
-          <th className="px-6 py-4 text-left font-semibold">DATE ARRIVED</th>
-          <th className="px-6 py-4 text-left font-semibold">QUANTITY</th>
-          <th className="px-6 py-4 text-left font-semibold">TOTAL COST</th>
-          <th className="px-6 py-4 text-left font-semibold">ACTION</th>
-        </tr>
-      </thead>
-      <tbody>
-        {paginatedData.map((order, index) => (
-          <tr 
-            key={order.PurchaseOrderID} 
-            className={`${
-              index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-            } hover:bg-blue-100 transition-colors`}
-          >
-            <td className="px-6 py-4 text-gray-700">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
-            <td className="px-6 py-4 text-gray-700">
-              <div className="flex items-center gap-3">
+      {/* Purchase Order Table */}
+      <div className="bg-white shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-blue-900 text-white">
+              <tr>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ID</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">SUPPLIER NAME</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ETA</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ARRIVED</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">TOTAL COST</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">ACTION</th>
+              </tr>
+            </thead>
+            <tbody className=" bg-blue-50">
+              {paginatedData.map((order => (
+              <tr key={order.PurchaseOrderID} >
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
+                <td className="px-2 py-4 text-gray-700 text-center border border-white">
+                  <div className="flex items-center gap-2">
                         {order.Product.Image ? (
                           <img
-                            src={order.Product.Image}
-                            alt={order.Product.Name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
+                          src={order.Product.Image}
+                          alt={order.Product.Name}
+                          className="w-8 h-8 object-cover rounded"
+                        />
                         ) : (
                           <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
                             <span className="text-blue-600 text-sm">
@@ -203,37 +199,39 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
                         <span className="font-medium">
                           {order.Product.Name}
                         </span>
-                </div>
-              </td>
-            <td className="px-6 py-4 text-gray-700">{order.Supplier.Name}</td>
-            <td className="px-6 py-4 text-gray-700">{new Date(order.OrderPlacedDateTime).toLocaleDateString()}</td>
-            <td className="px-6 py-4 text-gray-700">{new Date(order.ETA).toLocaleDateString()}</td>
-            <td className="px-6 py-4 text-gray-700">
-              {order.OrderArrivalDateTime
-                ? new Date(order.OrderArrivalDateTime).toLocaleDateString()
-                : '—'}
-            </td>
-            <td className="px-6 py-4 text-gray-700">{order.Quantity}</td>
-            <td className="px-6 py-4 text-gray-700">₱{order.TotalPurchaseCost.toFixed(2)}</td>
-            <td className="px-6 py-4">
-              <button
-                className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                onClick={() => navigate(`/purchase-orders/${order.PurchaseOrderID}`)}
-              >
-                <PenSquare className="w-4 h-4" />
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{order.Supplier.Name}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{new Date(order.OrderPlacedDateTime).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{new Date(order.ETA).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">
+                  {order.OrderArrivalDateTime
+                  ? new Date(order.OrderArrivalDateTime).toLocaleDateString()
+                  : '—'}
+                </td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{order.Quantity}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{order.TotalPurchaseCost.toFixed(2)}</td>
+                <td className="px-4 py-4 border border-white">
+                  <button
+                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700"
+                    onClick={() => navigate(`/purchase-orders/${order.PurchaseOrderID}`)}
+                    title="Edit Purchase Order Details"
+                  >
+                    <PenSquare className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+              )))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
 
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {paginatedData.length} of {displayedOrders.length} orders
+          Showing {paginatedData.length} of {itemsPerPage} purchase orders
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -255,6 +253,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
           </button>
         </div>
       </div>
-    </>
+    </div>
+    </div>
   );
 };

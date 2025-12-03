@@ -1,32 +1,28 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { authService } from '../services/authService'
-import { useAuth } from '../hooks/useAuth'
 
 const Login = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, user, isLoading } = useAuth()
   const [usernameOrEmail, setUsernameOrEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  // Redirect if already authenticated
+  // Check for success message from navigation state
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      // Redirect based on role
-      if (user.Roles === 'Pharmacist') {
-        navigate('/pharmacist/dashboard', { replace: true })
-      } else {
-        const from = (location.state as any)?.from?.pathname || '/'
-        navigate(from, { replace: true })
-      }
+    const state = location.state as any
+    if (state?.message) {
+      setSuccessMessage(state.message)
+      // Clear the state
+      navigate(location.pathname, { replace: true, state: {} })
     }
-  }, [isAuthenticated, isLoading, user, navigate, location])
+  }, [location, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +38,8 @@ const Login = () => {
 
       const response = await authService.signIn({
         usernameOrEmail,
-        password
+        password,
+        rememberMe
       })
 
       if (response.success && response.data?.user) {
@@ -83,6 +80,13 @@ const Login = () => {
         {/* Login Card */}
         <div className="bg-white rounded-lg shadow-lg p-10">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Login</h2>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-green-600 text-sm">{successMessage}</p>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
@@ -148,9 +152,12 @@ const Login = () => {
                 />
                 <span className="ml-2 text-sm text-gray-700">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-gray-900 hover:text-blue-600 transition-colors font-medium">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
                 Forgot Password?
-              </a>
+              </Link>
             </div>
 
             {/* Login Button */}

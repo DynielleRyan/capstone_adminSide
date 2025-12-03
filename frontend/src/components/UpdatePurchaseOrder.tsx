@@ -12,6 +12,7 @@ export const UpdatePurchaseOrderForm = () => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -70,7 +71,21 @@ export const UpdatePurchaseOrderForm = () => {
 
   const filteredProducts = products.filter(p =>
     p.Name.toLowerCase().startsWith(searchTerm.trim().toLowerCase())
-  );    
+  ); 
+  
+   // Handle input changes
+   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setDropdownOpen(value.trim().length > 0); // Open dropdown if there's input
+    };
+  
+    // Handle product selection
+    const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setSearchTerm(product.Name);
+    setDropdownOpen(false); // Close dropdown
+    };   
 
   const handleCancel = () => {
     navigate('/purchase-orders');
@@ -144,12 +159,12 @@ export const UpdatePurchaseOrderForm = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Search product name"
                   value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                   required
                 />
 
                 {/* Only show list if user typed something */}
-                {searchTerm.length > 0 && (
+                {searchTerm.length > 0 && dropdownOpen && (
                   <ul className="absolute z-10 bg-white border border-gray-300 w-full mt-1 rounded-md shadow-lg max-h-60 overflow-auto">
                     {filteredProducts.length === 0 ? (
                       <li className="px-4 py-2 text-sm text-gray-500">No products found.</li>
@@ -161,10 +176,7 @@ export const UpdatePurchaseOrderForm = () => {
                             className={`w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors ${
                               selectedProduct?.ProductID === p.ProductID ? 'bg-blue-100 text-blue-900' : ''
                             }`}
-                            onClick={() => {
-                              setSelectedProduct(p);
-                              setSearchTerm(p.Name);
-                            }}
+                            onClick={() => handleSelectProduct(p)}
                           >
                             {p.Name}
                           </button>

@@ -10,5 +10,6 @@ export const Transactions = () => {
     fetchTransactions().then(setTransactions);
   }, []);
 
-  return <TransactionTable transactions={transactions} />;
+  return <TransactionTable transactions={transactions} />
+
 };

@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 import { authService, type ApiResponse } from '../services/authService'
 import { UserResponse } from '../services/userService'
 
+// Helper to get the appropriate storage
+const getStorage = (): Storage => {
+  const rememberMe = localStorage.getItem('rememberMe') === 'true'
+  return rememberMe ? localStorage : sessionStorage
+}
+
 export interface UseAuthReturn {
   user: UserResponse | null
   isAuthenticated: boolean
@@ -45,8 +51,9 @@ export const useAuth = (): UseAuthReturn => {
             const response: ApiResponse<UserResponse> = await authService.getCurrentUser()
             if (response.success && response.data) {
               setUser(response.data)
-              // Store in localStorage for next time
-              localStorage.setItem('user', JSON.stringify(response.data))
+              // Store in appropriate storage for next time
+              const storage = getStorage()
+              storage.setItem('user', JSON.stringify(response.data))
             }
           } catch (error) {
             console.error('Failed to fetch user:', error)
@@ -72,7 +79,8 @@ export const useAuth = (): UseAuthReturn => {
       const response: ApiResponse<UserResponse> = await authService.getCurrentUser()
       if (response.success && response.data) {
         setUser(response.data)
-        localStorage.setItem('user', JSON.stringify(response.data))
+        const storage = getStorage()
+        storage.setItem('user', JSON.stringify(response.data))
       }
     } catch (error) {
       console.error('Failed to refresh user:', error)

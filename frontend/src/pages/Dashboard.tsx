@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   return (
     <div className="bg-gray-50">
-      <div className="space-y-6 m-4 ">
+      <div className="space-y-6 p-6">
         <h1 className="text-3xl font-bold text-blue-900">DASHBOARD</h1>
 
         {/* top metrics */}
@@ -99,7 +99,14 @@ export default function Dashboard() {
                     <XAxis dataKey="label" />
                     <YAxis yAxisId="left" />
                     <YAxis yAxisId="right" orientation="right" />
-                    <Tooltip />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (typeof value === "number" && name === "total") {
+                          return [`₱${value.toFixed(2)}`, "total"];
+                        }
+                        return [value, name];
+                      }}
+                    />
                     <Bar
                       yAxisId="left"
                       dataKey="units"
@@ -181,25 +188,25 @@ export default function Dashboard() {
 
               <div className="flex-1 p-6 overflow-y-auto">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-900 text-white">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="bg-blue-800 text-white">
                       <tr>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           ID
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Product
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Category
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Brand
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Price
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Expiry
                         </th>
                         <th className="px-6 py-3 text-left font-semibold">
@@ -237,9 +244,9 @@ export default function Dashboard() {
                               } hover:bg-blue-100 transition-colors`}
                             >
                               <td className="px-6 py-4 text-gray-700">
-                                {r.rowNo.toString().padStart(2, "0")}
+                                {r.productId}
                               </td>
-                              <td className="px-6 py-4 text-gray-700">
+                              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                                 <div className="flex items-center gap-2">
                                   {r.image && (
                                     <img
@@ -251,17 +258,17 @@ export default function Dashboard() {
                                   <span>{r.name}</span>
                                 </div>
                               </td>
-                              <td className="px-6 py-4 text-gray-700">
+                              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                                 {r.category}
                               </td>
-                              <td className="px-6 py-4 text-gray-700">
+                              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                                 {r.brand}
                               </td>
-                              <td className="px-6 py-4 text-gray-700">
+                              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                                 {currency}
                                 {(r.price ?? 0).toFixed(2)}
                               </td>
-                              <td className="px-6 py-4 text-gray-700">
+                              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                                 {r.expiry ?? "—"}
                               </td>
                               <td className="px-6 py-4 text-gray-700">
@@ -315,20 +322,22 @@ export default function Dashboard() {
 
               <div className="flex-1 p-6 overflow-y-auto">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-900 text-white">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="bg-blue-800 text-white">
                       <tr>
-                        <th className="px-6 py-3 text-left font-semibold">#</th>
+                        <th className="px-6 py-3 text-left font-semibold w-[20%]">
+                          ID
+                        </th>
                         <th className="px-6 py-3 text-left font-semibold">
                           Product
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Category
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Brand
                         </th>
-                        <th className="px-6 py-3 text-left font-semibold">
+                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
                           Expiry
                         </th>
                         <th className="px-6 py-3 text-left font-semibold">
@@ -364,19 +373,20 @@ export default function Dashboard() {
                               i % 2 === 0 ? "bg-blue-50" : "bg-white"
                             } hover:bg-blue-100 transition-colors`}
                           >
-                            <td className="px-6 py-4 text-gray-700">
-                              {(i + 1).toString().padStart(2, "0")}
+                            <td className="px-6 py-4 text-gray-700 ">
+                              {/* {(i + 1).toString().padStart(2, "0")} */}
+                              {r.productId}
                             </td>
-                            <td className="px-6 py-4 text-gray-700">
+                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                               {r.productName}
                             </td>
-                            <td className="px-6 py-4 text-gray-700">
+                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                               {r.category}
                             </td>
-                            <td className="px-6 py-4 text-gray-700">
+                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                               {r.brand}
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-6 py-4 border-r border-gray-200">
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${
                                   r.expiryLevel === "danger"
