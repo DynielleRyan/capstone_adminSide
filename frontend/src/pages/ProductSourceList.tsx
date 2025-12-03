@@ -76,10 +76,6 @@ const ProductSourceList = () => {
     })
   }
 
-  // Format product ID to a shorter display format
-  const formatProductId = (index: number) => {
-    return String(index + 1).padStart(2, '0')
-  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -158,7 +154,7 @@ const ProductSourceList = () => {
                   </td>
                 </tr>
               ) : (
-                products.map((product, index) => (
+                products.map((product) => (
                   <tr
                     key={product.ProductID}
                   >

@@ -15,7 +15,6 @@ export const PurchaseOrderForm = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState('');
   const [formData, setFormData] = useState({  quantity: '', orderDate: '', ETA: '', orderArrival: '', basePrice: '', totalCost: '' });
 
 

@@ -19,7 +19,7 @@ const PharmacistDashboard = () => {
     downloadExpCSV,
   } = useDashboard({ preloadLists: true });
 
-  const [modalTitle, setModalTitle] = useState("");
+  const [_modalTitle, setModalTitle] = useState("");
 
   // 🧩 Handlers
   const handleOpenLow = async () => {
@@ -101,7 +101,7 @@ const PharmacistDashboard = () => {
                   </td>
                 </tr>
               ) : (
-                expRows.slice(0, limit).map((r, i) => (
+                expRows.slice(0, limit).map((r, _i) => (
                   <tr
                     key={r.productItemId}
                   >
@@ -179,7 +179,7 @@ const PharmacistDashboard = () => {
                   </td>
                 </tr>
               ) : (
-                lowRows.slice(0, limit).map((r, index) => (
+                lowRows.slice(0, limit).map((r, _index) => (
                   <tr
                     key={r.productId}
                   >

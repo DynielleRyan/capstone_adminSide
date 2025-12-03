@@ -443,7 +443,7 @@ const ProductUpload = () => {
               </div>
               <button
                 onClick={handleSearch}
-                className="mt-7 px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                className="mt-7 bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-500 transition-colors font-medium"
               >
                 SEARCH
               </button>

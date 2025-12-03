@@ -178,7 +178,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
               </tr>
             </thead>
             <tbody className=" bg-blue-50">
-              {paginatedData.map((order, index) => (
+              {paginatedData.map((order => (
               <tr key={order.PurchaseOrderID} >
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
                 <td className="px-2 py-4 text-gray-700 text-center border border-white">
@@ -221,7 +221,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
                   </button>
                 </td>
               </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

@@ -226,7 +226,7 @@ const Suppliers = () => {
                   </td>
                 </tr>
               ) : (
-                filteredSuppliers.map((supplier, index) => (
+                filteredSuppliers.map((supplier) => (
                   <tr
                     key={supplier.SupplierID}
                   >

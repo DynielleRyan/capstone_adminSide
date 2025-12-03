@@ -257,7 +257,7 @@ const RoleManagement = () => {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user, index) => (
+                filteredUsers.map((user) => (
                   <tr
                     key={user.UserID}
                   >

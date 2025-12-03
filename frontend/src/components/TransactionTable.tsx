@@ -4,7 +4,6 @@ import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
 import { Search, Eye, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface Props {
   transactions: Transaction[];
@@ -254,7 +253,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
             </tr>
           </thead>
           <tbody className=" bg-blue-50">
-            {paginatedData.map((tx, index) => (
+            {paginatedData.map((tx => (
               <tr key={tx.TransactionID} >
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
                 <td className="px-6 py-4 text-gray-700 text-center border border-white">
@@ -289,7 +288,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                   </button>
                 </td>
               </tr>
-            ))}
+            )))}
           </tbody>
         </table>
       </div>
@@ -392,7 +391,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       </tr>
                       </thead>
                       <tbody>
-                      {items.map((item, index) => (
+                      {items.map((item => (
                         <tr key={item.TransactionItemID}>
                           <td className="px-6 py-4 text-gray-700 border border-black font-semibold"> 
                             <div className="flex items-center gap-2">
@@ -418,7 +417,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                           <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold">{item.Quantity}</td>
                           <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold">₱{item.Subtotal.toFixed(2)}</td>
                         </tr>
-                      ))}
+                      )))}
                       </tbody>
                     </table>
                   </div>

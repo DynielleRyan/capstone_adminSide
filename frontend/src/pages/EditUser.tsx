@@ -198,7 +198,7 @@ const EditUser = () => {
                     </td>
                   </tr>
                 ) : (
-                  editedUsers.map((user, index) => (
+                  editedUsers.map((user => (
                     <tr
                       key={user.userId}
                       >
@@ -230,7 +230,7 @@ const EditUser = () => {
                       </td>
                     </tr>
                   ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
