@@ -238,7 +238,7 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     downloadCSV(
       "low_on_stock.csv",
       lowRows.map((r) => ({
-        ID: r.rowNo,
+        ID: r.productId,
         Product: r.name,
         Category: r.category,
         Brand: r.brand,

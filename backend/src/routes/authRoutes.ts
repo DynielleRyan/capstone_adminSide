@@ -3,7 +3,9 @@ import {
   signIn,
   signOut,
   getCurrentUser,
-  resendVerificationEmail
+  resendVerificationEmail,
+  requestPasswordReset,
+  resetPassword
 } from '../controllers/userControllers';
 import { authenticate } from '../middleware/auth';
 
@@ -22,5 +24,11 @@ router.get('/me', authenticate, getCurrentUser);
 
 // Resend verification email - Public
 router.post('/resend-verification', resendVerificationEmail);
+
+// Request password reset - Public
+router.post('/forgot-password', requestPasswordReset);
+
+// Reset password - Requires valid reset token
+router.post('/reset-password', resetPassword);
 
 export default router;

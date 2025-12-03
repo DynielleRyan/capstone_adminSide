@@ -11,6 +11,7 @@ import {
   PaginatedUsers,
   UserRole
 } from '../schema/users';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 
 // Helper function to return user response (no password to remove in this schema)
 const formatUserResponse = (user: User): UserResponse => {
@@ -84,20 +85,6 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
     // Check if email is verified
     const emailVerified = authData.user.email_confirmed_at !== null;
 
-    // COMMENTED OUT FOR TESTING - Email verification check disabled
-    // // Block ALL logins if email is NOT verified (no exceptions)
-    // if (!emailVerified) {
-    //   // Sign out the user since we won't allow this login
-    //   await supabase.auth.signOut();
-    //   
-    //   res.status(403).json({
-    //     success: false,
-    //     message: 'Please verify your email before logging in. Check your inbox for the verification link.',
-    //     requiresEmailVerification: true
-    //   });
-    //   return;
-    // }
-
     // Allow both Admin and Pharmacist users to access the system
     // Block Clerk users from accessing this portal
     if (user.Roles !== 'Admin' && user.Roles !== 'Pharmacist') {
@@ -107,6 +94,20 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
       res.status(403).json({
         success: false,
         message: 'Access denied. This portal is for administrators and pharmacists only.'
+      });
+      return;
+    }
+
+    // Check email verification for non-Admin users
+    // Admin users bypass email verification requirement
+    if (user.Roles !== 'Admin' && !emailVerified) {
+      // Sign out the user since we won't allow this login
+      await supabase.auth.signOut();
+      
+      res.status(403).json({
+        success: false,
+        message: 'Your account is not verified.',
+        requiresEmailVerification: true
       });
       return;
     }
@@ -170,6 +171,168 @@ export const signOut = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     console.error('Error in signOut:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Request password reset
+export const requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+      return;
+    }
+
+    // Check if user exists in database
+    const { data: user, error: userError } = await supabase
+      .from('User')
+      .select('*')
+      .eq('Email', email)
+      .single();
+
+    // For security, always return success even if user doesn't exist
+    // This prevents email enumeration attacks
+    if (userError || !user) {
+      console.log('User not found for password reset:', email);
+      res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+      return;
+    }
+
+    // Check if user is active
+    if (!user.IsActive) {
+      console.log('Inactive user attempted password reset:', email);
+      res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+      return;
+    }
+
+    // Generate password reset link using Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password`
+      }
+    });
+
+    if (error) {
+      console.error('Error generating reset link:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate password reset link'
+      });
+      return;
+    }
+
+    // Send password reset email
+    const emailResult = await sendPasswordResetEmail(
+      email,
+      `${user.FirstName} ${user.LastName}`,
+      data.properties.action_link
+    );
+
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email'
+      });
+      return;
+    }
+
+    console.log('Password reset email sent to:', email);
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+  } catch (error) {
+    console.error('Error in requestPasswordReset:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Reset password
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { password } = req.body;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        success: false,
+        message: 'No authorization token provided'
+      });
+      return;
+    }
+
+    if (!password) {
+      res.status(400).json({
+        success: false,
+        message: 'New password is required'
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long'
+      });
+      return;
+    }
+
+    const token = authHeader.substring(7);
+
+    // Get user from token
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      console.error('Error getting user from token:', userError);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+      return;
+    }
+
+    // Update password using Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userData.user.id,
+      { password: password }
+    );
+
+    if (error) {
+      console.error('Error resetting password:', error);
+      res.status(400).json({
+        success: false,
+        message: 'Failed to reset password. The reset link may have expired.'
+      });
+      return;
+    }
+
+    console.log('Password reset successful for user:', data.user.email);
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    console.error('Error in resetPassword:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -280,11 +443,11 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     
     console.log('Creating user with role:', userRole, 'from userData.Roles:', userData.Roles);
     
-    // MODIFIED FOR TESTING - Email auto-confirmed for testing purposes
+    // Create user with email verification required
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.Email,
       password: userData.Password,
-      email_confirm: true,  // FOR TESTING: Auto-confirm email so users can login immediately
+      email_confirm: false,  // Require email verification before login
       user_metadata: {
         first_name: userData.FirstName,
         last_name: userData.LastName,
@@ -314,8 +477,34 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // FOR TESTING: Verification email disabled - users can login immediately
-    console.log(`User created with auto-confirmed email: ${userData.Email}`);
+    // Generate verification link using Supabase Admin
+    const { data: verificationData, error: verificationError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userData.Email,
+      options: {
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`
+      }
+    });
+
+    if (verificationError) {
+      console.error('Error generating verification link:', verificationError);
+      // Don't fail user creation if email fails, just log it
+      console.log('User created but verification email failed to send');
+    } else {
+      // Send verification email via SendGrid
+      const fullName = `${userData.FirstName} ${userData.LastName}`;
+      const emailResult = await sendVerificationEmail(
+        userData.Email,
+        fullName,
+        verificationData.properties.action_link
+      );
+
+      if (emailResult.success) {
+        console.log(`✅ Verification email sent successfully to: ${userData.Email}`);
+      } else {
+        console.error('❌ Failed to send verification email:', emailResult.error);
+      }
+    }
 
     // Create user in our User table with the auth user ID
     const { data: newUser, error } = await supabase
@@ -346,14 +535,14 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    console.log(`User created successfully: ${userData.Email}. Email auto-verified for testing.`);
+    console.log(`User created successfully: ${userData.Email}. Verification email sent.`);
 
     // Format user response
     const userResponse = formatUserResponse(newUser);
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully. You can now login immediately.',
+      message: 'User created successfully. Please check your email to verify your account before logging in.',
       data: userResponse
     });
   } catch (error) {
@@ -846,7 +1035,22 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       return;
     }
 
-    // Get user by email first
+    // Get user from database
+    const { data: dbUser, error: dbUserError } = await supabase
+      .from('User')
+      .select('FirstName, LastName, Roles')
+      .eq('Email', email)
+      .single();
+
+    if (dbUserError || !dbUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // Get user by email from auth
     const { data: { users }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (getUserError) {
@@ -858,9 +1062,9 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       return;
     }
 
-    const user = users?.find(u => u.email === email);
+    const authUser = users?.find(u => u.email === email);
     
-    if (!user) {
+    if (!authUser) {
       res.status(404).json({
         success: false,
         message: 'User not found'
@@ -868,7 +1072,16 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       return;
     }
 
-    // Generate magic link for email verification
+    // Check if already verified
+    if (authUser.email_confirmed_at) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+      return;
+    }
+
+    // Generate verification link for email verification
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
@@ -881,13 +1094,31 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       console.error('Failed to generate verification link:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to send verification email',
+        message: 'Failed to generate verification link',
         error: error.message
       });
       return;
     }
 
-    console.log(`Verification link generated for ${email}:`, data.properties.action_link);
+    // Send verification email via SendGrid
+    const fullName = `${dbUser.FirstName} ${dbUser.LastName}`;
+    const emailResult = await sendVerificationEmail(
+      email,
+      fullName,
+      data.properties.action_link
+    );
+
+    if (!emailResult.success) {
+      console.error('Failed to send verification email:', emailResult.error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email',
+        error: emailResult.error
+      });
+      return;
+    }
+
+    console.log(`✅ Verification email resent successfully to ${email}`);
 
     res.status(200).json({
       success: true,

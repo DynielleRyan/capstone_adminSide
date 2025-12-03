@@ -321,7 +321,11 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
             const isOpen = openGroups[productId] ?? false;
     
             return [
-            <tr key={primary.ProductItemID}>
+            <tr 
+              key={primary.ProductItemID}
+              onClick={() => rest.length > 0 && toggleGroup(productId)}
+              className={rest.length > 0 ? 'cursor-pointer hover:bg-blue-100' : ''}
+            >
               <td className="px-6 py-4 text-gray-700 border border-white">{primary.ProductID}</td>
               <td className=" w-[50px] px-4 py-4 text-gray-700 text-center border border-white">
                 <div className="flex items-center gap-3">
@@ -393,7 +397,11 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
               </td>
             </tr>,
             ...(isOpen ? rest.map(item => (
-            <tr key={item.ProductItemID} className="bg-white">
+            <tr 
+              key={item.ProductItemID} 
+              className="bg-white cursor-pointer hover:bg-gray-50"
+              onClick={() => toggleGroup(productId)}
+            >
               <td className="px-6 py-4 text-gray-700 text-center"> </td>
               <td className="px-4 py-4 text-gray-700 text-center">
                 <div className="flex items-center gap-3">

@@ -5,6 +5,7 @@ import { activityService } from './activityService'
 export interface SignInCredentials {
   usernameOrEmail: string
   password: string
+  rememberMe?: boolean
 }
 
 export interface SignInResponse {
@@ -24,6 +25,32 @@ export interface ApiResponse<T> {
   error?: string
 }
 
+// Storage Helper Functions
+const getStorage = (): Storage => {
+  // Check if rememberMe preference exists
+  const rememberMe = localStorage.getItem('rememberMe') === 'true'
+  return rememberMe ? localStorage : sessionStorage
+}
+
+const setStoragePreference = (rememberMe: boolean): void => {
+  // Store the rememberMe preference in localStorage (this persists)
+  localStorage.setItem('rememberMe', rememberMe.toString())
+}
+
+const clearAllStorage = (): void => {
+  // Clear from both storages
+  localStorage.removeItem('token')
+  localStorage.removeItem('refresh_token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('expires_at')
+  localStorage.removeItem('rememberMe')
+  
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('refresh_token')
+  sessionStorage.removeItem('user')
+  sessionStorage.removeItem('expires_at')
+}
+
 // Auth Service Functions
 export const authService = {
   // Sign in
@@ -31,16 +58,24 @@ export const authService = {
     try {
       const response = await api.post('/auth/signin', credentials)
       
-      // Store token in localStorage
+      // Store token in appropriate storage based on rememberMe
       if (response.data.success && response.data.data?.session) {
-        localStorage.setItem('token', response.data.data.session.access_token)
-        localStorage.setItem('refresh_token', response.data.data.session.refresh_token)
-        localStorage.setItem('user', JSON.stringify(response.data.data.user))
+        // Set storage preference
+        const rememberMe = credentials.rememberMe ?? false
+        setStoragePreference(rememberMe)
+        
+        // Get the appropriate storage
+        const storage = getStorage()
+        
+        // Store authentication data
+        storage.setItem('token', response.data.data.session.access_token)
+        storage.setItem('refresh_token', response.data.data.session.refresh_token)
+        storage.setItem('user', JSON.stringify(response.data.data.user))
         
         // Store expiration timestamp
         const expiresAt = response.data.data.session.expires_at || 
                          Math.floor(Date.now() / 1000) + response.data.data.session.expires_in
-        localStorage.setItem('expires_at', expiresAt.toString())
+        storage.setItem('expires_at', expiresAt.toString())
         
         // Initialize activity tracking after successful login
         activityService.initialize(() => {
@@ -85,19 +120,20 @@ export const authService = {
   // Refresh access token
   refreshToken: async (): Promise<boolean> => {
     try {
-      const refreshToken = localStorage.getItem('refresh_token')
+      const storage = getStorage()
+      const refreshToken = storage.getItem('refresh_token')
       if (!refreshToken) return false
 
       const response = await api.post('/auth/refresh', { refresh_token: refreshToken })
       
       if (response.data.success && response.data.data?.session) {
-        localStorage.setItem('token', response.data.data.session.access_token)
-        localStorage.setItem('refresh_token', response.data.data.session.refresh_token)
+        storage.setItem('token', response.data.data.session.access_token)
+        storage.setItem('refresh_token', response.data.data.session.refresh_token)
         
         // Store new expiration timestamp
         const expiresAt = response.data.data.session.expires_at || 
                          Math.floor(Date.now() / 1000) + response.data.data.session.expires_in
-        localStorage.setItem('expires_at', expiresAt.toString())
+        storage.setItem('expires_at', expiresAt.toString())
         
         return true
       }
@@ -111,7 +147,8 @@ export const authService = {
 
   // Check if token is expired
   isTokenExpired: (): boolean => {
-    const expiresAtStr = localStorage.getItem('expires_at')
+    const storage = getStorage()
+    const expiresAtStr = storage.getItem('expires_at')
     if (!expiresAtStr) return true
 
     try {
@@ -130,16 +167,14 @@ export const authService = {
     activityService.cleanup()
     activityService.clearActivity()
     
-    // Clear auth data
-    localStorage.removeItem('token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('expires_at')
+    // Clear auth data from both storages
+    clearAllStorage()
   },
 
   // Check if user is authenticated with proper validation
   isAuthenticated: (): boolean => {
-    const token = localStorage.getItem('token')
+    const storage = getStorage()
+    const token = storage.getItem('token')
     
     // No token exists
     if (!token) {
@@ -158,7 +193,8 @@ export const authService = {
 
   // Validate and refresh token if needed
   validateAndRefreshToken: async (): Promise<boolean> => {
-    const token = localStorage.getItem('token')
+    const storage = getStorage()
+    const token = storage.getItem('token')
     
     if (!token) {
       authService.clearAuth()
@@ -180,7 +216,8 @@ export const authService = {
 
   // Get stored user
   getStoredUser: (): UserResponse | null => {
-    const userStr = localStorage.getItem('user')
+    const storage = getStorage()
+    const userStr = storage.getItem('user')
     if (!userStr) return null
     
     try {
@@ -192,7 +229,28 @@ export const authService = {
 
   // Get stored token
   getToken: (): string | null => {
-    return localStorage.getItem('token')
+    const storage = getStorage()
+    return storage.getItem('token')
+  },
+
+  // Request password reset
+  requestPasswordReset: async (email: string): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.post('/auth/forgot-password', { email })
+      return response.data
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to request password reset')
+    }
+  },
+
+  // Reset password with new password
+  resetPassword: async (password: string): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.post('/auth/reset-password', { password })
+      return response.data
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to reset password')
+    }
   }
 }
 

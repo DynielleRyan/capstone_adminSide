@@ -14,6 +14,8 @@ import Suppliers from './pages/Suppliers'
 import ProductSourceList from './pages/ProductSourceList'
 import UserProfile from './pages/UserProfile'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import alertService from './services/alertService'
 import authService from './services/authService'
 import activityService from './services/activityService'
@@ -117,8 +119,10 @@ function App() {
       />
 
       <Routes>
-        {/* Login route without Layout */}
+        {/* Public routes without Layout */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Protected routes with Layout */}
         <Route

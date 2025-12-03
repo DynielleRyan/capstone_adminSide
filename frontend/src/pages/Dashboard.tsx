@@ -243,8 +243,8 @@ export default function Dashboard() {
                                 index % 2 === 0 ? "bg-blue-50" : "bg-white"
                               } hover:bg-blue-100 transition-colors`}
                             >
-                              <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                                {r.rowNo.toString().padStart(2, "0")}
+                              <td className="px-6 py-4 text-gray-700">
+                                {r.productId}
                               </td>
                               <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                                 <div className="flex items-center gap-2">
@@ -325,8 +325,10 @@ export default function Dashboard() {
                   <table className="w-full text-sm border-collapse">
                     <thead className="bg-blue-800 text-white">
                       <tr>
-                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">#</th>
-                        <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
+                        <th className="px-6 py-3 text-left font-semibold w-[20%]">
+                          ID
+                        </th>
+                        <th className="px-6 py-3 text-left font-semibold">
                           Product
                         </th>
                         <th className="px-6 py-3 text-left font-semibold border-r border-white/20">
@@ -371,8 +373,9 @@ export default function Dashboard() {
                               i % 2 === 0 ? "bg-blue-50" : "bg-white"
                             } hover:bg-blue-100 transition-colors`}
                           >
-                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
-                              {(i + 1).toString().padStart(2, "0")}
+                            <td className="px-6 py-4 text-gray-700 ">
+                              {/* {(i + 1).toString().padStart(2, "0")} */}
+                              {r.productId}
                             </td>
                             <td className="px-6 py-4 text-gray-700 border-r border-gray-200">
                               {r.productName}
