@@ -76,17 +76,12 @@ export const useGlobalSearch = () => {
       console.log('[SEARCH] Searching pharmacist products for:', query);
       
       const response = await api.get('/product-list');
-
-      if (!response.data.success) {
-        console.error('[SEARCH] Product list API error:', response.status);
-        return;
-      }
       
-      const data = response.data.data;
+      // API returns array directly, not wrapped in {success, data}
+      const data = response.data;
       console.log('[SEARCH] Product list API response:', data);
       console.log('[SEARCH] Is array?', Array.isArray(data));
       
-      // The API returns the array directly, not wrapped in {success, data}
       if (Array.isArray(data)) {
         console.log('[SEARCH] Processing', data.length, 'products');
         let count = 0;
