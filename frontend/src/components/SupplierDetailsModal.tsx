@@ -145,16 +145,6 @@ const SupplierDetailsModal = ({ isOpen, onClose, supplierId }: SupplierDetailsMo
             No supplier data available
           </div>
         )}
-
-        {/* Footer */}
-        <div className="flex justify-end mt-8">
-          <button
-            onClick={handleClose}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            CLOSE
-          </button>
-        </div>
       </div>
     </div>
   )

@@ -12,11 +12,13 @@ interface User {
   username: string
   password: string
   role: 'PHARMACIST' | 'CLERK'
+  markedForDeletion?: boolean // Track if user is marked for deletion
 }
 
 const EditUser = () => {
   const navigate = useNavigate()
   const [editedUsers, setEditedUsers] = useState<User[]>([])
+  const [originalUsers, setOriginalUsers] = useState<User[]>([]) // Track original state
   const [loading, setLoading] = useState(true)
 
   // Helper function to convert new Roles format to old format for EditUserForm
@@ -62,6 +64,7 @@ const EditUser = () => {
         if (response.success && response.data) {
           const formattedUsers = response.data.users.map(convertToEditUserFormat)
           setEditedUsers(formattedUsers)
+          setOriginalUsers(formattedUsers) // Save original state for comparison
         }
       } catch (err) {
         console.error('Error fetching users:', err)
@@ -87,22 +90,64 @@ const EditUser = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    loadingService.start('edit-user', `Updating ${editedUsers.length} user(s)...`)
+    // Find users marked for deletion
+    const usersToDelete = editedUsers.filter(user => user.markedForDeletion)
+    
+    // Find users with role changes (excluding those marked for deletion)
+    const changedUsers = editedUsers.filter(editedUser => {
+      if (editedUser.markedForDeletion) return false // Skip deleted users
+      const originalUser = originalUsers.find(u => u.userId === editedUser.userId)
+      return originalUser && originalUser.role !== editedUser.role
+    })
+
+    if (changedUsers.length === 0 && usersToDelete.length === 0) {
+      alertService.info('No changes detected')
+      return
+    }
+    
+    const totalChanges = changedUsers.length + usersToDelete.length
+    loadingService.start('edit-user', `Processing ${totalChanges} change(s)...`)
     
     try {
-      const updatePromises = editedUsers.map(user => {
+      const promises: Promise<any>[] = []
+      
+      // Add update promises
+      changedUsers.forEach(user => {
         const updateData: UpdateUser = {
           UserID: user.userId,
           Roles: mapStringToRole(user.role)
         }
-        return userService.updateUser(user.userId, updateData)
+        promises.push(userService.updateUser(user.userId, updateData))
+      })
+      
+      // Add delete promises
+      usersToDelete.forEach(user => {
+        promises.push(userService.deleteUser(user.userId))
       })
 
-      await Promise.all(updatePromises)
-      loadingService.success('edit-user', `${editedUsers.length} user(s) updated successfully!`)
+      await Promise.all(promises)
+      
+      // Create detailed success message
+      const messages: string[] = []
+      
+      if (changedUsers.length === 1) {
+        messages.push(`Updated role for ${changedUsers[0].name}`)
+      } else if (changedUsers.length > 1) {
+        messages.push(`Updated ${changedUsers.length} user roles`)
+      }
+      
+      if (usersToDelete.length === 1) {
+        messages.push(`Deleted ${usersToDelete[0].name}`)
+      } else if (usersToDelete.length > 1) {
+        messages.push(`Deleted ${usersToDelete.length} users`)
+      }
+      
+      const message = messages.join(' and ')
+      
+      loadingService.success('edit-user', message)
       navigate('/role-management')
     } catch (error) {
-      loadingService.error('edit-user', 'Error updating users: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      loadingService.error('edit-user', 'Error processing changes: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
@@ -110,24 +155,22 @@ const EditUser = () => {
     navigate('/role-management')
   }
 
-  const handleDelete = async (userId: string, userName: string) => {
-    await alertService.confirmDelete(userName, async () => {
-      loadingService.start('delete-user', 'Deleting user...')
-      
-      try {
-        const response = await userService.deleteUser(userId)
-        
-        if (response.success) {
-          loadingService.success('delete-user', 'User deleted successfully!')
-          // Remove from local state
-          setEditedUsers(prev => prev.filter(user => user.userId !== userId))
-        } else {
-          loadingService.error('delete-user', 'Failed to delete user: ' + response.message)
+  const handleDelete = (userId: string, userName: string) => {
+    setEditedUsers(prev => 
+      prev.map(user => {
+        if (user.userId === userId) {
+          // Toggle deletion mark
+          const newMarkedState = !user.markedForDeletion
+          if (newMarkedState) {
+            alertService.info(`${userName} marked for deletion. Click CONFIRM to apply.`)
+          } else {
+            alertService.info(`${userName} unmarked for deletion.`)
+          }
+          return { ...user, markedForDeletion: newMarkedState }
         }
-      } catch (error) {
-        loadingService.error('delete-user', 'Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'))
-      }
-    })
+        return user
+      })
+    )
   }
 
   return (
@@ -200,27 +243,38 @@ const EditUser = () => {
                   editedUsers.map((user => (
                     <tr
                       key={user.userId}
+                      className={user.markedForDeletion ? 'bg-red-50 opacity-60' : ''}
                       >
                       <td className="px-4 py-4 text-center border border-white">
                         <button
                           type="button"
                           onClick={() => handleDelete(user.userId, user.name)}
-                          className="text-red-500 hover:text-red-700 transition-colors"
+                          className={user.markedForDeletion 
+                            ? "text-gray-500 hover:text-gray-700 transition-colors" 
+                            : "text-red-500 hover:text-red-700 transition-colors"
+                          }
+                          title={user.markedForDeletion ? "Undo delete" : "Mark for deletion"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-gray-700 text-center border border-white">{user.name}</td>
-                      <td className="px-6 py-4 text-gray-700 text-center border border-white">{user.contact}</td>
-                      <td className="px-6 py-4 text-gray-700 text-center border border-white">{user.username}</td>
+                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${user.markedForDeletion ? 'line-through' : ''}`}>
+                        {user.name}
+                        {user.markedForDeletion && <span className="ml-2 text-xs text-red-600 font-semibold">(TO BE DELETED)</span>}
+                      </td>
+                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${user.markedForDeletion ? 'line-through' : ''}`}>{user.contact}</td>
+                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${user.markedForDeletion ? 'line-through' : ''}`}>{user.username}</td>
                       <td className="px-6 py-4 text-center border border-white">
                         <select 
                           value={user.role}
                           onChange={(e) => handleRoleChange(user.userId, e.target.value)}
+                          disabled={user.markedForDeletion}
                           className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
-                            user.role === 'PHARMACIST' 
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-blue-100 text-blue-800'
+                            user.markedForDeletion 
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : user.role === 'PHARMACIST' 
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-blue-100 text-blue-800'
                           }`}
                         >
                           <option value="PHARMACIST">PHARMACIST</option>

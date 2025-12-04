@@ -498,7 +498,10 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       type: 'magiclink',
       email: userData.Email,
       options: {
-        redirectTo: `${frontendUrl}/verify-email?role=${userRole}`
+        // Clerk users go to POS login, Pharmacist users go to verify-email page
+        redirectTo: userRole === 'Clerk' 
+          ? `${frontendUrl}/login` 
+          : `${frontendUrl}/verify-email?role=${userRole}`
       }
     });
 
@@ -1129,7 +1132,10 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${frontendUrl}/verify-email?role=${dbUser.Roles}`
+        // Clerk users go to POS login, Pharmacist users go to verify-email page
+        redirectTo: dbUser.Roles === 'Clerk'
+          ? `${frontendUrl}/login`
+          : `${frontendUrl}/verify-email?role=${dbUser.Roles}`
       }
     });
 
