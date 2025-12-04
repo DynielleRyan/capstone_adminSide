@@ -488,7 +488,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       frontendUrl = process.env.ADMIN_FRONTEND_URL || 'https://capstoneadminside-production-45a1.up.railway.app';
     } else {
       // Staff/Clerk POS portal
-      frontendUrl = process.env.STAFF_FRONTEND_URL || 'https://capstonepos-production-0c58.up.railway.app';
+      frontendUrl = process.env.STAFF_FRONTEND_URL || 'https://jambospharmacypos.up.railway.app';
     }
     
     console.log(`📧 Generating verification link for: ${userData.Email} (Role: ${userRole})`);
@@ -1122,7 +1122,7 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       frontendUrl = process.env.ADMIN_FRONTEND_URL || 'https://capstoneadminside-production-45a1.up.railway.app';
     } else {
       // Staff/Clerk POS portal
-      frontendUrl = process.env.STAFF_FRONTEND_URL || 'https://capstonepos-production-0c58.up.railway.app';
+      frontendUrl = process.env.STAFF_FRONTEND_URL || 'https://jambospharmacypos.up.railway.app';
     }
     
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
