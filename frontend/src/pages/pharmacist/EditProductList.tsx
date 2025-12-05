@@ -23,6 +23,10 @@ export const EditProductList = () => {
     ExpiryDate: '',
   });
 
+  // Image upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+
   useEffect(() => {
     if (id) {
       loadProductItem();
@@ -45,6 +49,9 @@ export const EditProductList = () => {
         Stock: data.Stock,
         ExpiryDate: data.ExpiryDate ? new Date(data.ExpiryDate).toISOString().split('T')[0] : '',
       });
+      
+      // Set initial image preview
+      setImagePreview(data.Product.Image || '');
     } catch (err: any) {
       alertService.error(err.message || 'Failed to load product item');
       navigate('/products/list');
@@ -66,6 +73,32 @@ export const EditProductList = () => {
         ...prev,
         [name]: value,
       }));
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alertService.error('Please select an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alertService.error('Image size must be less than 5MB');
+        return;
+      }
+
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -118,13 +151,26 @@ export const EditProductList = () => {
       
       // Update product details (name, price, etc.)
       if (productItem) {
-        const productUpdateData = {
+        const productUpdateData: any = {
           Name: formData.name,
           GenericName: formData.genericName,
           Brand: formData.brand,
           Category: formData.category,
           SellingPrice: parseFloat(formData.price),
         };
+        
+        // Add image if changed
+        if (imageFile) {
+          // Convert image to base64
+          const reader = new FileReader();
+          await new Promise((resolve) => {
+            reader.onloadend = () => {
+              productUpdateData.Image = reader.result;
+              resolve(null);
+            };
+            reader.readAsDataURL(imageFile);
+          });
+        }
         
         await api.put(`/products/${productItem.ProductID}`, productUpdateData);
       }
@@ -185,22 +231,52 @@ export const EditProductList = () => {
               Upload Image
             </label>
             <div className="relative">
-              <div className="block w-full h-64 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                {productItem.Product.Image ? (
-                  <img
-                    src={productItem.Product.Image}
-                    alt={productItem.Product.Name}
-                    className="w-full h-full object-cover"
-                  />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                id="image-upload"
+              />
+              <label
+                htmlFor="image-upload"
+                className="block w-full h-64 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden cursor-pointer hover:border-blue-500 transition-colors"
+              >
+                {imagePreview ? (
+                  <div className="relative w-full h-full group">
+                    <img
+                      src={imagePreview}
+                      alt={formData.name || 'Product'}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
+                      <span className="text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to change image
+                      </span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                    <span className="text-4xl font-bold text-blue-600">
-                      {productItem.Product.Name.charAt(0)}
-                    </span>
+                    <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>Click to upload image</span>
                   </div>
                 )}
-              </div>
+              </label>
             </div>
+            {imageFile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setImageFile(null);
+                  setImagePreview(productItem?.Product.Image || '');
+                }}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Remove new image
+              </button>
+            )}
           </div>
 
           {/* Product Name */}
