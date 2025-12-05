@@ -7,9 +7,10 @@ import { toast } from 'react-toastify';
 
 interface Props {
   productList: ProductItem[];
+  onRefresh?: () => void | Promise<void>;
 }
 
-export const ProductListTable : React.FC<Props> = ({ productList }) => {
+export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) => {
   const [selectedProductItem, setSelectedProductItem] = useState<ProductItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('none');
@@ -29,7 +30,11 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
       setDeleteItem(null);
       const modal = document.getElementById('delete_modal') as HTMLDialogElement;
       modal?.close();
-      // Optionally refresh product list here
+      
+      // Auto-refresh the product list
+      if (onRefresh) {
+        await onRefresh();
+      }
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete product');
@@ -366,7 +371,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
                 {new Date(primary.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>              
-              <td className="px-4 py-4 border border-white">
+              <td className="px-4 py-4 border border-white" onClick={(e) => e.stopPropagation()}>
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
@@ -432,7 +437,7 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
                 {new Date(item.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>
-              <td className="px-4 py-4">
+              <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 

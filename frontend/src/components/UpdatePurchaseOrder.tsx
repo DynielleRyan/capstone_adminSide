@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { fetchProducts } from '../services/purchaseOrderService';
 import { fetchPurchaseOrderById, updatePurchaseOrder } from '../services/purchaseOrderService';
+import { supplierService, SupplierResponse } from '../services/supplierService';
 import { Product } from '../types/product';
 import loadingService from '../services/loadingService';
 
