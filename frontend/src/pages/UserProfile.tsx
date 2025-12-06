@@ -25,8 +25,26 @@ const UserProfile = () => {
     setIsEditing(!isEditing)
   }
 
+  const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numbers
+    const value = e.target.value.replace(/[^0-9]/g, '')
+    setEditedContactNumber(value)
+  }
+
   const handleSave = async () => {
     if (!user?.UserID) return
+
+    // Validate contact number - must be numeric
+    if (editedContactNumber && !/^\d+$/.test(editedContactNumber)) {
+      loadingService.error('update-profile', 'Contact number must contain only numbers')
+      return
+    }
+
+    // Validate minimum length (optional - adjust as needed)
+    if (editedContactNumber && editedContactNumber.length < 10) {
+      loadingService.error('update-profile', 'Contact number must be at least 10 digits')
+      return
+    }
 
     loadingService.start('update-profile', 'Updating contact number...')
 
@@ -161,11 +179,14 @@ const UserProfile = () => {
                   {isEditing ? (
                     <div className="flex items-center gap-2">
                       <input
-                        type="text"
+                        type="tel"
                         value={editedContactNumber}
-                        onChange={(e) => setEditedContactNumber(e.target.value)}
+                        onChange={handleContactNumberChange}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        maxLength={11}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter contact number"
+                        placeholder="Enter contact number (numbers only)"
                       />
                       <button
                         onClick={handleSave}

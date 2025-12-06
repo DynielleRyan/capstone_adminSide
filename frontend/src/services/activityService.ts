@@ -4,7 +4,7 @@
  */
 
 const ACTIVITY_KEY = 'last_activity'
-const INACTIVITY_TIMEOUT = 60 * 60 * 1000 // 1 hour in milliseconds
+const INACTIVITY_TIMEOUT = 4 * 60 * 60 * 1000 // 4 hours in milliseconds
 const CHECK_INTERVAL = 60 * 1000 // Check every minute
 
 class ActivityService {

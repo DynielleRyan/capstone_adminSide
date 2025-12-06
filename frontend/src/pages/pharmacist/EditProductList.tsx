@@ -5,6 +5,9 @@ import { productItemService } from '../../services/productItemService';
 import { ProductItem } from '../../types/productItem';
 import api from '../../services/api';
 import alertService from '../../services/alertService';
+import { supplierService, SupplierResponse } from '../../services/supplierService';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export const EditProductList = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +15,8 @@ export const EditProductList = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [productItem, setProductItem] = useState<ProductItem | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierResponse[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -21,6 +26,7 @@ export const EditProductList = () => {
     price: '',
     Stock: 0,
     ExpiryDate: '',
+    supplierId: '',
   });
 
   // Image upload states
@@ -28,16 +34,39 @@ export const EditProductList = () => {
   const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
+    loadSuppliers();
+  }, []);
+
+  useEffect(() => {
     if (id) {
       loadProductItem();
     }
   }, [id]);
+
+  const loadSuppliers = async () => {
+    try {
+      setLoadingSuppliers(true);
+      const response = await supplierService.getSuppliers({ limit: 1000, isActive: true });
+      if (response.success && response.data) {
+        setSuppliers(response.data.suppliers);
+      }
+    } catch (err: any) {
+      console.error('Error loading suppliers:', err);
+      alertService.error('Failed to load suppliers');
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  };
 
   const loadProductItem = async () => {
     try {
       setLoading(true);
       const data = await fetchProductItemByID(id!);
       setProductItem(data);
+      
+      // Fetch full product data to get SupplierID
+      const productResponse = await api.get(`/products/${data.ProductID}`);
+      const fullProduct = productResponse.data.data;
       
       // Populate form with existing data
       setFormData({
@@ -48,6 +77,7 @@ export const EditProductList = () => {
         price: data.Product.SellingPrice.toString(),
         Stock: data.Stock,
         ExpiryDate: data.ExpiryDate ? new Date(data.ExpiryDate).toISOString().split('T')[0] : '',
+        supplierId: fullProduct.SupplierID || '',
       });
       
       // Set initial image preview
@@ -109,7 +139,7 @@ export const EditProductList = () => {
 
     try {
       // Validate all required fields
-      if (!formData.name || !formData.genericName || !formData.brand || !formData.category || !formData.price) {
+      if (!formData.name || !formData.genericName || !formData.brand || !formData.category || !formData.price || !formData.supplierId) {
         alertService.error('Please fill in all required fields');
         return;
       }
@@ -138,6 +168,12 @@ export const EditProductList = () => {
         return;
       }
 
+      // Validate supplier
+      if (formData.supplierId === '' || formData.supplierId === '--Select--') {
+        alertService.error('Please select a supplier');
+        return;
+      }
+
       setSaving(true);
 
       // Prepare update data for product item
@@ -149,7 +185,7 @@ export const EditProductList = () => {
       // Update product item
       await productItemService.updateProductItem(id, updateData);
       
-      // Update product details (name, price, etc.)
+      // Update product details (name, price, supplier, etc.)
       if (productItem) {
         const productUpdateData: any = {
           Name: formData.name,
@@ -157,6 +193,7 @@ export const EditProductList = () => {
           Brand: formData.brand,
           Category: formData.category,
           SellingPrice: parseFloat(formData.price),
+          SupplierID: formData.supplierId,
         };
         
         // Add image if changed
@@ -177,10 +214,10 @@ export const EditProductList = () => {
       
       alertService.success('Product updated successfully!');
       
-      // Navigate back after 1.5 seconds
+      // Navigate back after showing the toast (2.5 seconds to see the toast)
       setTimeout(() => {
         navigate('/products/list');
-      }, 1500);
+      }, 2500);
     } catch (err: any) {
       alertService.error(err.message || 'Failed to update product');
       console.error('Error updating product:', err);
@@ -217,6 +254,7 @@ export const EditProductList = () => {
 
   return (
     <div className="p-6 space-y-8">
+      <ToastContainer />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-blue-900">Edit Product</h1>
@@ -409,8 +447,33 @@ export const EditProductList = () => {
           </div>
         </div>
 
+        {/* Supplier Field */}
+        <div className="mb-8">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Supplier <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="supplierId"
+            value={formData.supplierId}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            disabled={loadingSuppliers}
+          >
+            <option value="">--Select Supplier--</option>
+            {suppliers.map((supplier) => (
+              <option key={supplier.SupplierID} value={supplier.SupplierID}>
+                {supplier.Name}
+              </option>
+            ))}
+          </select>
+          {loadingSuppliers && (
+            <p className="text-sm text-gray-500 mt-1">Loading suppliers...</p>
+          )}
+        </div>
+
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 mt-8">
           <button
             type="button"
             onClick={() => navigate('/products/list')}

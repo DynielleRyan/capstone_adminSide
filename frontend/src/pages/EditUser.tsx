@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trash2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Loader2, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import alertService from '../services/alertService'
 import loadingService from '../services/loadingService'
 import { userService, UserResponse, UpdateUser, UserFilters, UserRole } from '../services/userService'
@@ -15,11 +15,17 @@ interface User {
   markedForDeletion?: boolean // Track if user is marked for deletion
 }
 
+type SortField = 'name' | 'contact' | 'username' | 'role'
+type SortDirection = 'asc' | 'desc' | null
+
 const EditUser = () => {
   const navigate = useNavigate()
   const [editedUsers, setEditedUsers] = useState<User[]>([])
   const [originalUsers, setOriginalUsers] = useState<User[]>([]) // Track original state
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortField, setSortField] = useState<SortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
 
   // Helper function to convert new Roles format to old format for EditUserForm
   const mapRoleToOldFormat = (role: UserRole): 'PHARMACIST' | 'CLERK' => {
@@ -173,6 +179,74 @@ const EditUser = () => {
     )
   }
 
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle sort direction
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null)
+        setSortField(null)
+      } else {
+        setSortDirection('asc')
+      }
+    } else {
+      // Set new field
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // Filter and sort users
+  const getFilteredAndSortedUsers = () => {
+    let filtered = [...editedUsers]
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(user => 
+        user.name.toLowerCase().includes(query) ||
+        user.username.toLowerCase().includes(query) ||
+        user.contact.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply sorting
+    if (sortField && sortDirection) {
+      filtered.sort((a, b) => {
+        let aValue = a[sortField]
+        let bValue = b[sortField]
+
+        // Convert to lowercase for string comparison
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase()
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase()
+
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return filtered
+  }
+
+  const filteredUsers = getFilteredAndSortedUsers()
+
+  // Render sort icon
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 inline opacity-50" />
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="w-4 h-4 ml-1 inline text-white" />
+    }
+    if (sortDirection === 'desc') {
+      return <ArrowDown className="w-4 h-4 ml-1 inline text-white" />
+    }
+    return <ArrowUpDown className="w-4 h-4 ml-1 inline opacity-50" />
+  }
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Page Header */}
@@ -193,34 +267,97 @@ const EditUser = () => {
       {/* Users Table */}
       <div className="bg-white rounded-lg shadow p-8">
         <form onSubmit={handleSubmit}>
-          {/* Action Buttons */}
-          <div className="flex justify-end mb-6 gap-4">
-            <button
-              type="submit"
-              disabled={loading || editedUsers.length === 0}
-              className="px-6 py-2 bg-blue-900 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              CONFIRM
-            </button>
+          {/* Search and Action Buttons */}
+          <div className="flex justify-between items-center mb-6 gap-4">
+            {/* Search Bar */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by name, username, or contact..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-6 py-2 border border-blue-900 text-blue-900 rounded-md hover:bg-blue-50 transition-colors"
-            >
-              CANCEL
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <button
+                type="submit"
+                disabled={loading || editedUsers.length === 0}
+                className="px-6 py-2 bg-blue-900 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                CONFIRM
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-6 py-2 border border-blue-900 text-blue-900 rounded-md hover:bg-blue-50 transition-colors"
+              >
+                CANCEL
+              </button>
+            </div>
           </div>
+
+          {/* Results count */}
+          {searchQuery && !loading && (
+            <div className="mb-4 text-sm text-gray-600">
+              Found {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} matching "{searchQuery}"
+            </div>
+          )}
 
           <div className="overflow-x-auto mb-6">
             <table className="w-full">
               <thead className="bg-blue-900 text-white">
                 <tr>
                   <th className="px-4 py-4 text-center font-semibold w-16 border-r border-white">DELETE</th>
-                  <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
-                  <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
-                  <th className="px-6 py-4 text-center font-semibold border-r border-white">USERNAME</th>
-                  <th className="px-6 py-4 text-center font-semibold border-r border-white">ROLE</th>
+                  <th 
+                    className="px-6 py-4 text-center font-semibold border-r border-white cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center justify-center">
+                      NAME
+                      {renderSortIcon('name')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-center font-semibold border-r border-white cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('contact')}
+                  >
+                    <div className="flex items-center justify-center">
+                      CONTACT
+                      {renderSortIcon('contact')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-center font-semibold border-r border-white cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('username')}
+                  >
+                    <div className="flex items-center justify-center">
+                      USERNAME
+                      {renderSortIcon('username')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-center font-semibold border-r border-white cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('role')}
+                  >
+                    <div className="flex items-center justify-center">
+                      ROLE
+                      {renderSortIcon('role')}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className=" bg-blue-50">
@@ -239,8 +376,14 @@ const EditUser = () => {
                       No users available to edit. Make sure users are loaded first.
                     </td>
                   </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      No users found matching your search criteria.
+                    </td>
+                  </tr>
                 ) : (
-                  editedUsers.map((user => (
+                  filteredUsers.map((user => (
                     <tr
                       key={user.userId}
                       className={user.markedForDeletion ? 'bg-red-50 opacity-60' : ''}

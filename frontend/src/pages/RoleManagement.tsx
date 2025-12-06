@@ -62,10 +62,10 @@ const RoleManagement = () => {
 
   // Debounced search effect
   useEffect(() => {
-    if (!searchTerm) return;
-    
     const timeoutId = setTimeout(() => {
-      fetchUsers(1, searchTerm);
+      // If search term is empty, fetch all users
+      // Otherwise, fetch with search term
+      fetchUsers(1, searchTerm || undefined);
     }, 500);
 
     return () => clearTimeout(timeoutId);

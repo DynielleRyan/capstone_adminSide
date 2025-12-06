@@ -10,6 +10,8 @@ import { productItemService } from "../../services/productItemService";
 import { searchProductByName } from "../../services/productListService";
 import { ProductItem } from "../../types/productItem";
 import api from "../../services/api";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface ProductFormData {
   name: string;
@@ -38,6 +40,7 @@ const ProductUpload = () => {
   const [searchResults, setSearchResults] = useState<ProductItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const [isAddingBatch, setIsAddingBatch] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -77,6 +80,53 @@ const ProductUpload = () => {
     }));
   };
 
+  const handleFieldBlur = (field: string) => {
+    setTouchedFields(prev => new Set(prev).add(field));
+  };
+
+  const isFieldInvalid = (field: keyof ProductFormData): boolean => {
+    if (!touchedFields.has(field)) return false;
+    
+    const value = formData[field];
+    
+    // Check if it's empty or default select value
+    if (!value || value === "" || value === "--Select--") {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const getFieldClassName = (field: keyof ProductFormData, baseClass: string): string => {
+    if (isFieldInvalid(field)) {
+      return `${baseClass} border-red-500 focus:ring-red-500`;
+    }
+    return baseClass;
+  };
+
+  const getMissingFieldsForDisplay = (): string[] => {
+    if (isAddingBatch) {
+      const missing: string[] = [];
+      if (!formData.quantity) missing.push("Quantity");
+      if (!formData.expiry) missing.push("Expiry Date");
+      return missing;
+    }
+    
+    const missing: string[] = [];
+    if (!formData.name) missing.push("Product Name");
+    if (!formData.genericName) missing.push("Generic Name");
+    if (!formData.brand) missing.push("Brand");
+    if (!formData.price) missing.push("Price");
+    if (!formData.quantity) missing.push("Quantity");
+    if (!formData.expiry) missing.push("Expiry Date");
+    if (formData.category === "--Select--") missing.push("Category");
+    if (formData.prescription === "--Select--") missing.push("Prescription");
+    if (formData.vatExempted === "--Select--") missing.push("VAT Exempted");
+    if (formData.seniorPWD === "--Select--") missing.push("Senior/PWD");
+    if (formData.supplierID === "--Select--") missing.push("Supplier");
+    return missing;
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -110,41 +160,36 @@ const ProductUpload = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (
-      !formData.name ||
-      !formData.genericName ||
-      !formData.brand ||
-      !formData.price ||
-      !formData.quantity ||
-      !formData.expiry
-    ) {
-      alertService.error("Please fill in all required fields");
+    // Comprehensive validation with detailed feedback
+    const missingFields: string[] = [];
+    
+    if (!formData.name) missingFields.push("Product Name");
+    if (!formData.genericName) missingFields.push("Generic Name");
+    if (!formData.brand) missingFields.push("Brand");
+    if (!formData.price) missingFields.push("Price");
+    if (!formData.quantity) missingFields.push("Quantity");
+    if (!formData.expiry) missingFields.push("Expiry Date");
+    if (formData.category === "--Select--") missingFields.push("Category");
+    if (formData.prescription === "--Select--") missingFields.push("Prescription");
+    if (formData.vatExempted === "--Select--") missingFields.push("VAT Exempted");
+    if (formData.seniorPWD === "--Select--") missingFields.push("Senior/PWD");
+    if (formData.supplierID === "--Select--") missingFields.push("Supplier");
+
+    // Show all missing fields at once
+    if (missingFields.length > 0) {
+      const fieldsList = missingFields.join(", ");
+      alertService.error(`Please fill in the following required fields: ${fieldsList}`);
       return;
     }
 
-    if (formData.category === "--Select--") {
-      alertService.error("Please select a category");
+    // Additional validations
+    if (parseFloat(formData.price) <= 0) {
+      alertService.error("Price must be greater than 0");
       return;
     }
 
-    if (formData.prescription === "--Select--") {
-      alertService.error("Please select prescription requirement");
-      return;
-    }
-
-    if (formData.vatExempted === "--Select--") {
-      alertService.error("Please select VAT exemption status");
-      return;
-    }
-
-    if (formData.seniorPWD === "--Select--") {
-      alertService.error("Please select Senior/PWD discount eligibility");
-      return;
-    }
-
-    if (formData.supplierID === "--Select--") {
-      alertService.error("Please select a supplier");
+    if (parseInt(formData.quantity) <= 0) {
+      alertService.error("Quantity must be greater than 0");
       return;
     }
 
@@ -247,6 +292,7 @@ const ProductUpload = () => {
           imageBase64: null,
         });
         setImagePreview(null);
+        setTouchedFields(new Set());
         setShowForm(false);
       } else {
         alertService.error(response.message || "Failed to add product");
@@ -304,8 +350,21 @@ const ProductUpload = () => {
       return;
     }
 
-    if (!formData.quantity || !formData.expiry) {
-      alertService.error("Please fill in quantity and expiry date");
+    // Validation for batch addition
+    const missingFields: string[] = [];
+    
+    if (!formData.quantity) missingFields.push("Quantity");
+    if (!formData.expiry) missingFields.push("Expiry Date");
+
+    if (missingFields.length > 0) {
+      const fieldsList = missingFields.join(", ");
+      alertService.error(`Please fill in the following required fields: ${fieldsList}`);
+      return;
+    }
+
+    // Additional validations
+    if (parseInt(formData.quantity) <= 0) {
+      alertService.error("Quantity must be greater than 0");
       return;
     }
 
@@ -351,6 +410,7 @@ const ProductUpload = () => {
         setSearchResults([]);
         setSelectedProduct(null);
         setIsAddingBatch(false);
+        setTouchedFields(new Set());
       } else {
         alertService.error(productItemResponse.message || "Failed to add batch");
       }
@@ -399,6 +459,7 @@ const ProductUpload = () => {
     setSearchResults([]);
     setShowForm(false);
     setImagePreview(null);
+    setTouchedFields(new Set());
     setFormData({
       name: "",
       genericName: "",
@@ -418,6 +479,7 @@ const ProductUpload = () => {
 
   return (
     <div className="p-6 space-y-8">
+      <ToastContainer />
       {!showForm ? (
         <>
           {/* Header */}
@@ -453,53 +515,65 @@ const ProductUpload = () => {
           {/* Search Results */}
           {searchResults.length > 0 && (
             <>
-              <div className="space-y-6">
+              {/* Simple Table */}
+              <div className="bg-white border border-gray-300">
+                {/* Table Headers */}
+                <div className="grid grid-cols-7 items-center gap-4 p-3 bg-blue-900 border-b border-blue-900">
+                  <div className="text-white font-semibold text-sm text-center">#</div>
+                  <div className="text-white font-semibold text-sm text-center">PRODUCT</div>
+                  <div className="text-white font-semibold text-sm text-center">CATEGORY</div>
+                  <div className="text-white font-semibold text-sm text-center">BRAND</div>
+                  <div className="text-white font-semibold text-sm text-center">PRICE</div>
+                  <div className="text-white font-semibold text-sm text-center">STOCK</div>
+                  <div className="text-white font-semibold text-sm text-center">EXPIRY DATE</div>
+                </div>
+
+                {/* Table Rows */}
                 {searchResults.map((product, index) => (
-                  <div key={product.ProductItemID} className="space-y-4">
-                    {/* Product Row */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                      <div className="grid grid-cols-7 items-center gap-4 p-4 bg-gray-50">
-                        <div className="text-gray-700 font-medium">
-                          {(index + 1).toString().padStart(2, '0')}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {product.Product.Image ? (
-                            <img
-                              src={product.Product.Image}
-                              alt={product.Product.Name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
-                              <span className="text-blue-600 text-sm font-bold">
-                                {product.Product.Name.charAt(0)}
-                              </span>
-                            </div>
-                          )}
-                          <span className="font-medium text-gray-900">{product.Product.Name}</span>
-                        </div>
-                        <div className="text-gray-700">{product.Product.Category}</div>
-                        <div className="text-gray-700">{product.Product.Brand}</div>
-                        <div className="text-gray-700 font-medium">₱{product.Product.SellingPrice.toFixed(2)}</div>
-                        <div className="text-gray-700">{product.Stock}</div>
-                        <div className="text-gray-700">
-                          {new Date(product.ExpiryDate).toLocaleDateString('en-US', {
-                            month: '2-digit',
-                            day: '2-digit',
-                            year: 'numeric'
-                          })}
-                        </div>
+                  <div key={product.ProductItemID}>
+                    <div className="grid grid-cols-7 items-center gap-4 p-3 border-b border-gray-200">
+                      <div className="text-gray-600 text-sm text-center">
+                        {(index + 1).toString().padStart(2, '0')}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {product.Product.Image ? (
+                          <img
+                            src={product.Product.Image}
+                            alt={product.Product.Name}
+                            className="w-10 h-10 object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-600 text-xs font-semibold">
+                              {product.Product.Name.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                        <span className="text-gray-800 text-sm">{product.Product.Name}</span>
+                      </div>
+                      <div className="text-gray-600 text-sm text-center">{product.Product.Category}</div>
+                      <div className="text-gray-600 text-sm text-center">{product.Product.Brand}</div>
+                      <div className="text-gray-800 text-sm text-center">₱{product.Product.SellingPrice.toFixed(2)}</div>
+                      <div className="text-gray-600 text-sm text-center">{product.Stock}</div>
+                      <div className="text-gray-600 text-sm text-center">
+                        {new Date(product.ExpiryDate).toLocaleDateString('en-US', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          year: 'numeric'
+                        })}
                       </div>
                     </div>
-
-                    {/* Add New Batch Button - Separated */}
-                    <div className="flex justify-center">
-                      <button
-                        onClick={() => handleSelectProduct(product)}
-                        className="px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-                      >
-                        Add New Batch
-                      </button>
+                    
+                    {/* Add New Batch Button */}
+                    <div className="p-3 bg-gray-50 border-b border-gray-300">
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => handleSelectProduct(product)}
+                          className="px-6 py-2 bg-blue-900 text-white text-sm hover:bg-blue-500 transition-colors font-medium"
+                        >
+                          Add New Batch
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -539,6 +613,25 @@ const ProductUpload = () => {
               {isAddingBatch ? "Add New Batch" : "Product Upload"}
             </h1>
           </div>
+
+          {/* Missing Fields Warning Banner */}
+          {touchedFields.size > 0 && getMissingFieldsForDisplay().length > 0 && (
+            <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    <span className="font-medium">Missing required fields ({getMissingFieldsForDisplay().length}):</span>
+                    {" "}{getMissingFieldsForDisplay().join(", ")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={isAddingBatch ? handleAddBatch : handleSubmit} className="bg-blue-50 rounded-lg p-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-6">
@@ -591,11 +684,15 @@ const ProductUpload = () => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
+                  onBlur={() => handleFieldBlur("name")}
                   placeholder="Enter name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={getFieldClassName("name", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required
                 />
+                {isFieldInvalid("name") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Product name is required</p>
+                )}
               </div>
             </div>
 
@@ -612,10 +709,14 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("genericName", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("genericName")}
+                  className={getFieldClassName("genericName", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required
                 />
+                {isFieldInvalid("genericName") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Generic name is required</p>
+                )}
               </div>
 
               {/* Price */}
@@ -633,12 +734,16 @@ const ProductUpload = () => {
                     min="0"
                     value={formData.price}
                     onChange={(e) => handleInputChange("price", e.target.value)}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    onBlur={() => handleFieldBlur("price")}
+                    className={getFieldClassName("price", "w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                     placeholder="0.00"
                     disabled={isAddingBatch}
                     required
                   />
                 </div>
+                {isFieldInvalid("price") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Price is required</p>
+                )}
               </div>
 
               {/* Quantity */}
@@ -653,9 +758,13 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("quantity", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onBlur={() => handleFieldBlur("quantity")}
+                  className={getFieldClassName("quantity", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500")}
                   required
                 />
+                {isFieldInvalid("quantity") && (
+                  <p className="mt-1 text-sm text-red-600">Quantity is required</p>
+                )}
               </div>
             </div>
 
@@ -669,10 +778,14 @@ const ProductUpload = () => {
                   type="text"
                   value={formData.brand}
                   onChange={(e) => handleInputChange("brand", e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("brand")}
+                  className={getFieldClassName("brand", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required
                 />
+                {isFieldInvalid("brand") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Brand is required</p>
+                )}
               </div>
 
               {/* Expiry */}
@@ -684,10 +797,14 @@ const ProductUpload = () => {
                   type="date"
                   value={formData.expiry}
                   onChange={(e) => handleInputChange("expiry", e.target.value)}
+                  onBlur={() => handleFieldBlur("expiry")}
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={getFieldClassName("expiry", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500")}
                   required
                 />
+                {isFieldInvalid("expiry") && (
+                  <p className="mt-1 text-sm text-red-600">Expiry date is required</p>
+                )}
               </div>
 
               {/* Category */}
@@ -700,7 +817,8 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("category", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("category")}
+                  className={getFieldClassName("category", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required
                 >
@@ -713,6 +831,9 @@ const ProductUpload = () => {
                   <option value="Personal Care">Personal Care</option>
                   <option value="Medical Devices">Medical Devices</option>
                 </select>
+                {isFieldInvalid("category") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Please select a category</p>
+                )}
               </div>
             </div>
 
@@ -728,7 +849,8 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("supplierID", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("supplierID")}
+                  className={getFieldClassName("supplierID", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required={!isAddingBatch}
                 >
@@ -742,6 +864,9 @@ const ProductUpload = () => {
                     </option>
                   ))}
                 </select>
+                {isFieldInvalid("supplierID") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Please select a supplier</p>
+                )}
               </div>
 
               {/* Prescription */}
@@ -754,7 +879,8 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("prescription", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("prescription")}
+                  className={getFieldClassName("prescription", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required={!isAddingBatch}
                 >
@@ -762,6 +888,9 @@ const ProductUpload = () => {
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
                 </select>
+                {isFieldInvalid("prescription") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Please select prescription status</p>
+                )}
               </div>
 
               {/* VAT Exempted */}
@@ -774,7 +903,8 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("vatExempted", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("vatExempted")}
+                  className={getFieldClassName("vatExempted", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required={!isAddingBatch}
                 >
@@ -782,6 +912,9 @@ const ProductUpload = () => {
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
                 </select>
+                {isFieldInvalid("vatExempted") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Please select VAT exemption status</p>
+                )}
               </div>
 
               {/* Senior/PWD */}
@@ -794,7 +927,8 @@ const ProductUpload = () => {
                   onChange={(e) =>
                     handleInputChange("seniorPWD", e.target.value)
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  onBlur={() => handleFieldBlur("seniorPWD")}
+                  className={getFieldClassName("seniorPWD", "w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed")}
                   disabled={isAddingBatch}
                   required={!isAddingBatch}
                 >
@@ -802,6 +936,9 @@ const ProductUpload = () => {
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
                 </select>
+                {isFieldInvalid("seniorPWD") && !isAddingBatch && (
+                  <p className="mt-1 text-sm text-red-600">Please select Senior/PWD discount eligibility</p>
+                )}
               </div>
             </div>
 
@@ -814,6 +951,7 @@ const ProductUpload = () => {
                     handleCancelBatch();
                   } else {
                     setShowForm(false);
+                    setTouchedFields(new Set());
                     setFormData({
                       name: "",
                       genericName: "",

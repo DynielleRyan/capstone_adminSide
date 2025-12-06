@@ -5,6 +5,7 @@ import { Product } from '../types/product';
 import { PurchaseOrderForms } from '../types/PurchaseOrderForms';
 import { fetchProducts } from '../services/purchaseOrderService';
 import { createPurchaseOrder } from '../services/purchaseOrderService';
+import { supplierService, SupplierResponse } from '../services/supplierService';
 import loadingService from '../services/loadingService';
 
 export const PurchaseOrderForm = () => {
@@ -12,9 +13,11 @@ export const PurchaseOrderForm = () => {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierResponse | null>(null);
   const [formData, setFormData] = useState({  quantity: '', orderDate: '', ETA: '', orderArrival: '', basePrice: '', totalCost: '' });
 
 
@@ -34,10 +37,29 @@ export const PurchaseOrderForm = () => {
   setSelectedProduct(product);
   setSearchTerm(product.Name);
   setDropdownOpen(false); // Close dropdown
+  
+  // Auto-select the supplier associated with the product
+  const matchedSupplier = suppliers.find(s => s.SupplierID === product.SupplierID);
+  if (matchedSupplier) {
+    setSelectedSupplier(matchedSupplier);
+  }
   };
 
   useEffect(() => {
     fetchProducts().then(setProducts);
+    
+    // Fetch suppliers
+    const loadSuppliers = async () => {
+      try {
+        const response = await supplierService.getSuppliers({ limit: 1000, isActive: true });
+        if (response.success && response.data) {
+          setSuppliers(response.data.suppliers);
+        }
+      } catch (error) {
+        console.error('Error fetching suppliers:', error);
+      }
+    };
+    loadSuppliers();
   }, []);
 
   const handleCancel = () => {
@@ -52,12 +74,17 @@ export const PurchaseOrderForm = () => {
       return;
     }
 
+    if (!selectedSupplier) {
+      loadingService.error('add-purchase-order', 'Please select a supplier');
+      return;
+    }
+
     loadingService.start('add-purchase-order', 'Creating purchase order...');
 
     try {
       const purchaseorder: PurchaseOrderForms = {
         ProductID: selectedProduct.ProductID,
-        SupplierID: selectedProduct.SupplierID,
+        SupplierID: selectedSupplier.SupplierID,
         Quantity: formData.quantity,
         OrderPlacedDateTime: formData.orderDate,
         ETA: formData.ETA,
@@ -133,12 +160,23 @@ export const PurchaseOrderForm = () => {
 
               <div>
                 <label htmlFor="supplier" className="block text-sm font-bold text-gray-700 mb-2">SUPPLIER NAME:</label>
-                <input
+                <select
                   id="supplier"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
-                  value={selectedProduct?.Supplier.Name || ''}
-                  disabled
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedSupplier?.SupplierID || ''}
+                  onChange={(e) => {
+                    const supplier = suppliers.find(s => s.SupplierID === e.target.value);
+                    setSelectedSupplier(supplier || null);
+                  }}
+                  required
+                >
+                  <option value="">Select a supplier</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.SupplierID} value={supplier.SupplierID}>
+                      {supplier.Name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -169,7 +207,9 @@ export const PurchaseOrderForm = () => {
               </div>
 
               <div>
-                <label htmlFor="datearrived" className="block text-sm font-bold text-gray-700 mb-2">DATE ARRIVED:</label>
+                <label htmlFor="datearrived" className="block text-sm font-bold text-gray-700 mb-2">
+                  DATE ARRIVED: <span className="text-gray-500 font-normal">(Optional)</span>
+                </label>
                 <input
                   id="datearrived"
                   type="date"

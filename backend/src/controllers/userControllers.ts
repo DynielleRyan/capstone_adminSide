@@ -59,6 +59,15 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
 
     const user = users[0];
 
+    // Check if user account is active
+    if (!user.IsActive) {
+      res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact an administrator.'
+      });
+      return;
+    }
+
     // Authenticate with Supabase Auth using the email to check credentials
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: user.Email,
@@ -171,6 +180,54 @@ export const signOut = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     console.error('Error in signOut:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Refresh access token
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      res.status(400).json({
+        success: false,
+        message: 'Refresh token is required'
+      });
+      return;
+    }
+
+    // Refresh the session using Supabase
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: refresh_token
+    });
+
+    if (error || !data.session) {
+      console.error('Error refreshing token:', error);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        session: {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_in: data.session.expires_in,
+          expires_at: data.session.expires_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in refreshToken:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
