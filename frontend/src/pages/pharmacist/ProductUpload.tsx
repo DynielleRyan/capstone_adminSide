@@ -533,46 +533,46 @@ const ProductUpload = () => {
                   <div key={product.ProductItemID}>
                     <div className="grid grid-cols-7 items-center gap-4 p-3 border-b border-gray-200">
                       <div className="text-gray-600 text-sm text-center">
-                        {(index + 1).toString().padStart(2, '0')}
-                      </div>
+                          {(index + 1).toString().padStart(2, '0')}
+                        </div>
                       <div className="flex items-center gap-2">
-                        {product.Product.Image ? (
-                          <img
-                            src={product.Product.Image}
-                            alt={product.Product.Name}
+                          {product.Product.Image ? (
+                            <img
+                              src={product.Product.Image}
+                              alt={product.Product.Name}
                             className="w-10 h-10 object-cover"
-                          />
-                        ) : (
+                            />
+                          ) : (
                           <div className="w-10 h-10 bg-gray-200 flex items-center justify-center">
                             <span className="text-gray-600 text-xs font-semibold">
-                              {product.Product.Name.charAt(0)}
-                            </span>
-                          </div>
-                        )}
+                                {product.Product.Name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
                         <span className="text-gray-800 text-sm">{product.Product.Name}</span>
-                      </div>
+                        </div>
                       <div className="text-gray-600 text-sm text-center">{product.Product.Category}</div>
                       <div className="text-gray-600 text-sm text-center">{product.Product.Brand}</div>
                       <div className="text-gray-800 text-sm text-center">₱{product.Product.SellingPrice.toFixed(2)}</div>
                       <div className="text-gray-600 text-sm text-center">{product.Stock}</div>
                       <div className="text-gray-600 text-sm text-center">
-                        {new Date(product.ExpiryDate).toLocaleDateString('en-US', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          year: 'numeric'
-                        })}
+                          {new Date(product.ExpiryDate).toLocaleDateString('en-US', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            year: 'numeric'
+                          })}
                       </div>
                     </div>
-                    
+
                     {/* Add New Batch Button */}
                     <div className="p-3 bg-gray-50 border-b border-gray-300">
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => handleSelectProduct(product)}
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => handleSelectProduct(product)}
                           className="px-6 py-2 bg-blue-900 text-white text-sm hover:bg-blue-500 transition-colors font-medium"
-                        >
-                          Add New Batch
-                        </button>
+                      >
+                        Add New Batch
+                      </button>
                       </div>
                     </div>
                   </div>
