@@ -12,7 +12,9 @@ export const UpdatePurchaseOrderForm = () => {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierResponse[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierResponse | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -27,11 +29,24 @@ export const UpdatePurchaseOrderForm = () => {
 
   useEffect(() => {
     fetchProducts().then(setProducts);
+    
+    // Fetch suppliers
+    const loadSuppliers = async () => {
+      try {
+        const response = await supplierService.getSuppliers({ limit: 1000, isActive: true });
+        if (response.success && response.data) {
+          setSuppliers(response.data.suppliers);
+        }
+      } catch (error) {
+        console.error('Error fetching suppliers:', error);
+      }
+    };
+    loadSuppliers();
   }, []);
 
   useEffect(() => {
     const loadOrder = async () => {
-        if (!id || products.length === 0) return;
+        if (!id || products.length === 0 || suppliers.length === 0) return;
     
         try {
             setLoading(true);
@@ -59,6 +74,14 @@ export const UpdatePurchaseOrderForm = () => {
             } else {
               console.warn('Product not found for ID:', order.ProductID);
             }
+            
+            // Set the selected supplier
+            const matchedSupplier = suppliers.find(s => s.SupplierID === order.SupplierID);
+            if (matchedSupplier) {
+              setSelectedSupplier(matchedSupplier);
+            } else {
+              console.warn('Supplier not found for ID:', order.SupplierID);
+            }
         } catch (err: any) {
           console.error('Failed to load order:', err);
           loadingService.error('load-purchase-order', 'Failed to load purchase order details. Please try again.');
@@ -68,7 +91,7 @@ export const UpdatePurchaseOrderForm = () => {
     };
 
     loadOrder();
-  }, [id, products]);
+  }, [id, products, suppliers]);
 
   const filteredProducts = products.filter(p =>
     p.Name.toLowerCase().startsWith(searchTerm.trim().toLowerCase())
@@ -86,6 +109,12 @@ export const UpdatePurchaseOrderForm = () => {
     setSelectedProduct(product);
     setSearchTerm(product.Name);
     setDropdownOpen(false); // Close dropdown
+    
+    // Auto-select the supplier associated with the product
+    const matchedSupplier = suppliers.find(s => s.SupplierID === product.SupplierID);
+    if (matchedSupplier) {
+      setSelectedSupplier(matchedSupplier);
+    }
     };   
 
   const handleCancel = () => {
@@ -99,11 +128,16 @@ export const UpdatePurchaseOrderForm = () => {
       return;
     }
 
+    if (!selectedSupplier) {
+      loadingService.error('update-purchase-order', 'Please select a supplier');
+      return;
+    }
+
     loadingService.start('update-purchase-order', 'Updating purchase order...');
 
     const purchaseorder = {
         ProductID: selectedProduct.ProductID,
-        SupplierID: selectedProduct.SupplierID,
+        SupplierID: selectedSupplier.SupplierID!,
         Quantity: formData.quantity,
         OrderPlacedDateTime: formData.orderDate,
         ETA: formData.ETA,
@@ -190,12 +224,23 @@ export const UpdatePurchaseOrderForm = () => {
 
               <div>
                 <label htmlFor="supplier" className="block text-sm font-bold text-gray-700 mb-2">SUPPLIER NAME:</label>
-                <input
+                <select
                   id="supplier"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
-                  value={selectedProduct?.Supplier.Name || ''}
-                  disabled
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedSupplier?.SupplierID ?? ''}
+                  onChange={(e) => {
+                    const supplier = suppliers.find(s => s.SupplierID === e.target.value);
+                    setSelectedSupplier(supplier ?? null);
+                  }}
+                  required
+                >
+                  <option value="">Select a supplier</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.SupplierID} value={supplier.SupplierID}>
+                      {supplier.Name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -226,7 +271,9 @@ export const UpdatePurchaseOrderForm = () => {
               </div>
 
               <div>
-                <label htmlFor="datearrived" className="block text-sm font-bold text-gray-700 mb-2">DATE ARRIVED:</label>
+                <label htmlFor="datearrived" className="block text-sm font-bold text-gray-700 mb-2">
+                  DATE ARRIVED: <span className="text-gray-500 font-normal">(Optional)</span>
+                </label>
                 <input
                   id="datearrived"
                   type="date"
