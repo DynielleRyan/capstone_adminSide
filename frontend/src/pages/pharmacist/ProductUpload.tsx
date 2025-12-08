@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import alertService from "../../services/alertService";
 import { authService } from "../../services/authService";
@@ -30,6 +31,7 @@ interface ProductFormData {
 }
 
 const ProductUpload = () => {
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [searchName, setSearchName] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -102,29 +104,6 @@ const ProductUpload = () => {
       return `${baseClass} border-red-500 focus:ring-red-500`;
     }
     return baseClass;
-  };
-
-  const getMissingFieldsForDisplay = (): string[] => {
-    if (isAddingBatch) {
-      const missing: string[] = [];
-      if (!formData.quantity) missing.push("Quantity");
-      if (!formData.expiry) missing.push("Expiry Date");
-      return missing;
-    }
-    
-    const missing: string[] = [];
-    if (!formData.name) missing.push("Product Name");
-    if (!formData.genericName) missing.push("Generic Name");
-    if (!formData.brand) missing.push("Brand");
-    if (!formData.price) missing.push("Price");
-    if (!formData.quantity) missing.push("Quantity");
-    if (!formData.expiry) missing.push("Expiry Date");
-    if (formData.category === "--Select--") missing.push("Category");
-    if (formData.prescription === "--Select--") missing.push("Prescription");
-    if (formData.vatExempted === "--Select--") missing.push("VAT Exempted");
-    if (formData.seniorPWD === "--Select--") missing.push("Senior/PWD");
-    if (formData.supplierID === "--Select--") missing.push("Supplier");
-    return missing;
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,6 +244,10 @@ const ProductUpload = () => {
 
           if (productItemResponse.success) {
             alertService.success("Product and inventory added successfully!");
+            // Navigate to product list after successful creation
+            setTimeout(() => {
+              navigate("/pharmacist/products/list");
+            }, 1500);
           } else {
             alertService.warning(
               "Product created but inventory tracking failed"
@@ -389,6 +372,11 @@ const ProductUpload = () => {
 
       if (productItemResponse.success) {
         alertService.success("New batch added successfully!");
+        
+        // Navigate to product list after successful batch addition
+        setTimeout(() => {
+          navigate("/pharmacist/products/list");
+        }, 1500);
         
         // Reset form and states
         setFormData({
@@ -613,25 +601,6 @@ const ProductUpload = () => {
               {isAddingBatch ? "Add New Batch" : "Product Upload"}
             </h1>
           </div>
-
-          {/* Missing Fields Warning Banner */}
-          {touchedFields.size > 0 && getMissingFieldsForDisplay().length > 0 && (
-            <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    <span className="font-medium">Missing required fields ({getMissingFieldsForDisplay().length}):</span>
-                    {" "}{getMissingFieldsForDisplay().join(", ")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           <form onSubmit={isAddingBatch ? handleAddBatch : handleSubmit} className="bg-blue-50 rounded-lg p-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-6">
