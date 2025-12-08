@@ -5,6 +5,9 @@ import { productItemService } from '../../services/productItemService';
 import { ProductItem } from '../../types/productItem';
 import api from '../../services/api';
 import alertService from '../../services/alertService';
+import { supplierService, SupplierResponse } from '../../services/supplierService';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export const EditProductList = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +15,8 @@ export const EditProductList = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [productItem, setProductItem] = useState<ProductItem | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierResponse[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -21,7 +26,16 @@ export const EditProductList = () => {
     price: '',
     Stock: 0,
     ExpiryDate: '',
+    supplierId: '',
   });
+
+  // Image upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -29,11 +43,30 @@ export const EditProductList = () => {
     }
   }, [id]);
 
+  const loadSuppliers = async () => {
+    try {
+      setLoadingSuppliers(true);
+      const response = await supplierService.getSuppliers({ limit: 1000, isActive: true });
+      if (response.success && response.data) {
+        setSuppliers(response.data.suppliers);
+      }
+    } catch (err: any) {
+      console.error('Error loading suppliers:', err);
+      alertService.error('Failed to load suppliers');
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  };
+
   const loadProductItem = async () => {
     try {
       setLoading(true);
       const data = await fetchProductItemByID(id!);
       setProductItem(data);
+      
+      // Fetch full product data to get SupplierID
+      const productResponse = await api.get(`/products/${data.ProductID}`);
+      const fullProduct = productResponse.data.data;
       
       // Populate form with existing data
       setFormData({
@@ -44,7 +77,11 @@ export const EditProductList = () => {
         price: data.Product.SellingPrice.toString(),
         Stock: data.Stock,
         ExpiryDate: data.ExpiryDate ? new Date(data.ExpiryDate).toISOString().split('T')[0] : '',
+        supplierId: fullProduct.SupplierID || '',
       });
+      
+      // Set initial image preview
+      setImagePreview(data.Product.Image || '');
     } catch (err: any) {
       alertService.error(err.message || 'Failed to load product item');
       navigate('/products/list');
@@ -69,6 +106,32 @@ export const EditProductList = () => {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alertService.error('Please select an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alertService.error('Image size must be less than 5MB');
+        return;
+      }
+
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -76,7 +139,7 @@ export const EditProductList = () => {
 
     try {
       // Validate all required fields
-      if (!formData.name || !formData.genericName || !formData.brand || !formData.category || !formData.price) {
+      if (!formData.name || !formData.genericName || !formData.brand || !formData.category || !formData.price || !formData.supplierId) {
         alertService.error('Please fill in all required fields');
         return;
       }
@@ -105,6 +168,12 @@ export const EditProductList = () => {
         return;
       }
 
+      // Validate supplier
+      if (formData.supplierId === '' || formData.supplierId === '--Select--') {
+        alertService.error('Please select a supplier');
+        return;
+      }
+
       setSaving(true);
 
       // Prepare update data for product item
@@ -116,25 +185,39 @@ export const EditProductList = () => {
       // Update product item
       await productItemService.updateProductItem(id, updateData);
       
-      // Update product details (name, price, etc.)
+      // Update product details (name, price, supplier, etc.)
       if (productItem) {
-        const productUpdateData = {
+        const productUpdateData: any = {
           Name: formData.name,
           GenericName: formData.genericName,
           Brand: formData.brand,
           Category: formData.category,
           SellingPrice: parseFloat(formData.price),
+          SupplierID: formData.supplierId,
         };
+        
+        // Add image if changed
+        if (imageFile) {
+          // Convert image to base64
+          const reader = new FileReader();
+          await new Promise((resolve) => {
+            reader.onloadend = () => {
+              productUpdateData.Image = reader.result;
+              resolve(null);
+            };
+            reader.readAsDataURL(imageFile);
+          });
+        }
         
         await api.put(`/products/${productItem.ProductID}`, productUpdateData);
       }
       
       alertService.success('Product updated successfully!');
       
-      // Navigate back after 1.5 seconds
+      // Navigate back after showing the toast (2.5 seconds to see the toast)
       setTimeout(() => {
         navigate('/products/list');
-      }, 1500);
+      }, 2500);
     } catch (err: any) {
       alertService.error(err.message || 'Failed to update product');
       console.error('Error updating product:', err);
@@ -171,6 +254,7 @@ export const EditProductList = () => {
 
   return (
     <div className="p-6 space-y-8">
+      <ToastContainer />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-blue-900">Edit Product</h1>
@@ -185,22 +269,52 @@ export const EditProductList = () => {
               Upload Image
             </label>
             <div className="relative">
-              <div className="block w-full h-64 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                {productItem.Product.Image ? (
-                  <img
-                    src={productItem.Product.Image}
-                    alt={productItem.Product.Name}
-                    className="w-full h-full object-cover"
-                  />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                id="image-upload"
+              />
+              <label
+                htmlFor="image-upload"
+                className="block w-full h-64 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden cursor-pointer hover:border-blue-500 transition-colors"
+              >
+                {imagePreview ? (
+                  <div className="relative w-full h-full group">
+                    <img
+                      src={imagePreview}
+                      alt={formData.name || 'Product'}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
+                      <span className="text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to change image
+                      </span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                    <span className="text-4xl font-bold text-blue-600">
-                      {productItem.Product.Name.charAt(0)}
-                    </span>
+                    <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>Click to upload image</span>
                   </div>
                 )}
-              </div>
+              </label>
             </div>
+            {imageFile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setImageFile(null);
+                  setImagePreview(productItem?.Product.Image || '');
+                }}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Remove new image
+              </button>
+            )}
           </div>
 
           {/* Product Name */}
@@ -333,8 +447,33 @@ export const EditProductList = () => {
           </div>
         </div>
 
+        {/* Supplier Field */}
+        <div className="mb-8">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Supplier <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="supplierId"
+            value={formData.supplierId}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            disabled={loadingSuppliers}
+          >
+            <option value="">--Select Supplier--</option>
+            {suppliers.map((supplier) => (
+              <option key={supplier.SupplierID} value={supplier.SupplierID}>
+                {supplier.Name}
+              </option>
+            ))}
+          </select>
+          {loadingSuppliers && (
+            <p className="text-sm text-gray-500 mt-1">Loading suppliers...</p>
+          )}
+        </div>
+
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 mt-8">
           <button
             type="button"
             onClick={() => navigate('/products/list')}

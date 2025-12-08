@@ -59,6 +59,15 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
 
     const user = users[0];
 
+    // Check if user account is active
+    if (!user.IsActive) {
+      res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact an administrator.'
+      });
+      return;
+    }
+
     // Authenticate with Supabase Auth using the email to check credentials
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: user.Email,
@@ -171,6 +180,54 @@ export const signOut = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     console.error('Error in signOut:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Refresh access token
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      res.status(400).json({
+        success: false,
+        message: 'Refresh token is required'
+      });
+      return;
+    }
+
+    // Refresh the session using Supabase
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: refresh_token
+    });
+
+    if (error || !data.session) {
+      console.error('Error refreshing token:', error);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        session: {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_in: data.session.expires_in,
+          expires_at: data.session.expires_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in refreshToken:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -478,21 +535,43 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Generate verification link using Supabase Admin
+    // Choose the correct frontend URL based on user role
+    // Pharmacist uses capstoneadminside
+    // Clerk/Staff use capstonepos
+    // (Admin users don't need verification - they're auto-verified)
+    let frontendUrl: string;
+    if (userRole === 'Pharmacist') {
+      // Pharmacist portal
+      frontendUrl = process.env.ADMIN_FRONTEND_URL || 'https://capstoneadminside-production-45a1.up.railway.app';
+    } else {
+      // Staff/Clerk POS portal
+      frontendUrl = process.env.STAFF_FRONTEND_URL || 'https://jambospharmacypos.up.railway.app';
+    }
+    
+    console.log(`📧 Generating verification link for: ${userData.Email} (Role: ${userRole})`);
+    console.log(`📧 Using frontend URL: ${frontendUrl}`);
+    
     const { data: verificationData, error: verificationError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: userData.Email,
       options: {
-        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`
+        // Clerk users go to POS login, Pharmacist users go to verify-email page
+        redirectTo: userRole === 'Clerk' 
+          ? `${frontendUrl}/login` 
+          : `${frontendUrl}/verify-email?role=${userRole}`
       }
     });
 
     if (verificationError) {
-      console.error('Error generating verification link:', verificationError);
+      console.error('❌ Error generating verification link:', verificationError);
       // Don't fail user creation if email fails, just log it
-      console.log('User created but verification email failed to send');
+      console.log('⚠️ User created but verification email failed to send');
     } else {
+      console.log('✅ Verification link generated successfully');
       // Send verification email via SendGrid
       const fullName = `${userData.FirstName} ${userData.LastName}`;
+      console.log(`📧 Attempting to send verification email to: ${userData.Email}`);
+      
       const emailResult = await sendVerificationEmail(
         userData.Email,
         fullName,
@@ -503,6 +582,9 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         console.log(`✅ Verification email sent successfully to: ${userData.Email}`);
       } else {
         console.error('❌ Failed to send verification email:', emailResult.error);
+        if (emailResult.details) {
+          console.error('❌ Error details:', JSON.stringify(emailResult.details, null, 2));
+        }
       }
     }
 
@@ -1050,6 +1132,15 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       return;
     }
 
+    // Admin users don't need verification - they're auto-verified
+    if (dbUser.Roles === 'Admin') {
+      res.status(400).json({
+        success: false,
+        message: 'Admin accounts are automatically verified and do not need email verification'
+      });
+      return;
+    }
+
     // Get user by email from auth
     const { data: { users }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
     
@@ -1082,11 +1173,26 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
     }
 
     // Generate verification link for email verification
+    // Choose the correct frontend URL based on user role
+    // Pharmacist uses capstoneadminside
+    // Clerk/Staff use capstonepos
+    let frontendUrl: string;
+    if (dbUser.Roles === 'Pharmacist') {
+      // Pharmacist portal
+      frontendUrl = process.env.ADMIN_FRONTEND_URL || 'https://capstoneadminside-production-45a1.up.railway.app';
+    } else {
+      // Staff/Clerk POS portal
+      frontendUrl = process.env.STAFF_FRONTEND_URL || 'https://jambospharmacypos.up.railway.app';
+    }
+    
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`
+        // Clerk users go to POS login, Pharmacist users go to verify-email page
+        redirectTo: dbUser.Roles === 'Clerk'
+          ? `${frontendUrl}/login`
+          : `${frontendUrl}/verify-email?role=${dbUser.Roles}`
       }
     });
 

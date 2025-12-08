@@ -250,9 +250,12 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   }
 
   function downloadExpCSV() {
+    // Filter out expired products (daysLeft < 0)
+    const validRows = expRows.filter((r) => Number(r.daysLeft) >= 0);
+  
     downloadCSV(
       "expiring_batches.csv",
-      expRows.map((r) => ({
+      validRows.map((r) => ({
         ID: r.productId,
         Product: r.productName,
         Category: r.category,
@@ -263,7 +266,7 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
         Level: r.expiryLevel,
       }))
     );
-  }
+    }
 
   // ===============================
   //  RETURN

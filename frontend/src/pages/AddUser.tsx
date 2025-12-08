@@ -55,6 +55,11 @@ const AddUser = () => {
   };
 
   const handleInputChange = (field: keyof UserFormData, value: string) => {
+    // If the field is contactNumber, only allow numeric values
+    if (field === 'contactNumber') {
+      value = value.replace(/[^0-9]/g, '');
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -63,6 +68,18 @@ const AddUser = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate contact number - must be numeric
+    if (formData.contactNumber && !/^\d+$/.test(formData.contactNumber)) {
+      alertService.error('Contact number must contain only numbers');
+      return;
+    }
+
+    // Validate minimum length (optional - adjust as needed)
+    if (formData.contactNumber && formData.contactNumber.length < 10) {
+      alertService.error('Contact number must be at least 10 digits');
+      return;
+    }
 
     loadingService.start("add-user", "Creating user...");
 
@@ -238,6 +255,10 @@ const AddUser = () => {
                   onChange={(e) =>
                     handleInputChange("contactNumber", e.target.value)
                   }
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  maxLength={11}
+                  placeholder="Enter numbers only"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />

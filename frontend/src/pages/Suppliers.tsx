@@ -73,10 +73,10 @@ const Suppliers = () => {
 
   // Debounced search effect
   useEffect(() => {
-    if (!searchTerm) return;
-    
     const timeoutId = setTimeout(() => {
-      fetchSuppliers(1, searchTerm);
+      // If search term is empty, fetch all suppliers
+      // Otherwise, fetch with search term
+      fetchSuppliers(1, searchTerm || undefined);
     }, 500);
 
     return () => clearTimeout(timeoutId);

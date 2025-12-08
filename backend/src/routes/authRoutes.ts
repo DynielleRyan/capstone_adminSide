@@ -5,7 +5,8 @@ import {
   getCurrentUser,
   resendVerificationEmail,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
+  refreshToken
 } from '../controllers/userControllers';
 import { authenticate } from '../middleware/auth';
 
@@ -18,6 +19,9 @@ router.post('/signin', signIn);
 
 // Sign out - Public (can be called even if token expired)
 router.post('/signout', signOut);
+
+// Refresh token - Public
+router.post('/refresh', refreshToken);
 
 // Get current user - Protected
 router.get('/me', authenticate, getCurrentUser);

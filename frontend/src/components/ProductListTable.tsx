@@ -7,9 +7,10 @@ import { toast } from 'react-toastify';
 
 interface Props {
   productList: ProductItem[];
+  onRefresh?: () => void | Promise<void>;
 }
 
-export const ProductListTable : React.FC<Props> = ({ productList }) => {
+export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) => {
   const [selectedProductItem, setSelectedProductItem] = useState<ProductItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('none');
@@ -29,7 +30,11 @@ export const ProductListTable : React.FC<Props> = ({ productList }) => {
       setDeleteItem(null);
       const modal = document.getElementById('delete_modal') as HTMLDialogElement;
       modal?.close();
-      // Optionally refresh product list here
+      
+      // Auto-refresh the product list
+      if (onRefresh) {
+        await onRefresh();
+      }
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete product');
