@@ -117,6 +117,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       const payment = String(tx.PaymentMethod).toLowerCase();
       const date = new Date(tx.OrderDateTime).toLocaleDateString().toLowerCase();
       const total = tx.Total.toFixed(2).toLowerCase();
+      const refNo = String(tx.ReferenceNo).toLowerCase();
       
 
       return (
@@ -124,7 +125,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         staffName.includes(term) ||
         payment.includes(term) ||
         date.includes(term) ||
-        total.includes(term)
+        total.includes(term) ||
+        refNo.includes(term)
       );
     });
   }
