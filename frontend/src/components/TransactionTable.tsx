@@ -59,21 +59,21 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const handleDownloadCSV = () => {
     const headers = [
       "TransactionID",
-      "UserID",
+      "Clerk",
       "Total",
-      "PaymentMethod",
-      "VATAmount",
-      "OrderDateTime",
-      "CashReceived",
-      "PaymentChange",
-      "ReferenceNo",
-      "QTY",
+      "Payment Method",
+      "VAT Amount",
+      "Transaction Date",
+      "Cash Received",
+      "Payment Change",
+      "Reference No.",
+      "Quantity",
     ];
 
     // Prepare CSV data with all Transaction table fields
     const csvData = transactions.map((tx) => [
       tx.TransactionID,
-      tx.UserID,
+      tx.User.FirstName + " " + tx.User.LastName,
       tx.Total.toString(),
       tx.PaymentMethod,
       tx.VATAmount,
@@ -178,7 +178,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   }, [searchTerm, sortBy]);
 
   return (
-    <div className="p-6 bg-white min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen">
       {/* Blue background div */}
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
@@ -358,6 +358,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       <p><strong>DATE ORDERED:</strong></p>
                       <p><strong>STAFF:</strong></p>
                       <p><strong>PAYMENT OPTION:</strong></p>
+                      <p><strong>REFERENCE NO.:</strong></p>
                     </div>
 
                     <div className="flex-shrink-0 pl-4 space-y-3">
@@ -370,6 +371,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       </p>
                       <p>{selectedTransaction.User.FirstName}{" "}{selectedTransaction.User.LastName}</p>
                       <p>{selectedTransaction.PaymentMethod}</p>
+                      <p>{selectedTransaction.ReferenceNo}</p>
                     </div>
                   </div>
               </div>
