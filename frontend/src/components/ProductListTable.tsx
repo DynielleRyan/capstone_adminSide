@@ -17,7 +17,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 5;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
   
@@ -225,7 +225,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
 
 
   return (
-    <div className="p-6 bg-white min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen">
       {/* Legend */}
       <div className="px-6 py-4 mb-8 bg-blue-50 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -245,7 +245,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-4">Products</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-4">PRODUCTS</h1>
 
       {/* Search and Sort*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -299,7 +299,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
       {/* Product List Table */}
       <div className="bg-white shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+      <table className="w-full border-collapse">
           <thead className="bg-blue-900 text-white">
             <tr>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
@@ -308,8 +308,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
               <th className="px-4 py-4 text-center font-semibold border-r border-white">BRAND</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">PRICE</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
-              <th className="px-4 py-4 text-center font-semibold border-r border-white">EXPIRY</th>
-              <th className="px-4 py-4 text-center font-semibold">ACTION</th>
+              <th className="px-2 py-4 text-center font-semibold border-r border-white">EXPIRY</th>
+              <th className="px-2 py-4 text-center font-semibold">ACTION</th>
             </tr>
           </thead>
           <tbody className=" bg-blue-50">
@@ -331,8 +331,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
               onClick={() => rest.length > 0 && toggleGroup(productId)}
               className={rest.length > 0 ? 'cursor-pointer hover:bg-blue-100' : ''}
             >
-              <td className="px-6 py-4 text-gray-700 border border-white">{primary.ProductID}</td>
-              <td className=" w-[50px] px-4 py-4 text-gray-700 text-center border border-white">
+              <td className="px-4 py-4 text-gray-700 border border-white">{String(primary.ProductID).padStart(2, '0')}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">
                 <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
                           <img
@@ -362,16 +362,16 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
                         )}
                 </div>
               </td>
-              <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Category}</td>
-              <td className="px-6 py-4 text-gray-700 text-center border border-white">{primary.Product.Brand}</td>
+              <td className="px-2 py-4 text-gray-700 text-center border border-white">{primary.Product.Category}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">{primary.Product.Brand}</td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{primary.Product.SellingPrice.toFixed(2)}</td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">{primary.Stock}</td>
-              <td className="px-6 py-4 text-gray-700 text-center border border-white">
-                <span className={`px-3 py-1 rounded-full font-medium ${getExpiryColor(primary.ExpiryDate)}`}>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">
+                <span className={`px-2 py-1 rounded-full font-medium ${getExpiryColor(primary.ExpiryDate)}`}>
                 {new Date(primary.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>              
-              <td className="px-4 py-4 border border-white" onClick={(e) => e.stopPropagation()}>
+              <td className="px-2 py-4 border border-white">
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
@@ -407,7 +407,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
               className="bg-white cursor-pointer hover:bg-gray-50"
               onClick={() => toggleGroup(productId)}
             >
-              <td className="px-6 py-4 text-gray-700 text-center"> </td>
+              <td className="px-2 py-4 text-gray-700 text-center"> </td>
               <td className="px-4 py-4 text-gray-700 text-center">
                 <div className="flex items-center gap-3">
                         {item.Product.Image ? (
@@ -428,16 +428,16 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
                       </span>
                 </div>
               </td>
-              <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Category}</td>
-              <td className="px-6 py-4 text-gray-700 text-center">{item.Product.Brand}</td>
+              <td className="px-2 py-4 text-gray-700 text-center">{item.Product.Category}</td>
+              <td className="px-4 py-4 text-gray-700 text-center">{item.Product.Brand}</td>
               <td className="px-4 py-4 text-gray-700 text-center">₱{item.Product.SellingPrice.toFixed(2)}</td>
               <td className="px-4 py-4 text-gray-700 text-center">{item.Stock}</td>
-              <td className="px-6 py-4 text-gray-700 text-center">
-                <span className={`px-3 py-1 rounded-full font-medium ${getExpiryColor(item.ExpiryDate)}`}>
+              <td className="px-4 py-4 text-gray-700 text-center">
+                <span className={`px-2 py-1 rounded-full font-medium ${getExpiryColor(item.ExpiryDate)}`}>
                 {new Date(item.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>
-              <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+              <td className="px-2 py-4">
                 <div className="flex gap-2">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 

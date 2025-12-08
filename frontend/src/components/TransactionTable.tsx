@@ -59,21 +59,21 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const handleDownloadCSV = () => {
     const headers = [
       "TransactionID",
-      "UserID",
+      "Clerk",
       "Total",
-      "PaymentMethod",
-      "VATAmount",
-      "OrderDateTime",
-      "CashReceived",
-      "PaymentChange",
-      "ReferenceNo",
-      "QTY",
+      "Payment Method",
+      "VAT Amount",
+      "Transaction Date",
+      "Cash Received",
+      "Payment Change",
+      "Reference No.",
+      "Quantity",
     ];
 
     // Prepare CSV data with all Transaction table fields
     const csvData = transactions.map((tx) => [
       tx.TransactionID,
-      tx.UserID,
+      tx.User.FirstName + " " + tx.User.LastName,
       tx.Total.toString(),
       tx.PaymentMethod,
       tx.VATAmount,
@@ -117,13 +117,16 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       const payment = String(tx.PaymentMethod).toLowerCase();
       const date = new Date(tx.OrderDateTime).toLocaleDateString().toLowerCase();
       const total = tx.Total.toFixed(2).toLowerCase();
+      const refNo = String(tx.ReferenceNo).toLowerCase();
+      
 
       return (
         txnId.includes(term) ||
         staffName.includes(term) ||
         payment.includes(term) ||
         date.includes(term) ||
-        total.includes(term)
+        total.includes(term) ||
+        refNo.includes(term)
       );
     });
   }
@@ -178,7 +181,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   }, [searchTerm, sortBy]);
 
   return (
-    <div className="p-6 bg-white min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen">
       {/* Blue background div */}
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
@@ -240,14 +243,14 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       {/* Transaction Table */}
       <div className="bg-white shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full border-collapse">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-4 py-4 text-center font-semibold border-r border-white">TXN ID</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">TXN ID</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">STAFF</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">PAYMENT METHOD</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">QTY</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">QTY</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">TOTAL</th>
               <th className="px-6 py-4 text-center font-semibold">VIEW</th>
             </tr>
@@ -255,8 +258,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <tbody className=" bg-blue-50">
             {paginatedData.map((tx => (
               <tr key={tx.TransactionID} >
-                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                <td className="px-4 py-4 text-gray-700 border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
+                <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
                       month: 'numeric', 
@@ -272,13 +275,13 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     })}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">
                   <div className="font-medium">{tx.User.FirstName} {tx.User.LastName}</div>
                 </td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">{tx.PaymentMethod}</td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">{qtyMap[tx.TransactionID] ?? 0}</td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">₱{tx.Total.toFixed(2)}</td>
-                <td className="px-6 py-4 border border-white">
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{tx.PaymentMethod}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{qtyMap[tx.TransactionID] ?? 0}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{tx.Total.toFixed(2)}</td>
+                <td className="px-4 py-4 border border-white">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
                     onClick={() => handleView(tx.TransactionID)}
@@ -358,6 +361,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       <p><strong>DATE ORDERED:</strong></p>
                       <p><strong>STAFF:</strong></p>
                       <p><strong>PAYMENT OPTION:</strong></p>
+                      <p><strong>REFERENCE NO.:</strong></p>
                     </div>
 
                     <div className="flex-shrink-0 pl-4 space-y-3">
@@ -370,6 +374,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       </p>
                       <p>{selectedTransaction.User.FirstName}{" "}{selectedTransaction.User.LastName}</p>
                       <p>{selectedTransaction.PaymentMethod}</p>
+                      <p>{selectedTransaction.ReferenceNo}</p>
                     </div>
                   </div>
               </div>
