@@ -117,6 +117,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       const payment = String(tx.PaymentMethod).toLowerCase();
       const date = new Date(tx.OrderDateTime).toLocaleDateString().toLowerCase();
       const total = tx.Total.toFixed(2).toLowerCase();
+      
 
       return (
         txnId.includes(term) ||
