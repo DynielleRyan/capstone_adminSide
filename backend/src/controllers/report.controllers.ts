@@ -6,7 +6,7 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const T_TABLE = "Transaction";
 const TI_TABLE= "Transaction_Item";
 // Fields to select
-const TransFIELDS = `TransactionID, OrderDateTime`; // we only need an ID + date
+const TransFIELDS = `TransactionID, OrderDateTime, Total`; // we only need an ID + date
 const ItemFIELDS = 
   `Quantity,
   Product:ProductID (
@@ -21,9 +21,10 @@ const ItemFIELDS =
 type TxRow = {
   TransactionID: string;
   OrderDateTime: string | null;
+  Total?: number | null;  
 };
 
-// Get monthly transaction totals
+// Get monthly transaction totals + sales + units + best product
 export const getMonthlyTransactionTotals: RequestHandler = async (req, res) => {
   try {
     const now = new Date();
@@ -32,36 +33,96 @@ export const getMonthlyTransactionTotals: RequestHandler = async (req, res) => {
     const start = new Date(year, 0, 1).toISOString();
     const end   = new Date(year + 1, 0, 1).toISOString();
 
-    const { data, error } = await supabase
+    // 1️⃣ Transactions for counts + sales
+    const { data: txData, error: txErr } = await supabase
       .from(T_TABLE)
       .select(TransFIELDS)
       .gte("OrderDateTime", start)
       .lt("OrderDateTime", end);
 
-    if (error) { 
-        return res.status(500).json({ error: error.message });
-    }
-    
-    const rows = (data ?? []) as TxRow[];  // data gathered to TxRow type
-    const monthlyCount = new Array(12).fill(0); // index 0=Jan, 11=Dec
-
-    for (const row of rows) {
-      if (!row.OrderDateTime) continue;
-      const m = new Date(row.OrderDateTime).getMonth(); // 0..11
-      monthlyCount[m] += 1; // count, not sum
+    if (txErr) {
+      return res.status(500).json({ error: txErr.message });
     }
 
-    const series = monthlyCount.map((count, i) => ({
-      month: MONTHS[i],
-      totalTransactions: count,
+    const txRows = (txData ?? []) as TxRow[];
+
+    // 2️⃣ Transaction items for units + best product
+    const { data: itemData, error: iErr } = await supabase
+      .from(TI_TABLE)
+      .select(`
+        Quantity,
+        Product:ProductID ( Name ),
+        Transaction:TransactionID ( OrderDateTime )
+      `);
+
+    if (iErr) {
+      return res.status(500).json({ error: iErr.message });
+    }
+
+    // Monthly aggregates
+    const monthly = MONTHS.map(() => ({
+      transactions: 0,
+      sales: 0,
+      units: 0,
+      productQty: {} as Record<string, number>,
     }));
+
+    // 2.1 count transactions + sales per month
+    for (const row of txRows) {
+      if (!row.OrderDateTime) continue;
+      const d = new Date(row.OrderDateTime);
+      if (d < new Date(start) || d >= new Date(end)) continue;
+      const m = d.getMonth(); // 0..11
+      monthly[m].transactions += 1;
+      monthly[m].sales += Number(row.Total ?? 0);
+    }
+
+    // 2.2 units + per-product qty per month
+    for (const r of (itemData as any[]) ?? []) {
+      const tx = Array.isArray(r.Transaction) ? r.Transaction[0] : r.Transaction;
+      const whenStr = tx?.OrderDateTime as string | undefined;
+      if (!whenStr) continue;
+      const when = new Date(whenStr);
+      if (when < new Date(start) || when >= new Date(end)) continue;
+
+      const m = when.getMonth();
+      const qty = Number(r.Quantity ?? 0);
+      if (isNaN(qty)) continue;
+
+      monthly[m].units += qty;
+
+      const name = r.Product?.Name ?? "Unknown Product";
+      monthly[m].productQty[name] = (monthly[m].productQty[name] || 0) + qty;
+    }
+
+    // 3️⃣ Build final series
+    const series = MONTHS.map((label, i) => {
+      const agg = monthly[i];
+      let bestProduct: string | null = null;
+      let maxQty = 0;
+      for (const [name, qty] of Object.entries(agg.productQty)) {
+        if (qty > maxQty) {
+          maxQty = qty;
+          bestProduct = name;
+        }
+      }
+
+      return {
+        month: label,
+        totalTransactions: agg.transactions,
+        totalSales: Number(agg.sales.toFixed(2)),
+        totalUnitsSold: agg.units,
+        bestProduct,
+      };
+    });
 
     return res.json({ year, series });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || "Something went wrong" });
   }
 };
-// Get yearly transaction totals
+
+// Get yearly transaction totals + sales + units + best product
 export const getYearlyTransactionTotals: RequestHandler = async (req, res) => {
   try {
     const currentYear = new Date().getFullYear();
@@ -74,37 +135,106 @@ export const getYearlyTransactionTotals: RequestHandler = async (req, res) => {
     const start = new Date(startYear, 0, 1).toISOString();
     const end   = new Date(endYear + 1, 0, 1).toISOString();
 
-    const { data, error } = await supabase
+    // 1️⃣ Transactions for counts + sales
+    const { data: txData, error: txErr } = await supabase
       .from(T_TABLE)
       .select(TransFIELDS)
       .gte("OrderDateTime", start)
       .lt("OrderDateTime", end);
 
-    if (error){
-        return res.status(500).json({ error: error.message });
-    } 
-
-    const rows = (data ?? []) as TxRow[];
-
-    const totals: Record<number, number> = {};
-    for (let y = startYear; y <= endYear; y++) totals[y] = 0;
-
-    for (const row of rows) {
-      if (!row.OrderDateTime) continue;
-      const y = new Date(row.OrderDateTime).getFullYear();
-      totals[y] = (totals[y] || 0) + 1; // just count
+    if (txErr) {
+      return res.status(500).json({ error: txErr.message });
     }
 
-    const series = Object.keys(totals).map((y) => ({
-      year: Number(y),
-      totalTransactions: totals[Number(y)] || 0,
-    }));
+    const txRows = (txData ?? []) as TxRow[];
+
+    // 2️⃣ Items for units + best product
+    const { data: itemData, error: iErr } = await supabase
+      .from(TI_TABLE)
+      .select(`
+        Quantity,
+        Product:ProductID ( Name ),
+        Transaction:TransactionID ( OrderDateTime )
+      `);
+
+    if (iErr) {
+      return res.status(500).json({ error: iErr.message });
+    }
+
+    // Yearly aggregates
+    const years: number[] = [];
+    const yearly: Record<number, {
+      transactions: number;
+      sales: number;
+      units: number;
+      productQty: Record<string, number>;
+    }> = {};
+
+    for (let y = startYear; y <= endYear; y++) {
+      years.push(y);
+      yearly[y] = {
+        transactions: 0,
+        sales: 0,
+        units: 0,
+        productQty: {},
+      };
+    }
+
+    // 2.1 transactions + sales
+    for (const row of txRows) {
+      if (!row.OrderDateTime) continue;
+      const d = new Date(row.OrderDateTime);
+      const y = d.getFullYear();
+      if (y < startYear || y > endYear) continue;
+      yearly[y].transactions += 1;
+      yearly[y].sales += Number(row.Total ?? 0);
+    }
+
+    // 2.2 units + per-product qty per year
+    for (const r of (itemData as any[]) ?? []) {
+      const tx = Array.isArray(r.Transaction) ? r.Transaction[0] : r.Transaction;
+      const whenStr = tx?.OrderDateTime as string | undefined;
+      if (!whenStr) continue;
+      const when = new Date(whenStr);
+      const y = when.getFullYear();
+      if (y < startYear || y > endYear) continue;
+
+      const qty = Number(r.Quantity ?? 0);
+      if (isNaN(qty)) continue;
+
+      yearly[y].units += qty;
+
+      const name = r.Product?.Name ?? "Unknown Product";
+      yearly[y].productQty[name] = (yearly[y].productQty[name] || 0) + qty;
+    }
+
+    // 3️⃣ Build series
+    const series = years.map((y) => {
+      const agg = yearly[y];
+      let bestProduct: string | null = null;
+      let maxQty = 0;
+      for (const [name, qty] of Object.entries(agg.productQty)) {
+        if (qty > maxQty) {
+          maxQty = qty;
+          bestProduct = name;
+        }
+      }
+
+      return {
+        year: y,
+        totalTransactions: agg.transactions,
+        totalSales: Number(agg.sales.toFixed(2)),
+        totalUnitsSold: agg.units,
+        bestProduct,
+      };
+    });
 
     return res.json({ series });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || "Something went wrong" });
   }
 };
+
 
 // Get top 5 & 10 selling products or category
 export const getTopItems: RequestHandler = async (req, res) => {
@@ -220,26 +350,9 @@ export const getTopItems: RequestHandler = async (req, res) => {
 
 export const getReorderLevelFromItems: RequestHandler = async (req, res) => {
   try {
-    // Tunables (kept simple)
-    const WINDOW_DAYS = 30;         // look back N days of sales
-    const DEFAULT_LEAD = 7;         // days, if we can't compute from POs
-    const SAFETY_F = 0.2;           // 20% safety stock
-    const limit = Number(req.query.limit ?? 0); // optional ?limit=10
+    const threshold = Number(req.query.threshold ?? 20);
 
-    // Time window for sales
-    const now = new Date();
-    const from = new Date();
-    from.setDate(now.getDate() - WINDOW_DAYS);
-
-    // 1) Active products
-    const { data: products, error: prodErr } = await supabase
-      .from("Product")
-      .select("ProductID, Name, IsActive")
-      .eq("IsActive", true);
-
-    if (prodErr) return res.status(500).json({ error: prodErr.message });
-
-    // 2) Current stock per product (active Product_Item rows)
+    // 1️⃣ Get all active product items (batches)
     const { data: items, error: itemErr } = await supabase
       .from("Product_Item")
       .select("ProductID, Stock, IsActive")
@@ -247,108 +360,59 @@ export const getReorderLevelFromItems: RequestHandler = async (req, res) => {
 
     if (itemErr) return res.status(500).json({ error: itemErr.message });
 
-    const stockTotals: Record<string, number> = {};
-    for (const row of items ?? []) {
-      const pid = row.ProductID;
-      const qty = Number(row.Stock) || 0;
-      stockTotals[pid] = (stockTotals[pid] || 0) + qty;
+    // 2️⃣ Group by product, track lowest batch stock
+    const lowestBatchStock: Record<string, number> = {};
+
+    for (const it of items ?? []) {
+      const pid = it.ProductID;
+      const stock = Number(it.Stock) || 0;
+
+      if (!(pid in lowestBatchStock)) {
+        lowestBatchStock[pid] = stock;
+      } else {
+        lowestBatchStock[pid] = Math.min(lowestBatchStock[pid], stock);
+      }
     }
 
-    // 3) Average daily usage from last WINDOW_DAYS
-    //    We join Transaction_Item -> Transaction to read OrderDateTime
-    const { data: txItems, error: txErr } = await supabase
-      .from("Transaction_Item")
-      .select(`
-        ProductID,
-        Quantity,
-        Transaction:TransactionID ( OrderDateTime )
-      `);
+    // 3️⃣ Load product names
+    const productIds = Object.keys(lowestBatchStock);
 
-    if (txErr) return res.status(500).json({ error: txErr.message });
+    const { data: products, error: prodErr } = await supabase
+      .from("Product")
+      .select("ProductID, Name, IsActive")
+      .eq("IsActive", true)
+      .in("ProductID", productIds);
 
-    const usageTotals: Record<string, number> = {};
-    for (const r of (txItems as any) ?? []) {
-      const whenStr = r?.Transaction?.OrderDateTime as string | undefined;
-      if (!whenStr) continue;
-      const when = new Date(whenStr);
-      if (isNaN(when.getTime())) continue;
-      if (when < from || when > now) continue; // only within window
+    if (prodErr) return res.status(500).json({ error: prodErr.message });
 
-      const pid = r.ProductID as string;
-      const qty = Number(r.Quantity) || 0;
-      usageTotals[pid] = (usageTotals[pid] || 0) + qty;
-    }
+    // Map for lookup
+    const pMap = Object.fromEntries(
+      products.map((p) => [p.ProductID, p])
+    );
 
-    const avgDaily: Record<string, number> = {};
-    const divisor = Math.max(WINDOW_DAYS, 1);
-    for (const pid of Object.keys(usageTotals)) {
-      avgDaily[pid] = usageTotals[pid] / divisor; // units/day
-    }
+    // 4️⃣ Build final reorder list
+    const results = productIds
+      .map((pid) => {
+        const lowest = lowestBatchStock[pid];
+        const product = pMap[pid];
 
-    // 4) Lead time from delivered Purchase Orders
-    const { data: pos, error: poErr } = await supabase
-      .from("Purchase_Order")
-      .select("ProductID, OrderPlacedDateTime, OrderArrivalDateTime")
-      .not("OrderPlacedDateTime", "is", null)
-      .not("OrderArrivalDateTime", "is", null);
+        if (!product) return null;
 
-    if (poErr) return res.status(500).json({ error: poErr.message });
+        const suggestedQty = Math.max(threshold - lowest, 0);
 
-    const leadSum: Record<string, number> = {};
-    const leadCnt: Record<string, number> = {};
-    for (const po of pos ?? []) {
-      const placed = new Date(po.OrderPlacedDateTime as any);
-      const arrived = new Date(po.OrderArrivalDateTime as any);
-      if (isNaN(placed.getTime()) || isNaN(arrived.getTime())) continue;
+        return {
+          productId: pid,
+          name: product.Name,
+          lowestBatchStock: lowest,
+          reorderLevel: threshold,
+          suggestedReorderQty: suggestedQty,
+          status: lowest <= threshold ? "LOW STOCK" : "OK",
+        };
+      })
+      .filter((r) => r && r.status === "LOW STOCK");
 
-      const days = (arrived.getTime() - placed.getTime()) / (1000 * 60 * 60 * 24);
-      if (days <= 0) continue;
-
-      const pid = po.ProductID as string;
-      leadSum[pid] = (leadSum[pid] || 0) + days;
-      leadCnt[pid] = (leadCnt[pid] || 0) + 1;
-    }
-
-    const leadDays: Record<string, number> = {};
-    for (const pid of Object.keys(leadSum)) {
-      leadDays[pid] = leadSum[pid] / Math.max(leadCnt[pid], 1);
-    }
-
-    // 5) Compute per product and return LOW STOCK only
-    const results = (products ?? []).map((p) => {
-      const pid = p.ProductID as string;
-      const totalStock   = stockTotals[pid] || 0;
-      const avgUsage     = avgDaily[pid] || 0;                 // units/day
-      const lead         = leadDays[pid] || DEFAULT_LEAD;      // days
-      const safetyStock  = SAFETY_F * avgUsage * lead;         // 20% buffer
-      const reorderLevel = avgUsage * lead + safetyStock;      // final ROL
-
-      const reorderQty = Math.max(reorderLevel - totalStock + safetyStock, 0);
-      return {
-        productId: pid,
-        name: p.Name as string,
-        totalStock,
-        avgDailyUsage: +avgUsage.toFixed(2),
-        leadTimeDays:  +lead.toFixed(2),
-        safetyStock:   Math.round(safetyStock),
-        reorderLevel:  Math.round(reorderLevel),
-        reorderQuantity: Math.round(reorderQty), 
-        status: totalStock <= reorderLevel ? "LOW STOCK" : "OK",
-      };
-    });
-
-    let lowStock = results.filter((r) => r.status === "LOW STOCK");
-
-    // Optional limit (?limit=10)
-    if (limit > 0) {
-      lowStock = lowStock.slice(0, limit);
-    }
-
-    // Return ONLY lowStock (array)
-    return res.json(lowStock);
+    return res.json(results);
   } catch (err: any) {
-    return res
-      .status(500)
-      .json({ error: err?.message || "Something went wrong" });
+    return res.status(500).json({ error: err?.message || "Something went wrong" });
   }
 };

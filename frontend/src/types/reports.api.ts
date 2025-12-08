@@ -6,14 +6,20 @@ const API_BASE = "/reports";
 // ---------------- TYPES ----------------
 
 // Monthly transactions 
-export interface MonthlyTransaction {
-  month: string;
-  totalTransactions: number;
+export interface MonthlyTransaction{
+  month:string;
+  totalTransactions:number;
+  totalSales:number;
+  totalUnitsSold:number;
+  bestProduct?:string|null;
 }
 // Yearly transactions 
-export interface YearlyTransaction{
+export interface YearlyTransaction {
   year: number;
   totalTransactions: number;
+  totalSales: number;
+  totalUnitsSold: number;
+  bestProduct?: string | null;
 }
 
 // Top items (products or categories)

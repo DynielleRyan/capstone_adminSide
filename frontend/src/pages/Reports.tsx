@@ -1,4 +1,5 @@
 import { report_hooks } from "../hooks/report_hooks";
+import { toast } from "react-toastify";
 import {
   BarChart,
   Bar,
@@ -111,7 +112,9 @@ export default function Reports() {
                 <button
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   onClick={() =>
-                    openDownloadModal("Transaction Chart", downloadChartCSV)
+                    chartData.length === 0
+                      ? toast.warning("No report available to download.")
+                      : openDownloadModal("Transaction Chart", downloadChartCSV)
                   }
                 >
                   Download Report
@@ -183,7 +186,9 @@ export default function Reports() {
                 <button
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   onClick={() =>
-                    openDownloadModal("Top Selling", downloadTopCSV)
+                    safeTop.length === 0
+                      ? toast.warning("No report available to download.")
+                      : openDownloadModal("Top Selling", downloadTopCSV)
                   }
                 >
                   Download Report
@@ -264,7 +269,9 @@ export default function Reports() {
             <button
               className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
               onClick={() =>
-                openDownloadModal("Reorder Level", downloadReorderCSV)
+                safeReorder.length === 0
+                  ? toast.warning("No report available to download.")
+                  : openDownloadModal("Reorder Level", downloadReorderCSV)
               }
             >
               Download Report
