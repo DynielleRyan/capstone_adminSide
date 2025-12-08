@@ -243,14 +243,14 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       {/* Transaction Table */}
       <div className="bg-white shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full border-collapse">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-4 py-4 text-center font-semibold border-r border-white">TXN ID</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">TXN ID</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">STAFF</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">PAYMENT METHOD</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">QTY</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">QTY</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">TOTAL</th>
               <th className="px-6 py-4 text-center font-semibold">VIEW</th>
             </tr>
@@ -258,8 +258,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <tbody className=" bg-blue-50">
             {paginatedData.map((tx => (
               <tr key={tx.TransactionID} >
-                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                <td className="px-4 py-4 text-gray-700 border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
+                <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
                       month: 'numeric', 
@@ -275,13 +275,13 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     })}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">
                   <div className="font-medium">{tx.User.FirstName} {tx.User.LastName}</div>
                 </td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">{tx.PaymentMethod}</td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">{qtyMap[tx.TransactionID] ?? 0}</td>
-                <td className="px-6 py-4 text-gray-700 text-center border border-white">₱{tx.Total.toFixed(2)}</td>
-                <td className="px-6 py-4 border border-white">
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{tx.PaymentMethod}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{qtyMap[tx.TransactionID] ?? 0}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{tx.Total.toFixed(2)}</td>
+                <td className="px-4 py-4 border border-white">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
                     onClick={() => handleView(tx.TransactionID)}

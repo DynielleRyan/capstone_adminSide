@@ -17,7 +17,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 5;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
   
@@ -302,7 +302,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
       <table className="w-full border-collapse">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-2  py-4 text-center font-semibold border-r border-white">ID</th>
+              <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">CATEGORY</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">BRAND</th>
@@ -331,7 +331,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
               onClick={() => rest.length > 0 && toggleGroup(productId)}
               className={rest.length > 0 ? 'cursor-pointer hover:bg-blue-100' : ''}
             >
-              <td className="px-2 py-4 text-gray-700 border border-white">{primary.ProductID}</td>
+              <td className="px-4 py-4 text-gray-700 border border-white">{String(primary.ProductID).padStart(2, '0')}</td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">
                 <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
