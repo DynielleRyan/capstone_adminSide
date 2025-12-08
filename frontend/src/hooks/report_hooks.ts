@@ -19,6 +19,7 @@ import {
   TopItem,
   ReorderItem,
 } from "../types/reports.api";
+import { toast } from "react-toastify";
 
 type ChartMode = "month" | "year";
 
@@ -126,50 +127,77 @@ export function report_hooks() {
   // ===============================
   //  CSV EXPORT FUNCTIONS
   // ===============================
-  const downloadChartCSV = () => {
-    if (mode === "month") {
-      downloadCSV(
-        `transactions_by_month_${year}.csv`,
-        chartMonthly.map((r) => ({
-          Month: r.month,
-          TotalTransactions: r.totalTransactions,
-        }))
-      );
-    } else {
-      downloadCSV(
-        `transactions_by_year_${fromYear}-${toYear}.csv`,
-        chartYearly.map((r) => ({
-          Year: r.year,
-          TotalTransactions: r.totalTransactions,
-        }))
-      );
-    }
-  };
+ const downloadChartCSV = () => {
+  const data = mode === "month" ? chartMonthly : chartYearly;
 
-  const downloadTopCSV = () => {
+
+  if (!data || data.length === 0) {
+    toast.warning("No report available to download.");
+    return;
+  }
+
+  if (mode === "month") {
     downloadCSV(
-      `top_${type}_${limit}.csv`,
-      topItems.map((it, i) => ({
-        Rank: i + 1,
-        [type === "product" ? "Product" : "Category"]:
-          type === "product"
-            ? it.name ?? "Unknown Product"
-            : it.category ?? "Uncategorized",
-        QuantitySold: it.sold,
+      `transactions_by_month_${year}.csv`,
+      chartMonthly.map((r) => ({
+        Month: r.month,
+        TotalTransactions: r.totalTransactions,
+        TotalSales: r.totalSales,
+        TotalUnitsSold: r.totalUnitsSold,
+        BestSellingProduct: r.bestProduct ?? "",
       }))
     );
-  };
+  } else {
+    downloadCSV(
+      `transactions_by_year_${fromYear}-${toYear}.csv`,
+      chartYearly.map((r) => ({
+        Year: r.year,
+        TotalTransactions: r.totalTransactions,
+        TotalSales: r.totalSales,
+        TotalUnitsSold: r.totalUnitsSold,
+        BestSellingProduct: r.bestProduct ?? "",
+      }))
+    );
+  }
+};
+
+
+  const downloadTopCSV = () => {
+  if (!topItems || topItems.length === 0) {
+    toast.warning("No report available to download.");
+    return;
+  }
+
+  downloadCSV(
+    `top_${type}_${limit}.csv`,
+    topItems.map((it, i) => ({
+      Rank: i + 1,
+      [type === "product" ? "Product" : "Category"]:
+        type === "product"
+          ? it.name ?? "Unknown Product"
+          : it.category ?? "Uncategorized",
+      QuantitySold: it.sold,
+    }))
+  );
+};
 
   const downloadReorderCSV = async () => {
-    const all = await getReorder();
-    const rows = all.map((r) => ({
-      Name: r.name,
-      CurrentQty: r.totalStock,
-      ReorderLevel: r.reorderLevel,
-      SuggestedReorderQuantity: r.reorderQuantity,
-    }));
-    downloadCSV("low_stock.csv", rows);
-  };
+  const all = await getReorder();
+
+  if (!all || all.length === 0) {
+    toast.warning("No report available to download.");
+    return;
+  }
+
+  const rows = all.map((r) => ({
+    Name: r.name,
+    CurrentQty: r.totalStock,
+    ReorderLevel: r.reorderLevel,
+    SuggestedReorderQuantity: r.reorderQuantity,
+  }));
+
+  downloadCSV("low_stock.csv", rows);
+};
 
   // ===============================
   //  MODAL HANDLERS
