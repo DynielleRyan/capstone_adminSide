@@ -546,7 +546,7 @@ export function report_hooks() {
   const generateWeekReport = (
     transactions: Transaction[],
     itemsByTransaction: Map<string, TransactionItem[]>,
-    period: { type: string; start: string; end: string }
+    _period: { type: string; start: string; end: string }
   ): any[] => {
     const rows: any[] = [];
     
@@ -855,7 +855,7 @@ export function report_hooks() {
   const generateMonthReport = (
     transactions: Transaction[],
     itemsByTransaction: Map<string, TransactionItem[]>,
-    period: { type: string; start: string; end: string }
+    _period: { type: string; start: string; end: string }
   ): any[] => {
     const rows: any[] = [];
     
