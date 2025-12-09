@@ -235,6 +235,345 @@ export const getYearlyTransactionTotals: RequestHandler = async (req, res) => {
   }
 };
 
+// Get daily transaction totals + sales + units + best product
+export const getDailyTransactionTotals: RequestHandler = async (req, res) => {
+  try {
+    const daysLimit = Number(req.query.days ?? 60); // default 60 days
+    const now = new Date();
+    const from = new Date();
+    from.setDate(now.getDate() - daysLimit);
+
+    // 1️⃣ Transactions for counts + sales
+    const { data: txData, error: txErr } = await supabase
+      .from(T_TABLE)
+      .select(TransFIELDS)
+      .gte("OrderDateTime", from.toISOString())
+      .lte("OrderDateTime", now.toISOString());
+
+    if (txErr) {
+      return res.status(500).json({ error: txErr.message });
+    }
+
+    const txRows = (txData ?? []) as TxRow[];
+
+    // 2️⃣ Transaction items for units + best product
+    const { data: itemData, error: iErr } = await supabase
+      .from(TI_TABLE)
+      .select(`
+        Quantity,
+        Product:ProductID ( Name ),
+        Transaction:TransactionID ( OrderDateTime )
+      `);
+
+    if (iErr) {
+      return res.status(500).json({ error: iErr.message });
+    }
+
+    // Daily aggregates
+    const dayTotals: Record<string, {
+      transactions: number;
+      sales: number;
+      units: number;
+      productQty: Record<string, number>;
+    }> = {};
+
+    // 2.1 count transactions + sales per day
+    for (const row of txRows) {
+      if (!row.OrderDateTime) continue;
+      const d = new Date(row.OrderDateTime);
+      if (d < from || d > now) continue;
+      const dayKey = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      
+      if (!dayTotals[dayKey]) {
+        dayTotals[dayKey] = {
+          transactions: 0,
+          sales: 0,
+          units: 0,
+          productQty: {},
+        };
+      }
+      
+      dayTotals[dayKey].transactions += 1;
+      dayTotals[dayKey].sales += Number(row.Total ?? 0);
+    }
+
+    // 2.2 units + per-product qty per day
+    for (const r of (itemData as any[]) ?? []) {
+      const tx = Array.isArray(r.Transaction) ? r.Transaction[0] : r.Transaction;
+      const whenStr = tx?.OrderDateTime as string | undefined;
+      if (!whenStr) continue;
+      const when = new Date(whenStr);
+      if (when < from || when > now) continue;
+
+      const dayKey = when.toISOString().slice(0, 10);
+      if (!dayTotals[dayKey]) {
+        dayTotals[dayKey] = {
+          transactions: 0,
+          sales: 0,
+          units: 0,
+          productQty: {},
+        };
+      }
+
+      const qty = Number(r.Quantity ?? 0);
+      if (isNaN(qty)) continue;
+
+      dayTotals[dayKey].units += qty;
+
+      const name = r.Product?.Name ?? "Unknown Product";
+      dayTotals[dayKey].productQty[name] = (dayTotals[dayKey].productQty[name] || 0) + qty;
+    }
+
+    // 3️⃣ Build final series
+    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const series = Object.entries(dayTotals)
+      .map(([day, agg]) => {
+        let bestProduct: string | null = null;
+        let maxQty = 0;
+        for (const [name, qty] of Object.entries(agg.productQty)) {
+          if (qty > maxQty) {
+            maxQty = qty;
+            bestProduct = name;
+          }
+        }
+
+        const date = new Date(day);
+        const dayName = DAY_NAMES[date.getDay()];
+        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        return {
+          day,
+          dayName,
+          dayLabel: `${dayName}, ${formattedDate}`, // e.g., "Mon, Dec 9"
+          totalTransactions: agg.transactions,
+          totalSales: Number(agg.sales.toFixed(2)),
+          totalUnitsSold: agg.units,
+          bestProduct,
+        };
+      })
+      .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
+
+    return res.json({ from: from.toISOString(), to: now.toISOString(), series });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Something went wrong" });
+  }
+};
+
+// Get weekly transaction totals + sales + units + best product
+export const getWeeklyTransactionTotals: RequestHandler = async (req, res) => {
+  try {
+    const now = new Date();
+    // Default to current month if no date range specified
+    const month = req.query.month ? Number(req.query.month) : now.getMonth();
+    const year = req.query.year ? Number(req.query.year) : now.getFullYear();
+    
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+    // 1️⃣ Transactions for counts + sales
+    const { data: txData, error: txErr } = await supabase
+      .from(T_TABLE)
+      .select(TransFIELDS)
+      .gte("OrderDateTime", monthStart.toISOString())
+      .lte("OrderDateTime", monthEnd.toISOString());
+
+    if (txErr) {
+      return res.status(500).json({ error: txErr.message });
+    }
+
+    const txRows = (txData ?? []) as TxRow[];
+
+    // 2️⃣ Items for units + best product
+    const { data: itemData, error: iErr } = await supabase
+      .from(TI_TABLE)
+      .select(`
+        Quantity,
+        Product:ProductID ( Name ),
+        Transaction:TransactionID ( OrderDateTime )
+      `);
+
+    if (iErr) {
+      return res.status(500).json({ error: iErr.message });
+    }
+
+    // Helper to get start of week (Monday)
+    const getWeekStart = (d: Date): Date => {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+      return new Date(date.setDate(diff));
+    };
+
+    // Helper to get end of week (Sunday)
+    const getWeekEnd = (d: Date): Date => {
+      const weekStart = getWeekStart(d);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      return weekEnd;
+    };
+
+    // Helper to get week number within month (1-5)
+    const getWeekInMonth = (d: Date): number => {
+      const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+      const weekStart = getWeekStart(d);
+      const daysDiff = Math.floor((weekStart.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24));
+      return Math.floor(daysDiff / 7) + 1;
+    };
+
+    // Weekly aggregates - key by month-week
+    const weekly: Record<string, {
+      transactions: number;
+      sales: number;
+      units: number;
+      productQty: Record<string, number>;
+      weekStart: Date;
+      weekEnd: Date;
+      weekNum: number;
+      month: number;
+      year: number;
+    }> = {};
+
+    // 2.1 transactions + sales
+    for (const row of txRows) {
+      if (!row.OrderDateTime) continue;
+      const d = new Date(row.OrderDateTime);
+      if (d < monthStart || d > monthEnd) continue;
+      
+      const weekStart = getWeekStart(d);
+      const weekNum = getWeekInMonth(d);
+      const weekKey = `${d.getFullYear()}-${d.getMonth()}-W${weekNum}`;
+      
+      if (!weekly[weekKey]) {
+        weekly[weekKey] = {
+          transactions: 0,
+          sales: 0,
+          units: 0,
+          productQty: {},
+          weekStart: getWeekStart(d),
+          weekEnd: getWeekEnd(d),
+          weekNum,
+          month: d.getMonth(),
+          year: d.getFullYear(),
+        };
+      }
+      
+      weekly[weekKey].transactions += 1;
+      weekly[weekKey].sales += Number(row.Total ?? 0);
+    }
+
+    // 2.2 units + per-product qty per week
+    for (const r of (itemData as any[]) ?? []) {
+      const tx = Array.isArray(r.Transaction) ? r.Transaction[0] : r.Transaction;
+      const whenStr = tx?.OrderDateTime as string | undefined;
+      if (!whenStr) continue;
+      const when = new Date(whenStr);
+      if (when < monthStart || when > monthEnd) continue;
+
+      const weekStart = getWeekStart(when);
+      const weekNum = getWeekInMonth(when);
+      const weekKey = `${when.getFullYear()}-${when.getMonth()}-W${weekNum}`;
+      
+      if (!weekly[weekKey]) {
+        weekly[weekKey] = {
+          transactions: 0,
+          sales: 0,
+          units: 0,
+          productQty: {},
+          weekStart: getWeekStart(when),
+          weekEnd: getWeekEnd(when),
+          weekNum,
+          month: when.getMonth(),
+          year: when.getFullYear(),
+        };
+      }
+
+      const qty = Number(r.Quantity ?? 0);
+      if (isNaN(qty)) continue;
+
+      weekly[weekKey].units += qty;
+
+      const name = r.Product?.Name ?? "Unknown Product";
+      weekly[weekKey].productQty[name] = (weekly[weekKey].productQty[name] || 0) + qty;
+    }
+
+    // 3️⃣ Build series with all weeks of the month
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthName = MONTH_NAMES[month];
+    
+    // Generate all possible weeks in the month
+    const allWeeks: number[] = [];
+    for (let day = 1; day <= monthEnd.getDate(); day++) {
+      const testDate = new Date(year, month, day);
+      const weekNum = getWeekInMonth(testDate);
+      if (!allWeeks.includes(weekNum)) {
+        allWeeks.push(weekNum);
+      }
+    }
+    allWeeks.sort((a, b) => a - b);
+
+    const series = allWeeks.map((weekNum) => {
+      const weekKey = Object.keys(weekly).find(k => {
+        const parts = k.split('-');
+        return parseInt(parts[2].replace('W', '')) === weekNum && 
+               parseInt(parts[1]) === month && 
+               parseInt(parts[0]) === year;
+      });
+
+      if (weekKey && weekly[weekKey]) {
+        const agg = weekly[weekKey];
+        let bestProduct: string | null = null;
+        let maxQty = 0;
+        for (const [name, qty] of Object.entries(agg.productQty)) {
+          if (qty > maxQty) {
+            maxQty = qty;
+            bestProduct = name;
+          }
+        }
+
+        const startDate = agg.weekStart;
+        const endDate = agg.weekEnd;
+        const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        return {
+          week: `Week ${weekNum}`,
+          weekLabel: `${monthName} W${weekNum}`,
+          weekRange: `${startStr} - ${endStr}`,
+          weekTooltip: `Week ${weekNum} (${startStr} - ${endStr})`,
+          totalTransactions: agg.transactions,
+          totalSales: Number(agg.sales.toFixed(2)),
+          totalUnitsSold: agg.units,
+          bestProduct,
+        };
+      } else {
+        // Week with no data
+        const firstDayOfWeek = new Date(year, month, 1);
+        firstDayOfWeek.setDate(firstDayOfWeek.getDate() + (weekNum - 1) * 7 - (firstDayOfWeek.getDay() || 7) + 1);
+        const weekStart = getWeekStart(firstDayOfWeek);
+        const weekEnd = getWeekEnd(weekStart);
+        const startStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        return {
+          week: `Week ${weekNum}`,
+          weekLabel: `${monthName} W${weekNum}`,
+          weekRange: `${startStr} - ${endStr}`,
+          weekTooltip: `Week ${weekNum} (${startStr} - ${endStr})`,
+          totalTransactions: 0,
+          totalSales: 0,
+          totalUnitsSold: 0,
+          bestProduct: null,
+        };
+      }
+    });
+
+    return res.json({ month, year, series });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Something went wrong" });
+  }
+};
+
 
 // Get top 5 & 10 selling products or category
 export const getTopItems: RequestHandler = async (req, res) => {

@@ -5,6 +5,29 @@ const API_BASE = "/reports";
 
 // ---------------- TYPES ----------------
 
+// Daily transactions 
+export interface DailyTransaction {
+  day: string;
+  dayName?: string;
+  dayLabel?: string; // e.g., "Monday, Dec 9"
+  totalTransactions: number;
+  totalSales: number;
+  totalUnitsSold: number;
+  bestProduct?: string | null;
+}
+
+// Weekly transactions 
+export interface WeeklyTransaction {
+  week: string;
+  weekLabel?: string; // e.g., "Dec W1"
+  weekRange?: string; // e.g., "Dec 1 - Dec 7"
+  weekTooltip?: string; // e.g., "Week 1 (Dec 1 - Dec 7)"
+  totalTransactions: number;
+  totalSales: number;
+  totalUnitsSold: number;
+  bestProduct?: string | null;
+}
+
 // Monthly transactions 
 export interface MonthlyTransaction{
   month:string;
@@ -46,7 +69,30 @@ export interface ReorderItem {
 
 // ---------------- API CALLS ----------------
 
-// 1. Get monthly transactions 
+// 1. Get daily transactions 
+export const getDailyTransactions = async (
+  days?: number
+): Promise<DailyTransaction[]> => {
+  const res = await api.get<{ from: string; to: string; series: DailyTransaction[] }>(
+    `${API_BASE}/transac_daily`,
+    { params: days ? { days } : {} }
+  );
+  return res.data.series ?? [];
+};
+
+// 2. Get weekly transactions 
+export const getWeeklyTransactions = async (
+  month?: number,
+  year?: number
+): Promise<WeeklyTransaction[]> => {
+  const res = await api.get<{ month: number; year: number; series: WeeklyTransaction[] }>(
+    `${API_BASE}/transac_weekly`,
+    { params: { month, year } }
+  );
+  return res.data.series ?? [];
+};
+
+// 3. Get monthly transactions 
 export const getMonthlyTransactions = async (
   year: number
 ): Promise<MonthlyTransaction[]> => {
@@ -58,7 +104,7 @@ export const getMonthlyTransactions = async (
   return res.data.series; // backend returns { year, series: [...] }
 };
 
-// 2. Get yearly transactions 
+// 4. Get yearly transactions 
 export const getYearlyTransactions = async (
   from: number,
   to: number
@@ -70,7 +116,7 @@ export const getYearlyTransactions = async (
   return res.data.series ?? [];
 };
 
-// 3. Get top selling products or categories
+// 5. Get top selling products or categories
 export const getTopItems = async (
   type: "product" | "category" = "product",
   limit: number = 5
@@ -83,7 +129,7 @@ export const getTopItems = async (
   return res.data.items; // backend returns { type, fromYear, toYear, limit, items: [...] }
 };
 
-// // 4. Get reorder level / low stock items
+// 6. Get reorder level / low stock items
 
 export const getReorder = async (limit?: number): Promise<ReorderItem[]> => {
   const res = await api.get<ReorderItem[]>(`${API_BASE}/reorder`, {
