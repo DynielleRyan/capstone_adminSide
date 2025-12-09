@@ -92,6 +92,7 @@ api.interceptors.response.use(
         }
 
         try {
+          console.log('[API] Attempting to refresh expired token')
           // Try to refresh the token
           const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: refreshToken,
@@ -107,6 +108,8 @@ api.interceptors.response.use(
               Math.floor(Date.now() / 1000) + response.data.data.session.expires_in
             storage.setItem('expires_at', expiresAt.toString())
 
+            console.log('[API] Token refresh successful, new expiry:', new Date(expiresAt * 1000).toISOString())
+
             // Update the authorization header
             api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
             originalRequest.headers.Authorization = `Bearer ${newToken}`
@@ -117,12 +120,14 @@ api.interceptors.response.use(
             return api(originalRequest)
           } else {
             // Refresh failed
+            console.error('[API] Token refresh failed: Invalid response')
             processQueue(new Error('Token refresh failed'), null)
             clearAuthAndRedirect()
             return Promise.reject(error)
           }
         } catch (refreshError) {
           // Refresh failed
+          console.error('[API] Token refresh failed with error:', refreshError)
           processQueue(refreshError as Error, null)
           clearAuthAndRedirect()
           return Promise.reject(refreshError)
@@ -152,6 +157,11 @@ api.interceptors.response.use(
 
 // Helper function to clear auth data and redirect to login
 const clearAuthAndRedirect = () => {
+  console.warn('[API] Clearing auth and redirecting to login', {
+    currentPath: window.location.pathname,
+    timestamp: new Date().toISOString()
+  })
+  
   // Clean up activity tracking
   activityService.cleanup()
   activityService.clearActivity()
@@ -170,6 +180,7 @@ const clearAuthAndRedirect = () => {
   
   // Only redirect if not already on login page
   if (window.location.pathname !== '/login') {
+    console.log('[API] Redirecting to login page')
     window.location.href = '/login'
   }
 }
