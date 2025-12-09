@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
-import { Search, Eye, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, ArrowLeft, X } from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
@@ -258,7 +258,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <tbody className=" bg-blue-50">
             {paginatedData.map((tx => (
               <tr key={tx.TransactionID} >
-                <td className="px-4 py-4 text-gray-700 border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
                 <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
@@ -281,9 +281,9 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">{tx.PaymentMethod}</td>
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">{qtyMap[tx.TransactionID] ?? 0}</td>
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{tx.Total.toFixed(2)}</td>
-                <td className="px-4 py-4 border border-white">
+                <td className="px-6 py-4 text-center border border-white">
                   <button
-                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
+                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700 mx-auto" 
                     onClick={() => handleView(tx.TransactionID)}
                     title="View Transaction Details"
                   >
@@ -324,9 +324,9 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         </div>
       </div>
 
-      {/* Transaction Modal */}
+      {/* Transaction Modal - Receipt Style */}
       <dialog id="transaction_modal" className="modal">
-        <div className="modal-box bg-white rounded-lg w-full max-w-4xl max-h-[90vh] p-4 text-black flex flex-col">
+        <div className="modal-box bg-white rounded-lg w-full max-w-5xl max-h-[90vh] p-0 text-black flex flex-col">
           {errorMessage ? (
             <div className="p-6">
               <div className="text-red-500 font-semibold">{errorMessage}</div>
@@ -340,116 +340,180 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
             </div>
           ) : selectedTransaction ? (
             <>
-            <div className="px-6 pt-2 flex-shrink-0">
+              {/* Close button in top right */}
+              <div className="absolute top-4 right-4 z-10">
                 <form method="dialog">
-                <button                     
-                    className="bg-transparent border-none cursor-pointer rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
-                  >
-                    <ArrowLeft className="w-8 h-8" />
+                  <button className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <X className="w-6 h-6" />
                   </button>
                 </form>
-            </div>
-              {/* Header */}
-              <div className="px-6 pb-2 flex-shrink-0">
-                <h1 className="text-3xl text-center font-semibold text-gray-900">TRANSACTION DETAILS</h1>
-                  <hr className=" my-4 border-t-2 item-center border-gray-400"/>
-                  
-                  {/* Basic Details */}
-                  <div className="flex gap-6 items-start">
-                    <div className="flex-shrink-0 space-y-3">
-                      <p><strong>TRANSACTION ID:</strong></p>
-                      <p><strong>DATE ORDERED:</strong></p>
-                      <p><strong>STAFF:</strong></p>
-                      <p><strong>PAYMENT OPTION:</strong></p>
-                      <p><strong>REFERENCE NO.:</strong></p>
-                    </div>
-
-                    <div className="flex-shrink-0 pl-4 space-y-3">
-                      <p>{selectedTransaction.TransactionID}</p>
-                      <p>
-                        {" "}
-                        {new Date(
-                        selectedTransaction.OrderDateTime
-                        ).toLocaleString()}
-                      </p>
-                      <p>{selectedTransaction.User.FirstName}{" "}{selectedTransaction.User.LastName}</p>
-                      <p>{selectedTransaction.PaymentMethod}</p>
-                      <p>{selectedTransaction.ReferenceNo}</p>
-                    </div>
-                  </div>
               </div>
 
-                {/* Item List */}
-                <div className="flex gap-6 px-6">
-                  <div className="flex-shrink-0 ">
-                    <p><strong>ITEM LIST:</strong></p>
-                  </div>
-
-                  <div className="flex-shrink-0 pl-20 pt-2">
-                    <table className="w-[610px] text-sm text-black border border-black">
-                      <thead className="border border-black">
-                      <tr>
-                        <th className="px-6 py-3 border border-black text-center font-semibold">ITEM</th>
-                        <th className="px-6 py-3 border border-black text-center font-semibold">PRICE</th>
-                        <th className="px-6 py-3 border border-black text-center font-semibold">QTY</th>
-                        <th className="px-6 py-3 border border-black text-center font-semibold">SUBTOTAL</th>
-                      </tr>
-                      </thead>
-                      <tbody>
-                      {items.map((item => (
-                        <tr key={item.TransactionItemID}>
-                          <td className="px-6 py-4 text-gray-700 border border-black font-semibold"> 
-                            <div className="flex items-center gap-2">
-                              {item.Product.Image ? (
-                                <img
-                                  src={item.Product.Image}
-                                  alt={item.Product.Name}
-                                  className="w-8 h-8 object-cover rounded"
-                                />
-                              ) : (
-                              <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
-                                <span className="text-blue-600 text-sm">
-                                  {item.Product.Name.charAt(0)}
-                                </span>
-                              </div>
-                              )}
-                              <span className="font-medium">
-                                {item.Product.Name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold"> ₱{item.Product.SellingPrice.toFixed(2)}</td>
-                          <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold">{item.Quantity}</td>
-                          <td className="px-6 py-4 text-gray-700 border border-black text-center font-semibold">₱{item.Subtotal.toFixed(2)}</td>
-                        </tr>
-                      )))}
-                      </tbody>
-                    </table>
-                  </div>
-
+              {/* Receipt Content - Scrollable */}
+              <div className="px-6 py-6 space-y-4 overflow-y-auto flex-1">
+                {/* Pharmacy Information */}
+                <div className="text-center space-y-1">
+                  <h2 className="text-2xl font-bold text-gray-900">Jambo's Pharmacy</h2>
+                  <p className="text-sm text-gray-600">Babag, Lapu-Lapu City</p>
+                  <p className="text-sm text-gray-600">0991 648 2809</p>
                 </div>
 
-                <div className="flex gap-6 my-6 px-8 justify-end text-m">
-                    <div className="flex-shrink-0 space-y-2">
-                      <p><strong>SUBTOTAL:</strong></p>
-                      <p><strong>DISCOUNT:</strong></p>
-                      <p><strong>VAT AMOUNT:</strong></p>
-                      <p><strong>CASH RECEIVED:</strong></p>
-                      <p><strong>PAYMENT CHANGE:</strong></p>
-                      <p><strong>TOTAL:</strong></p>
-                    </div>
+                <hr className="border-gray-300" />
 
-                    <div className="flex-shrink-0 pl-4 space-y-2">
-                      <p>₱{items.reduce((sum, item) => sum + (item.Product.SellingPrice*item.Quantity), 0).toFixed(2)}</p>
-                      <p>₱{calculateTotalDiscount(items).toFixed(2)}</p>
-                      <p>₱{selectedTransaction.VATAmount.toFixed(2)}</p>
-                      <p>₱{selectedTransaction.CashReceived ? selectedTransaction.CashReceived : 0}</p>
-                      <p>₱{selectedTransaction.PaymentChange}</p>
-                      <p><strong>₱{selectedTransaction.Total.toFixed(2)}</strong></p>
+                {/* Transaction Details */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Receipt No:</span>
+                    <span>{selectedTransaction.ReferenceNo || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Transaction ID:</span>
+                    <span className="text-xs font-mono">{selectedTransaction.TransactionID}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Date & Time:</span>
+                    <span>
+                      {new Date(selectedTransaction.OrderDateTime).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}, {new Date(selectedTransaction.OrderDateTime).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Payment Method:</span>
+                    <span className="capitalize">{selectedTransaction.PaymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Staff:</span>
+                    <span>{selectedTransaction.User.FirstName} {selectedTransaction.User.LastName}</span>
+                  </div>
+                </div>
+
+                <hr className="border-gray-300" />
+
+                {/* Itemized List */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">Itemized List</h3>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-300">
+                        <th className="text-left py-2 font-semibold">Item</th>
+                        <th className="text-center py-2 font-semibold">Qty</th>
+                        <th className="text-right py-2 font-semibold">Price</th>
+                        <th className="text-right py-2 font-semibold">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => {
+                        const isVATExempt = item.Product.IsVATExemptYN || false;
+                        const sellingPrice = item.Product.SellingPrice; // Base price
+                        const vatAmountPerUnit = item.Product.VATAmount || 0; // VAT amount per unit
+                        const shelfPricePerUnit = sellingPrice + vatAmountPerUnit; // Selling Price + VAT = Shelf Price
+                        const itemSubtotal = item.Subtotal; // Total paid (after discounts if any)
+                        
+                        // Calculate unit price shown (shelf price per unit)
+                        const unitPrice = shelfPricePerUnit;
+                        // Calculate total VAT for this item
+                        const totalVAT = vatAmountPerUnit * item.Quantity;
+                        
+                        return (
+                          <tr key={item.TransactionItemID} className="border-b border-gray-200">
+                            <td className="py-3">
+                              <div className="space-y-1">
+                                <div className="font-medium">{item.Product.Name}</div>
+                                {isVATExempt ? (
+                                  <div className="text-xs text-gray-500">VAT Exempt</div>
+                                ) : (
+                                  <div className="text-xs text-gray-500">VAT (12%): ₱{totalVAT.toFixed(2)}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="text-center py-3">{item.Quantity}</td>
+                            <td className="text-right py-3">₱{unitPrice.toFixed(2)}</td>
+                            <td className="text-right py-3 font-medium">₱{itemSubtotal.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <hr className="border-gray-300" />
+
+                {/* Summary Section */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Subtotal:</span>
+                    <span>₱{items.reduce((sum, item) => {
+                      // Subtotal = Selling Price × Quantity (base price before VAT)
+                      const sellingPrice = item.Product.SellingPrice;
+                      return sum + (sellingPrice * item.Quantity);
+                    }, 0).toFixed(2)}</span>
+                  </div>
+                  
+                  {selectedTransaction.VATAmount > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-semibold">VAT BREAKDOWN:</span>
+                      </div>
+                      <div className="flex justify-between pl-4">
+                        <span>VAT (12%):</span>
+                        <span>₱{selectedTransaction.VATAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {calculateTotalDiscount(items) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Discount:</span>
+                      <span>₱{calculateTotalDiscount(items).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+
+                <hr className="border-gray-300" />
+
+                {/* Payment Information */}
+                {selectedTransaction.PaymentMethod.toLowerCase() === 'cash' && (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Cash Received:</span>
+                      <span>₱{selectedTransaction.CashReceived ? parseFloat(selectedTransaction.CashReceived).toFixed(2) : '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Change:</span>
+                      <span>₱{selectedTransaction.PaymentChange ? parseFloat(selectedTransaction.PaymentChange).toFixed(2) : '0.00'}</span>
                     </div>
                   </div>
-      
+                )}
 
+                {/* Total */}
+                <div className="flex justify-between text-lg font-bold pt-2 border-t-2 border-gray-400">
+                  <span>TOTAL:</span>
+                  <span>₱{selectedTransaction.Total.toFixed(2)}</span>
+                </div>
+
+                {/* Footer Messages */}
+                <div className="text-center space-y-1 text-xs text-gray-600 pt-4">
+                  <p>Thank you for your purchase!</p>
+                  <p>Please keep this receipt for your records.</p>
+                  <p>This is a computer-generated receipt.</p>
+                </div>
+
+                {/* Close Button at Bottom Right */}
+                <div className="pt-4 flex justify-end">
+                  <form method="dialog">
+                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                      Close
+                    </button>
+                  </form>
+                </div>
+              </div>
             </>
           ) : (
             <div className="p-6">

@@ -8,6 +8,7 @@ export interface Transaction {
     CashReceived: string;
     PaymentChange: string;
     ReferenceNo: string;
+    SeniorPWDID?: string | null;
     User: {
         FirstName: string;
         LastName: string;

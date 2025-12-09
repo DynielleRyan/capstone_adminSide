@@ -6,10 +6,15 @@ export interface TransactionItem {
     Subtotal: number;
     Product: {
         Name: string;
-        Image: string;
+        Image?: string;
+        Category?: string;
+        Brand?: string;
         SellingPrice: number;
+        IsVATExemptYN?: boolean;
+        VATAmount?: number;
       };
-    Discount: {
+    Discount?: {
         DiscountPercent: number;
+        Name?: string;
     }
   }

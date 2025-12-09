@@ -9,38 +9,256 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useState } from "react";
+import { ReportParams } from "../services/transactionService";
 
-type ChartMode = "month" | "year";
+type ChartMode = "day" | "week" | "month" | "year";
 
-interface DownloadModalProps {
+interface ReportSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
-  reportType: string;
+  onGenerate: (params: ReportParams) => void;
 }
 
-function DownloadModal({
+function ReportSelectionModal({
   isOpen,
   onClose,
-  onConfirm,
-  reportType,
-}: DownloadModalProps) {
+  onGenerate,
+}: ReportSelectionModalProps) {
+  const [periodType, setPeriodType] = useState<"day" | "week" | "month" | "year">("day");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedWeek, setSelectedWeek] = useState<number>(1);
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
   if (!isOpen) return null;
 
+  const handleGenerate = () => {
+    const params: ReportParams = {
+      periodType,
+    };
+
+    if (periodType === "day") {
+      if (!selectedDate) {
+        toast.warning("Please select a date");
+        return;
+      }
+      params.date = selectedDate;
+    } else if (periodType === "week") {
+      params.week = selectedWeek;
+      params.month = selectedMonth;
+      params.year = selectedYear;
+    } else if (periodType === "month") {
+      params.month = selectedMonth;
+      params.year = selectedYear;
+    } else if (periodType === "year") {
+      params.year = selectedYear;
+    }
+
+    onGenerate(params);
+    onClose();
+  };
+
+  // Get weeks in selected month
+  const getWeeksInMonth = (month: number, year: number) => {
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const firstMonday = new Date(firstDay);
+    const dayOfWeek = firstDay.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    firstMonday.setDate(firstDay.getDate() + daysToMonday);
+    
+    const lastMonday = new Date(lastDay);
+    const lastDayOfWeek = lastDay.getDay();
+    lastMonday.setDate(lastDay.getDate() - lastDayOfWeek);
+    
+    const weeks = [];
+    let currentWeek = new Date(firstMonday);
+    let weekNum = 1;
+    
+    while (currentWeek <= lastMonday) {
+      const weekStart = new Date(currentWeek);
+      const weekEnd = new Date(currentWeek);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      // Check if this week overlaps with the selected month
+      if (weekStart.getMonth() === month - 1 || weekEnd.getMonth() === month - 1) {
+        weeks.push(weekNum);
+      }
+      
+      currentWeek.setDate(currentWeek.getDate() + 7);
+      weekNum++;
+    }
+    
+    return weeks;
+  };
+
+  const weeks = periodType === "week" ? getWeeksInMonth(selectedMonth, selectedYear) : [];
+
   return (
-    <div className="drawer-content transform-none  ">
+    <div className="drawer-content transform-none">
       <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50">
-        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
+        <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
-              Confirm Download
+              Generate Detailed Report
             </h3>
           </div>
-          <div className="p-6">
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to download the {reportType} report as CSV?
-            </p>
-            <div className="flex justify-end gap-3">
+          <div className="p-6 space-y-4">
+            {/* Period Type Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Report Period
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={periodType}
+                onChange={(e) => setPeriodType(e.target.value as any)}
+              >
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+              </select>
+            </div>
+
+            {/* Day Selection */}
+            {periodType === "day" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  max={new Date().toISOString().split("T")[0]}
+                />
+              </div>
+            )}
+
+            {/* Week Selection */}
+            {periodType === "week" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Month
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={selectedMonth}
+                      onChange={(e) => {
+                        setSelectedMonth(Number(e.target.value));
+                        setSelectedWeek(1);
+                      }}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={m}>
+                          {new Date(2000, m - 1, 1).toLocaleString("default", { month: "long" })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Year
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={selectedYear}
+                      onChange={(e) => {
+                        setSelectedYear(Number(e.target.value));
+                        setSelectedWeek(1);
+                      }}
+                    >
+                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Week
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={selectedWeek}
+                    onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                  >
+                    {weeks.map((w) => (
+                      <option key={w} value={w}>
+                        Week {w}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* Month Selection */}
+            {periodType === "month" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Month
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {new Date(2000, m - 1, 1).toLocaleString("default", { month: "long" })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Year
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Year Selection */}
+            {periodType === "year" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Year
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4">
               <button
                 className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                 onClick={onClose}
@@ -49,12 +267,9 @@ function DownloadModal({
               </button>
               <button
                 className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
-                onClick={() => {
-                  onConfirm();
-                  onClose();
-                }}
+                onClick={handleGenerate}
               >
-                Download
+                Generate Report
               </button>
             </div>
           </div>
@@ -76,6 +291,17 @@ export default function Reports() {
     setType,
     limit,
     setLimit,
+    // top selling period controls
+    topPeriodType,
+    setTopPeriodType,
+    topYear,
+    setTopYear,
+    topMonth,
+    setTopMonth,
+    topWeek,
+    setTopWeek,
+    topDate,
+    setTopDate,
     // data
     topItems,
     reorder,
@@ -85,13 +311,14 @@ export default function Reports() {
     loadingTop,
     loadingReorder,
     // actions
-    downloadChartCSV,
     downloadTopCSV,
     downloadReorderCSV,
     // modal
     modalState,
     openDownloadModal,
     closeModal,
+    // detailed report
+    generateDetailedReport,
   } = report_hooks();
 
   // 🔒 SAFETY: never let Recharts / tables receive undefined
@@ -111,11 +338,7 @@ export default function Reports() {
               <div className="px-6 py-4 flex justify-end border-b border-gray-200">
                 <button
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={() =>
-                    chartData.length === 0
-                      ? toast.warning("No report available to download.")
-                      : openDownloadModal("Transaction Chart", downloadChartCSV)
-                  }
+                  onClick={() => openDownloadModal("Detailed Report", () => {})}
                 >
                   Download Report
                 </button>
@@ -132,6 +355,8 @@ export default function Reports() {
                       value={mode}
                       onChange={(e) => setMode(e.target.value as ChartMode)}
                     >
+                      <option value="day">Day</option>
+                      <option value="week">Week</option>
                       <option value="month">Month</option>
                       <option value="year">Year</option>
                     </select>
@@ -167,9 +392,31 @@ export default function Reports() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={safeChart}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey={mode === "month" ? "month" : "year"} />
+                        <XAxis 
+                          dataKey={
+                            mode === "day" ? "dayLabel" : 
+                            mode === "week" ? "weekLabel" : 
+                            mode === "month" ? "month" : 
+                            "year"
+                          } 
+                        />
                         <YAxis />
-                        <Tooltip />
+                        <Tooltip 
+                          formatter={(value: any, name: string) => {
+                            if (mode === "week" && name === "totalTransactions") {
+                              const data = safeChart.find((d: any) => d.totalTransactions === value) as any;
+                              return data?.weekTooltip ? [value, data.weekTooltip] : [value, name];
+                            }
+                            return [value, name];
+                          }}
+                          labelFormatter={(label) => {
+                            if (mode === "week") {
+                              const data = safeChart.find((d: any) => d.weekLabel === label) as any;
+                              return data?.weekRange || label;
+                            }
+                            return label;
+                          }}
+                        />
                         <Bar dataKey="totalTransactions" fill="#2563eb" />
                       </BarChart>
                     </ResponsiveContainer>
@@ -198,7 +445,151 @@ export default function Reports() {
               <div className="bg-base-300 rounded-xl p-4 shadow flex-1 min-w-0  min-h-96  max-h-96">
                 <div className="flex justify-between items-center mb-3 ">
                   <h2 className="font-semibold text-lg">Top Selling</h2>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <select
+                      className="select select-bordered select-sm"
+                      value={topPeriodType}
+                      onChange={(e) => setTopPeriodType(e.target.value as ChartMode)}
+                    >
+                      <option value="day">Day</option>
+                      <option value="week">Week</option>
+                      <option value="month">Month</option>
+                      <option value="year">Year</option>
+                    </select>
+                    {topPeriodType === "day" && (
+                      <input
+                        type="date"
+                        className="input input-bordered input-sm"
+                        value={topDate || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setTopDate(e.target.value)}
+                        max={new Date().toISOString().split("T")[0]}
+                      />
+                    )}
+                    {topPeriodType === "week" && (
+                      <>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topMonth}
+                          onChange={(e) => {
+                            setTopMonth(Number(e.target.value));
+                            setTopWeek(1);
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                            <option key={m} value={m}>
+                              {new Date(2000, m - 1, 1).toLocaleString("default", { month: "short" })}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topYear}
+                          onChange={(e) => {
+                            setTopYear(Number(e.target.value));
+                            setTopWeek(1);
+                          }}
+                        >
+                          {[
+                            thisYear,
+                            thisYear - 1,
+                            thisYear - 2,
+                            thisYear - 3,
+                            thisYear - 4,
+                          ].map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topWeek}
+                          onChange={(e) => setTopWeek(Number(e.target.value))}
+                        >
+                          {(() => {
+                            // Calculate weeks in selected month
+                            const firstDay = new Date(topYear, topMonth - 1, 1);
+                            const lastDay = new Date(topYear, topMonth, 0);
+                            const firstMonday = new Date(firstDay);
+                            const dayOfWeek = firstDay.getDay();
+                            const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                            firstMonday.setDate(firstDay.getDate() + daysToMonday);
+                            const lastMonday = new Date(lastDay);
+                            const lastDayOfWeek = lastDay.getDay();
+                            lastMonday.setDate(lastDay.getDate() - lastDayOfWeek);
+                            const weeks = [];
+                            let currentWeek = new Date(firstMonday);
+                            let weekNum = 1;
+                            while (currentWeek <= lastMonday) {
+                              const weekStart = new Date(currentWeek);
+                              const weekEnd = new Date(currentWeek);
+                              weekEnd.setDate(weekStart.getDate() + 6);
+                              if (weekStart.getMonth() === topMonth - 1 || weekEnd.getMonth() === topMonth - 1) {
+                                weeks.push(weekNum);
+                              }
+                              currentWeek.setDate(currentWeek.getDate() + 7);
+                              weekNum++;
+                            }
+                            return weeks;
+                          })().map((w) => (
+                            <option key={w} value={w}>
+                              Week {w}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    {topPeriodType === "month" && (
+                      <>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topMonth}
+                          onChange={(e) => setTopMonth(Number(e.target.value))}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                            <option key={m} value={m}>
+                              {new Date(2000, m - 1, 1).toLocaleString("default", { month: "short" })}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topYear}
+                          onChange={(e) => setTopYear(Number(e.target.value))}
+                        >
+                          {[
+                            thisYear,
+                            thisYear - 1,
+                            thisYear - 2,
+                            thisYear - 3,
+                            thisYear - 4,
+                          ].map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    {topPeriodType === "year" && (
+                      <select
+                        className="select select-bordered select-sm"
+                        value={topYear}
+                        onChange={(e) => setTopYear(Number(e.target.value))}
+                      >
+                        {[
+                          thisYear,
+                          thisYear - 1,
+                          thisYear - 2,
+                          thisYear - 3,
+                          thisYear - 4,
+                        ].map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <select
                       className="select select-bordered select-sm"
                       value={type}
@@ -224,34 +615,42 @@ export default function Reports() {
                   <table className="table table-sm">
                     <thead>
                       <tr>
-                        <th>Top</th>
-                        <th>{type === "product" ? "Product" : "Category"}</th>
-                        <th>Quantity Sold</th>
+                        <th className="text-center">Rank</th>
+                        <th className="text-center">{type === "product" ? "Product" : "Category"}</th>
+                        <th className="text-center">Qty Sold</th>
+                        <th className="text-center">Revenue</th>
+                        <th className="text-center">Avg Price</th>
+                        <th className="text-center">Transactions</th>
+                        <th className="text-center">% of Sales</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loadingTop ? (
                         <tr>
-                          <td colSpan={3} className="text-center opacity-60">
+                          <td colSpan={7} className="text-center opacity-60">
                             Loading...
                           </td>
                         </tr>
                       ) : safeTop.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="text-center opacity-60">
+                          <td colSpan={7} className="text-center opacity-60">
                             No data
                           </td>
                         </tr>
                       ) : (
                         safeTop.map((item, i) => (
                           <tr key={`${item.name ?? item.category}-${i}`}>
-                            <td>{i + 1}</td>
-                            <td>
+                            <td className="text-center">{i + 1}</td>
+                            <td className="text-center">
                               {type === "product"
                                 ? item.name ?? "Unknown Product"
                                 : item.category ?? "Uncategorized"}
                             </td>
-                            <td>{item.sold ?? 0}</td>
+                            <td className="text-center">{item.sold ?? 0}</td>
+                            <td className="text-center">₱{(item.revenue || 0).toFixed(2)}</td>
+                            <td className="text-center">₱{(item.avgPrice || 0).toFixed(2)}</td>
+                            <td className="text-center">{item.transactions || 0}</td>
+                            <td className="text-center">{(item.percentageOfSales || 0).toFixed(2)}%</td>
                           </tr>
                         ))
                       )}
@@ -324,11 +723,10 @@ export default function Reports() {
           </div>
         </div>
 
-        <DownloadModal
+        <ReportSelectionModal
           isOpen={modalState.isOpen}
           onClose={closeModal}
-          onConfirm={modalState.onConfirm}
-          reportType={modalState.reportType}
+          onGenerate={generateDetailedReport}
         />
       </div>
     </div>
