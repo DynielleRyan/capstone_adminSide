@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { Eye, EyeOff, Lock } from 'lucide-react'
 import { authService } from '../services/authService'
 import api from '../services/api'
 import { getDeviceIdentifier } from '../utils/deviceFingerprint'
