@@ -66,6 +66,7 @@ CREATE TABLE "Product" (
     "IsVATExemptYN" BOOLEAN DEFAULT false,
     "VATAmount" DECIMAL(10,2) DEFAULT 0,
     "PrescriptionYN" BOOLEAN DEFAULT false,
+    "SeniorPWDYN" BOOLEAN DEFAULT false,
     "DateTimeLastUpdate" TIMESTAMP DEFAULT NOW(),
     "IsActive" BOOLEAN DEFAULT true,
     "CreatedAt" TIMESTAMP DEFAULT NOW()

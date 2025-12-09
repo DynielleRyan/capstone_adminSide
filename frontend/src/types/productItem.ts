@@ -12,5 +12,6 @@ export interface ProductItem {
         Image: string;
         SellingPrice: number;
         IsVATExemptYN: string;
+        SeniorPWDYN?: boolean;
     }
   }

@@ -224,6 +224,7 @@ const ProductUpload = () => {
         IsVATExemptYN: isVATExempt,
         VATAmount: vatAmount,
         PrescriptionYN: formData.prescription === "Yes",
+        SeniorPWDYN: formData.seniorPWD === "Yes",
         IsActive: true,
       };
 
@@ -308,11 +309,8 @@ const ProductUpload = () => {
         }, [] as ProductItem[]);
         
         setSearchResults(uniqueProducts);
-        if (uniqueProducts.length === 1) {
-          // If only one product found, auto-select it
-          setSelectedProduct(uniqueProducts[0]);
-          setIsAddingBatch(true);
-        }
+        // Show search results without auto-selecting
+        // User can manually click "Add New Batch" button
       } else {
         alertService.info("No existing product found. You can create a new one.");
         setSearchResults([]);
@@ -429,7 +427,7 @@ const ProductUpload = () => {
       expiry: "",
       prescription: "--Select--",
       vatExempted: product.Product.IsVATExemptYN ? "Yes" : "No",
-      seniorPWD: "--Select--",
+      seniorPWD: (product.Product as any).SeniorPWDYN ? "Yes" : "No",
       supplierID: "--Select--",
       image: null,
       imageBase64: null,
@@ -799,6 +797,7 @@ const ProductUpload = () => {
                   <option value="First Aid">First Aid</option>
                   <option value="Personal Care">Personal Care</option>
                   <option value="Medical Devices">Medical Devices</option>
+                  <option value="Foods">Foods</option>
                 </select>
                 {isFieldInvalid("category") && !isAddingBatch && (
                   <p className="mt-1 text-sm text-red-600">Please select a category</p>
