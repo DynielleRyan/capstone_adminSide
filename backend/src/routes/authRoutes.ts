@@ -8,6 +8,11 @@ import {
   resetPassword,
   refreshToken
 } from '../controllers/userControllers';
+import {
+  checkDeviceVerification,
+  sendOTP,
+  verifyOTP
+} from '../controllers/otpControllers';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -34,5 +39,15 @@ router.post('/forgot-password', requestPasswordReset);
 
 // Reset password - Requires valid reset token
 router.post('/reset-password', resetPassword);
+
+// OTP / Device verification routes
+// Check if device verification is required - Protected
+router.post('/check-device', authenticate, checkDeviceVerification);
+
+// Send OTP to user's email - Protected
+router.post('/send-otp', authenticate, sendOTP);
+
+// Verify OTP and trust device - Protected
+router.post('/verify-otp', authenticate, verifyOTP);
 
 export default router;

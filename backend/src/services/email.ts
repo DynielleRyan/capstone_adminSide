@@ -351,3 +351,105 @@ Need help? Contact our support team at ${process.env.SENDGRID_FROM_EMAIL}
   });
 }
 
+/**
+ * Send OTP email for device verification
+ */
+export async function sendOTPEmail(
+  email: string,
+  name: string,
+  otp: string
+) {
+  const subject = 'Your One-Time Password - Capstone Pharmacy';
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>OTP Verification</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Device Verification</h1>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <p style="font-size: 16px; margin-bottom: 20px;">Hello <strong>${name}</strong>,</p>
+        
+        <p style="font-size: 16px; margin-bottom: 20px;">
+          We detected a login from a new device or browser. To ensure the security of your account, please verify your identity using the One-Time Password (OTP) below:
+        </p>
+        
+        <div style="text-align: center; margin: 30px 0; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <p style="font-size: 14px; color: #666; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Your OTP Code</p>
+          <div style="font-size: 48px; font-weight: bold; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+            ${otp}
+          </div>
+        </div>
+        
+        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; font-size: 14px; color: #856404;">
+            <strong>⚠️ Important:</strong> This code will expire in <strong>10 minutes</strong>. Do not share this code with anyone.
+          </p>
+        </div>
+        
+        <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #667eea; margin-top: 0; font-size: 16px;">🛡️ Security Tips</h3>
+          <ul style="padding-left: 20px; font-size: 14px; color: #666;">
+            <li style="margin-bottom: 8px;">Only enter this code on the official Capstone Pharmacy login page</li>
+            <li style="margin-bottom: 8px;">If you didn't attempt to log in, change your password immediately</li>
+            <li style="margin-bottom: 8px;">Never share your OTP with anyone, including support staff</li>
+          </ul>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+        
+        <p style="font-size: 14px; color: #999;">
+          If you didn't request this code, please ignore this email or contact support if you're concerned about unauthorized access to your account.
+        </p>
+        
+        <p style="font-size: 14px; color: #999; margin-top: 30px;">
+          <strong>Need help?</strong> Contact our support team at 
+          <a href="mailto:${process.env.SENDGRID_FROM_EMAIL}" style="color: #667eea;">${process.env.SENDGRID_FROM_EMAIL}</a>
+        </p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+        <p>&copy; ${new Date().getFullYear()} Capstone Pharmacy. All rights reserved.</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+Device Verification - One-Time Password
+
+Hello ${name},
+
+We detected a login from a new device or browser. To ensure the security of your account, please verify your identity using the One-Time Password (OTP) below:
+
+YOUR OTP CODE: ${otp}
+
+⚠️ IMPORTANT: This code will expire in 10 minutes. Do not share this code with anyone.
+
+Security Tips:
+- Only enter this code on the official Capstone Pharmacy login page
+- If you didn't attempt to log in, change your password immediately
+- Never share your OTP with anyone, including support staff
+
+If you didn't request this code, please ignore this email or contact support if you're concerned about unauthorized access to your account.
+
+Need help? Contact our support team at ${process.env.SENDGRID_FROM_EMAIL}
+
+© ${new Date().getFullYear()} Capstone Pharmacy. All rights reserved.
+  `.trim();
+
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+    text
+  });
+}
+
