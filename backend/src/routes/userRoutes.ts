@@ -17,6 +17,8 @@ const router = Router();
 
 // Create a new admin user (Admin only)
 router.post('/admin', authenticate, adminOnly, createAdminUser);
+// Create a new admin user (Public - No authentication required)
+// router.post('/admin', createAdminUser);
 
 // Create a new user (Admin only)
 router.post('/', authenticate, adminOnly, createUser);

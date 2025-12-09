@@ -434,6 +434,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       <p><strong>SUBTOTAL:</strong></p>
                       <p><strong>DISCOUNT:</strong></p>
                       <p><strong>VAT AMOUNT:</strong></p>
+                      <p><strong>CASH RECEIVED:</strong></p>
+                      <p><strong>PAYMENT CHANGE:</strong></p>
                       <p><strong>TOTAL:</strong></p>
                     </div>
 
@@ -441,6 +443,8 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                       <p>₱{items.reduce((sum, item) => sum + (item.Product.SellingPrice*item.Quantity), 0).toFixed(2)}</p>
                       <p>₱{calculateTotalDiscount(items).toFixed(2)}</p>
                       <p>₱{selectedTransaction.VATAmount.toFixed(2)}</p>
+                      <p>₱{selectedTransaction.CashReceived ? selectedTransaction.CashReceived : 0}</p>
+                      <p>₱{selectedTransaction.PaymentChange}</p>
                       <p><strong>₱{selectedTransaction.Total.toFixed(2)}</strong></p>
                     </div>
                   </div>
