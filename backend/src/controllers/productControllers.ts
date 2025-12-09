@@ -271,6 +271,12 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Calculate VAT amount (12% if not VAT exempted)
+    const isVATExempt = productData.IsVATExemptYN || false;
+    const vatAmount = isVATExempt ? 0 : productData.SellingPrice * 0.12;
+    productData.VATAmount = vatAmount;
+    productData.IsVATExemptYN = isVATExempt;
+
     // Check if supplier exists
     const { data: supplier } = await supabase
       .from('Supplier')
@@ -378,6 +384,23 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
         });
         return;
       }
+    }
+
+    // Recalculate VAT amount if price or VAT status is being updated
+    if (updateData.SellingPrice !== undefined || updateData.IsVATExemptYN !== undefined) {
+      // Get current product data if we need it
+      const { data: currentProduct } = await supabase
+        .from('Product')
+        .select('SellingPrice, IsVATExemptYN')
+        .eq('ProductID', id)
+        .single();
+
+      const sellingPrice = updateData.SellingPrice ?? currentProduct?.SellingPrice ?? 0;
+      const isVATExempt = updateData.IsVATExemptYN ?? currentProduct?.IsVATExemptYN ?? false;
+      const vatAmount = isVATExempt ? 0 : sellingPrice * 0.12;
+      
+      updateData.VATAmount = vatAmount;
+      updateData.IsVATExemptYN = isVATExempt;
     }
 
     const { data, error } = await supabase

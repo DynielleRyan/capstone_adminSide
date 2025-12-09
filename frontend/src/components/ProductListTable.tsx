@@ -565,7 +565,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
                       year: 'numeric' 
                     })}
                   </p>
-                  <p className="text-xl font-normal">{selectedProductItem.Product.IsVATExemptYN? "Vatable" : "NonVatable"}</p>
+                  <p className="text-xl font-normal">{selectedProductItem.Product.IsVATExemptYN? "VAT Exempt" : "Vatable (12% VAT)"}</p>
                 </div>
               </div>
             </>

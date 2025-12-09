@@ -28,6 +28,7 @@ export const EditProductList = () => {
     ExpiryDate: '',
     supplierId: '',
     seniorPWD: false,
+    vatExempted: false,
   });
 
   // Image upload states
@@ -80,6 +81,7 @@ export const EditProductList = () => {
         ExpiryDate: data.ExpiryDate ? new Date(data.ExpiryDate).toISOString().split('T')[0] : '',
         supplierId: fullProduct.SupplierID || '',
         seniorPWD: fullProduct.SeniorPWDYN || false,
+        vatExempted: fullProduct.IsVATExemptYN || false,
       });
       
       // Set initial image preview
@@ -187,6 +189,10 @@ export const EditProductList = () => {
       // Update product item
       await productItemService.updateProductItem(id, updateData);
       
+      // Calculate VAT amount (12% if not VAT exempted)
+      const sellingPrice = parseFloat(formData.price);
+      const vatAmount = formData.vatExempted ? 0 : sellingPrice * 0.12;
+
       // Update product details (name, price, supplier, etc.)
       if (productItem) {
         const productUpdateData: any = {
@@ -194,9 +200,11 @@ export const EditProductList = () => {
           GenericName: formData.genericName,
           Brand: formData.brand,
           Category: formData.category,
-          SellingPrice: parseFloat(formData.price),
+          SellingPrice: sellingPrice,
           SupplierID: formData.supplierId,
           SeniorPWDYN: formData.seniorPWD,
+          IsVATExemptYN: formData.vatExempted,
+          VATAmount: vatAmount,
         };
         
         // Add image if changed
@@ -451,8 +459,8 @@ export const EditProductList = () => {
           </div>
         </div>
 
-        {/* Supplier and Senior/PWD Discount Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Supplier Row */}
+        <div className="grid grid-cols-1 mb-6">
           {/* Supplier Field */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -477,7 +485,10 @@ export const EditProductList = () => {
               <p className="text-sm text-gray-500 mt-1">Loading suppliers...</p>
             )}
           </div>
+        </div>
 
+        {/* Checkboxes Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Senior/PWD Discount */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -493,6 +504,25 @@ export const EditProductList = () => {
               />
               <label className="ml-3 text-sm text-gray-700">
                 This product is eligible for Senior Citizen/PWD discount
+              </label>
+            </div>
+          </div>
+
+          {/* VAT Exemption */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              VAT Exemption
+            </label>
+            <div className="flex items-center h-10">
+              <input
+                type="checkbox"
+                name="vatExempted"
+                checked={formData.vatExempted}
+                onChange={(e) => setFormData(prev => ({ ...prev, vatExempted: e.target.checked }))}
+                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label className="ml-3 text-sm text-gray-700">
+                This product is VAT exempt (if unchecked, 12% VAT will be applied)
               </label>
             </div>
           </div>
