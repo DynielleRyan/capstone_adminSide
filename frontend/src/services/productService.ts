@@ -14,6 +14,7 @@ export interface Product {
   IsVATExemptYN: boolean
   VATAmount: number
   PrescriptionYN: boolean
+  SeniorPWDYN?: boolean
   IsActive: boolean
   CreatedAt?: Date
   UpdatedAt?: Date
@@ -32,6 +33,7 @@ export interface CreateProductData {
   IsVATExemptYN: boolean
   VATAmount: number
   PrescriptionYN: boolean
+  SeniorPWDYN?: boolean
   IsActive: boolean
 }
 

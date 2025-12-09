@@ -12,6 +12,7 @@ export interface Product {
   IsVATExemptYN?: boolean;
   VATAmount?: number;
   PrescriptionYN?: boolean;
+  SeniorPWDYN?: boolean;
   DateTimeLastUpdate?: Date;
   IsActive?: boolean;
   CreatedAt?: Date;
@@ -30,6 +31,7 @@ export interface CreateProduct {
   IsVATExemptYN?: boolean;
   VATAmount?: number;
   PrescriptionYN?: boolean;
+  SeniorPWDYN?: boolean;
   IsActive?: boolean;
 }
 
@@ -47,6 +49,7 @@ export interface UpdateProduct {
   IsVATExemptYN?: boolean;
   VATAmount?: number;
   PrescriptionYN?: boolean;
+  SeniorPWDYN?: boolean;
   DateTimeLastUpdate?: Date;
   IsActive?: boolean;
 }
@@ -65,6 +68,7 @@ export interface ProductResponse {
   IsVATExemptYN?: boolean;
   VATAmount?: number;
   PrescriptionYN?: boolean;
+  SeniorPWDYN?: boolean;
   DateTimeLastUpdate?: Date;
   IsActive?: boolean;
   CreatedAt?: Date;

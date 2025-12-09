@@ -27,6 +27,7 @@ export const EditProductList = () => {
     Stock: 0,
     ExpiryDate: '',
     supplierId: '',
+    seniorPWD: false,
   });
 
   // Image upload states
@@ -78,6 +79,7 @@ export const EditProductList = () => {
         Stock: data.Stock,
         ExpiryDate: data.ExpiryDate ? new Date(data.ExpiryDate).toISOString().split('T')[0] : '',
         supplierId: fullProduct.SupplierID || '',
+        seniorPWD: fullProduct.SeniorPWDYN || false,
       });
       
       // Set initial image preview
@@ -194,6 +196,7 @@ export const EditProductList = () => {
           Category: formData.category,
           SellingPrice: parseFloat(formData.price),
           SupplierID: formData.supplierId,
+          SeniorPWDYN: formData.seniorPWD,
         };
         
         // Add image if changed
@@ -443,33 +446,56 @@ export const EditProductList = () => {
               <option value="First Aid">First Aid</option>
               <option value="Personal Care">Personal Care</option>
               <option value="Medical Devices">Medical Devices</option>
+              <option value="Foods">Foods</option>
             </select>
           </div>
         </div>
 
-        {/* Supplier Field */}
-        <div className="mb-8">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Supplier <span className="text-red-500">*</span>
-          </label>
-          <select
-            name="supplierId"
-            value={formData.supplierId}
-            onChange={handleInputChange}
-            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-            disabled={loadingSuppliers}
-          >
-            <option value="">--Select Supplier--</option>
-            {suppliers.map((supplier) => (
-              <option key={supplier.SupplierID} value={supplier.SupplierID}>
-                {supplier.Name}
-              </option>
-            ))}
-          </select>
-          {loadingSuppliers && (
-            <p className="text-sm text-gray-500 mt-1">Loading suppliers...</p>
-          )}
+        {/* Supplier and Senior/PWD Discount Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Supplier Field */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Supplier <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="supplierId"
+              value={formData.supplierId}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              disabled={loadingSuppliers}
+            >
+              <option value="">--Select Supplier--</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier.SupplierID} value={supplier.SupplierID}>
+                  {supplier.Name}
+                </option>
+              ))}
+            </select>
+            {loadingSuppliers && (
+              <p className="text-sm text-gray-500 mt-1">Loading suppliers...</p>
+            )}
+          </div>
+
+          {/* Senior/PWD Discount */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Senior/PWD Discount Eligible
+            </label>
+            <div className="flex items-center h-10">
+              <input
+                type="checkbox"
+                name="seniorPWD"
+                checked={formData.seniorPWD}
+                onChange={(e) => setFormData(prev => ({ ...prev, seniorPWD: e.target.checked }))}
+                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label className="ml-3 text-sm text-gray-700">
+                This product is eligible for Senior Citizen/PWD discount
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}
