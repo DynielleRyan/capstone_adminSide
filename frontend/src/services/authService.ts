@@ -92,14 +92,17 @@ export const authService = {
 
   // Sign out
   signOut: async (): Promise<ApiResponse<void>> => {
+    console.log('[Auth] Sign out initiated')
     try {
       const response = await api.post('/auth/signout')
       
       // Clear authentication data
       authService.clearAuth()
       
+      console.log('[Auth] Sign out successful')
       return response.data
     } catch (error: any) {
+      console.error('[Auth] Sign out API call failed, clearing auth anyway:', error)
       // Clear authentication data even if request fails
       authService.clearAuth()
       
@@ -149,20 +152,37 @@ export const authService = {
   isTokenExpired: (): boolean => {
     const storage = getStorage()
     const expiresAtStr = storage.getItem('expires_at')
-    if (!expiresAtStr) return true
+    if (!expiresAtStr) {
+      console.log('[Auth] No expiration timestamp found, considering token expired')
+      return true
+    }
 
     try {
       const expiresAt = parseInt(expiresAtStr)
       const now = Math.floor(Date.now() / 1000) // Current time in seconds
-      // Consider token expired if it expires in the next 60 seconds
-      return expiresAt <= now + 60
+      // Consider token expired if it expires in the next 30 seconds (reduced from 60)
+      const isExpired = expiresAt <= now + 30
+      
+      if (isExpired) {
+        const timeUntilExpiry = expiresAt - now
+        console.warn('[Auth] Token expired or expiring soon', {
+          expiresAt: new Date(expiresAt * 1000).toISOString(),
+          now: new Date(now * 1000).toISOString(),
+          secondsUntilExpiry: timeUntilExpiry
+        })
+      }
+      
+      return isExpired
     } catch (error) {
+      console.error('[Auth] Error checking token expiration:', error)
       return true
     }
   },
 
   // Clear authentication data
   clearAuth: (): void => {
+    console.log('[Auth] Clearing authentication data')
+    
     // Clean up activity tracking
     activityService.cleanup()
     activityService.clearActivity()
@@ -178,12 +198,14 @@ export const authService = {
     
     // No token exists
     if (!token) {
+      console.log('[Auth] No token found, user not authenticated')
       authService.clearAuth()
       return false
     }
 
     // Check if token is expired
     if (authService.isTokenExpired()) {
+      console.warn('[Auth] Token expired, clearing authentication')
       authService.clearAuth()
       return false
     }

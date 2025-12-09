@@ -77,15 +77,19 @@ function App() {
   // Initialize activity tracking for existing sessions
   useEffect(() => {
     // Check if user is already authenticated (e.g., after page refresh)
+    // Activity tracking will be initialized by authService during login
+    // But we need to initialize it here for users who refresh the page while already logged in
     if (authService.isAuthenticated()) {
+      console.log('[App] User authenticated on mount, initializing activity tracking')
       // Initialize activity tracking
       activityService.initialize(() => {
+        console.log('[App] Auto-logout triggered by inactivity')
         // Auto-logout callback on inactivity
         authService.signOut().catch(console.error);
       });
     }
 
-    // Cleanup on unmount
+    // Cleanup on unmount (app component unmounting means app is closing)
     return () => {
       activityService.cleanup();
     };

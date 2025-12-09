@@ -10,12 +10,29 @@ const CHECK_INTERVAL = 60 * 1000 // Check every minute
 class ActivityService {
   private checkInterval: number | null = null
   private onInactivityCallback: (() => void) | null = null
+  private isInitialized: boolean = false
+
+  /**
+   * Helper to get the appropriate storage (same logic as authService)
+   */
+  private getStorage(): Storage {
+    const rememberMe = localStorage.getItem('rememberMe') === 'true'
+    return rememberMe ? localStorage : sessionStorage
+  }
 
   /**
    * Initialize activity tracking
    * Sets up event listeners and periodic inactivity checks
    */
   public initialize(onInactivity: () => void): void {
+    // Prevent double initialization
+    if (this.isInitialized) {
+      console.log('[ActivityService] Already initialized, skipping...')
+      return
+    }
+
+    console.log('[ActivityService] Initializing activity tracking')
+    this.isInitialized = true
     this.onInactivityCallback = onInactivity
     
     // Record initial activity
@@ -33,9 +50,15 @@ class ActivityService {
    * Removes event listeners and stops inactivity checks
    */
   public cleanup(): void {
+    if (!this.isInitialized) {
+      return
+    }
+
+    console.log('[ActivityService] Cleaning up activity tracking')
     this.removeActivityListeners()
     this.stopInactivityCheck()
     this.onInactivityCallback = null
+    this.isInitialized = false
   }
 
   /**
@@ -43,14 +66,16 @@ class ActivityService {
    */
   private recordActivity = (): void => {
     const now = Date.now()
-    localStorage.setItem(ACTIVITY_KEY, now.toString())
+    const storage = this.getStorage()
+    storage.setItem(ACTIVITY_KEY, now.toString())
   }
 
   /**
    * Get the last recorded activity timestamp
    */
   private getLastActivity(): number {
-    const lastActivity = localStorage.getItem(ACTIVITY_KEY)
+    const storage = this.getStorage()
+    const lastActivity = storage.getItem(ACTIVITY_KEY)
     if (!lastActivity) {
       // If no activity recorded, record current time and return it
       this.recordActivity()
@@ -69,7 +94,16 @@ class ActivityService {
 
     if (inactiveTime >= INACTIVITY_TIMEOUT) {
       // User has been inactive for too long
-      console.log('User inactive for', Math.floor(inactiveTime / 1000 / 60), 'minutes. Logging out...')
+      console.warn(
+        '[ActivityService] User inactive for', 
+        Math.floor(inactiveTime / 1000 / 60), 
+        'minutes. Triggering auto-logout...',
+        {
+          lastActivity: new Date(lastActivity).toISOString(),
+          now: new Date(now).toISOString(),
+          inactiveMinutes: Math.floor(inactiveTime / 1000 / 60)
+        }
+      )
       
       if (this.onInactivityCallback) {
         this.onInactivityCallback()
@@ -162,7 +196,9 @@ class ActivityService {
    * Clear activity data (call on logout)
    */
   public clearActivity(): void {
+    // Clear from both storages to be safe
     localStorage.removeItem(ACTIVITY_KEY)
+    sessionStorage.removeItem(ACTIVITY_KEY)
   }
 
   /**
