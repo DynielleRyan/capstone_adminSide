@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
-import { Search, Eye, ChevronLeft, ChevronRight, ArrowLeft, X } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
