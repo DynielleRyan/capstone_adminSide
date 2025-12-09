@@ -48,9 +48,13 @@ export interface YearlyTransaction {
 // Top items (products or categories)
 export interface TopItem {
   productId?: string;
-  name: string;
+  name?: string;
   category?: string | null;
   sold: number;
+  revenue?: number;
+  avgPrice?: number;
+  transactions?: number;
+  percentageOfSales?: number;
 }
 
 // Reorder level (low stock)
@@ -119,14 +123,36 @@ export const getYearlyTransactions = async (
 // 5. Get top selling products or categories
 export const getTopItems = async (
   type: "product" | "category" = "product",
-  limit: number = 5
+  limit: number = 5,
+  periodType?: "day" | "week" | "month" | "year",
+  date?: string,
+  week?: number,
+  month?: number,
+  year?: number
 ): Promise<TopItem[]> => {
-  const res = await api.get<{ type: string; fromYear: number; toYear: number; limit: number; items: TopItem[] }>(
+  const params: any = { type, limit };
+  if (periodType) {
+    params.periodType = periodType;
+    if (date) params.date = date;
+    if (week) params.week = week;
+    if (month) params.month = month;
+    if (year) params.year = year;
+  }
+  
+  const res = await api.get<{ 
+    type: string; 
+    periodType?: string;
+    period?: { start: string; end: string };
+    limit: number; 
+    totalSales?: number;
+    totalTransactions?: number;
+    items: TopItem[] 
+  }>(
     `${API_BASE}/top_items`,
-    { params: { type, limit } }
+    { params }
   );
 
-  return res.data.items; // backend returns { type, fromYear, toYear, limit, items: [...] }
+  return res.data.items;
 };
 
 // 6. Get reorder level / low stock items

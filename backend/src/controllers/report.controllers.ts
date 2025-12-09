@@ -581,17 +581,57 @@ export const getTopItems: RequestHandler = async (req, res) => {
     // read choices from query
     const typeRaw  = String(req.query.type || "product").toLowerCase();
     const limitRaw = Number(req.query.limit || 5);
+    const periodType = String(req.query.periodType || "month").toLowerCase();
+    const date = req.query.date as string | undefined;
+    const week = Number(req.query.week);
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
     const fromYear = Number(req.query.fromYear);
     const toYear   = Number(req.query.toYear);
 
-    // default years 
-    const nowY = new Date().getFullYear();
-    const startYear = isNaN(fromYear) ? nowY - 1 : fromYear; // deafault to last year 
-    const endYear   = isNaN(toYear)   ? nowY     : toYear;
-
-    // clamp to 2 years max 
-    const minYear = Math.min(startYear, endYear); // e.g. 2024
-    const maxYear = Math.min(minYear + 1, Math.max(startYear, endYear)); // e.g. 2025
+    // Calculate date range based on period type
+    let startDate: Date;
+    let endDate: Date;
+    const now = new Date();
+    
+    if (periodType === 'day' && date) {
+      startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (periodType === 'week' && week && month && year) {
+      const monthNum = month - 1;
+      const firstDay = new Date(year, monthNum, 1);
+      const firstMonday = new Date(firstDay);
+      const dayOfWeek = firstDay.getDay();
+      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      firstMonday.setDate(firstDay.getDate() + daysToMonday);
+      startDate = new Date(firstMonday);
+      startDate.setDate(firstMonday.getDate() + (week - 1) * 7);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (periodType === 'month' && month && year) {
+      const monthNum = month - 1;
+      startDate = new Date(year, monthNum, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(year, monthNum + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (periodType === 'year' && year) {
+      startDate = new Date(year, 0, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(year, 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      // Default to current month
+      const nowY = now.getFullYear();
+      const nowM = now.getMonth();
+      startDate = new Date(nowY, nowM, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(nowY, nowM + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+    }
 
     // only allow 5 or 10
     const limit = limitRaw === 10 ? 10 : 5;
@@ -599,15 +639,23 @@ export const getTopItems: RequestHandler = async (req, res) => {
     // only allow product or category
     const type = typeRaw === "category" ? "category" : "product";
 
-    // make ISO date range example result (2024-01-01T00:00:00.000Z to 2026-01-01T00:00:00.000Z)
-
-    const startISO = new Date(minYear, 0, 1).toISOString();
-    const endISO   = new Date(maxYear + 1, 0, 1).toISOString();
-
-    // get transaction items with joined product + transaction date
+    // Get transaction items with joined product, transaction date, and subtotal
     const { data, error } = await supabase
       .from(TI_TABLE)
-      .select(ItemFIELDS);
+      .select(`
+        Quantity,
+        Subtotal,
+        Product:ProductID (
+          ProductID,
+          Name,
+          Category,
+          SellingPrice
+        ),
+        Transaction:TransactionID (
+          OrderDateTime,
+          TransactionID
+        )
+      `);
 
     if (error) return res.status(500).json({ error: error.message });
 
@@ -615,22 +663,30 @@ export const getTopItems: RequestHandler = async (req, res) => {
     const rows = (data ?? []).filter((r: any) => {
       const when = r?.Transaction?.OrderDateTime ? new Date(r.Transaction.OrderDateTime) : null;
       if (!when || isNaN(when.getTime())) return false;
-      return when >= new Date(startISO) && when < new Date(endISO);
+      return when >= startDate && when <= endDate;
     });
+
+    // Calculate total sales for percentage calculation
+    const totalSales = rows.reduce((sum: number, r: any) => sum + (Number(r.Subtotal ?? 0)), 0);
+    const totalTransactions = new Set(rows.map((r: any) => r.Transaction?.TransactionID).filter(Boolean)).size;
 
     // By PRODUCT mode
     if (type === "product") {
-      //e.g Record <productId, { productId, name, category, sold }>
+      //e.g Record <productId, { productId, name, category, sold, revenue, avgPrice, transactions }>
       const byProduct: Record <string, {
         productId: string;
         name: string;
         category: string | null;
         sold: number;
+        revenue: number;
+        avgPrice: number;
+        transactions: Set<string>;
       }> = {};
 
       // cast to any[] to keep it simple 
-      for (const { Product: p, Quantity } of rows as any[]) {
+      for (const { Product: p, Quantity, Subtotal, Transaction: txn } of rows as any[]) {
         const qty = Number(Quantity ?? 0);
+        const subtotal = Number(Subtotal ?? 0);
         if (!p?.ProductID) continue;
 
         if (!byProduct[p.ProductID]) { 
@@ -639,45 +695,97 @@ export const getTopItems: RequestHandler = async (req, res) => {
             name: p.Name ?? "Unknown Product",
             category: p.Category ?? null,
             sold: 0,
+            revenue: 0,
+            avgPrice: 0,
+            transactions: new Set(),
           };
         }
 
         byProduct[p.ProductID].sold += isNaN(qty) ? 0 : qty;
+        byProduct[p.ProductID].revenue += isNaN(subtotal) ? 0 : subtotal;
+        if (txn?.TransactionID) {
+          byProduct[p.ProductID].transactions.add(txn.TransactionID);
+        }
       }
 
-      const items = Object.values(byProduct)
-        .sort((a, b) => b.sold - a.sold) // sort desceending
+      // Calculate averages and percentages
+      const items = Object.values(byProduct).map(item => ({
+        productId: item.productId,
+        name: item.name,
+        category: item.category,
+        sold: item.sold,
+        revenue: item.revenue,
+        avgPrice: item.sold > 0 ? item.revenue / item.sold : 0,
+        transactions: item.transactions.size,
+        percentageOfSales: totalSales > 0 ? (item.revenue / totalSales) * 100 : 0,
+      }))
+        .sort((a, b) => b.revenue - a.revenue) // sort by revenue (industry standard)
         .slice(0, limit);
 
       return res.json({
         type: "product",
-        fromYear: minYear,
-        toYear: maxYear,
+        periodType,
+        period: {
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+        },
         limit,
+        totalSales,
+        totalTransactions,
         items,
       });
     }
     else {
 
       // By CATEGORY mode
-      const byCategory: Record<string, { category: string; sold: number }> = {};
+      const byCategory: Record<string, { 
+        category: string; 
+        sold: number; 
+        revenue: number;
+        transactions: Set<string>;
+      }> = {};
 
       for (const r of rows as any[]) {
         const qty = Number(r.Quantity ?? 0);
+        const subtotal = Number(r.Subtotal ?? 0);
         const cat = r?.Product?.Category ?? "Uncategorized";
-        if (!byCategory[cat]) byCategory[cat] = { category: cat, sold: 0 };
+        if (!byCategory[cat]) {
+          byCategory[cat] = { 
+            category: cat, 
+            sold: 0,
+            revenue: 0,
+            transactions: new Set(),
+          };
+        }
         byCategory[cat].sold += isNaN(qty) ? 0 : qty;
+        byCategory[cat].revenue += isNaN(subtotal) ? 0 : subtotal;
+        if (r.Transaction?.TransactionID) {
+          byCategory[cat].transactions.add(r.Transaction.TransactionID);
+        }
       }
 
-      const items = Object.values(byCategory)
-        .sort((a, b) => b.sold - a.sold)
+      // Calculate percentages
+      const items = Object.values(byCategory).map(item => ({
+        category: item.category,
+        sold: item.sold,
+        revenue: item.revenue,
+        avgPrice: item.sold > 0 ? item.revenue / item.sold : 0,
+        transactions: item.transactions.size,
+        percentageOfSales: totalSales > 0 ? (item.revenue / totalSales) * 100 : 0,
+      }))
+        .sort((a, b) => b.revenue - a.revenue) // sort by revenue
         .slice(0, limit);
 
       return res.json({
         type: "category",
-        fromYear: minYear,
-        toYear: maxYear,
+        periodType,
+        period: {
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+        },
         limit,
+        totalSales,
+        totalTransactions,
         items,
       });
     }

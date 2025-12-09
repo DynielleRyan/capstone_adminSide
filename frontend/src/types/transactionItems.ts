@@ -10,6 +10,8 @@ export interface TransactionItem {
         Category?: string;
         Brand?: string;
         SellingPrice: number;
+        IsVATExemptYN?: boolean;
+        VATAmount?: number;
       };
     Discount?: {
         DiscountPercent: number;

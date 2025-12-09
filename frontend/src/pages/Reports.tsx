@@ -291,6 +291,17 @@ export default function Reports() {
     setType,
     limit,
     setLimit,
+    // top selling period controls
+    topPeriodType,
+    setTopPeriodType,
+    topYear,
+    setTopYear,
+    topMonth,
+    setTopMonth,
+    topWeek,
+    setTopWeek,
+    topDate,
+    setTopDate,
     // data
     topItems,
     reorder,
@@ -434,7 +445,151 @@ export default function Reports() {
               <div className="bg-base-300 rounded-xl p-4 shadow flex-1 min-w-0  min-h-96  max-h-96">
                 <div className="flex justify-between items-center mb-3 ">
                   <h2 className="font-semibold text-lg">Top Selling</h2>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <select
+                      className="select select-bordered select-sm"
+                      value={topPeriodType}
+                      onChange={(e) => setTopPeriodType(e.target.value as ChartMode)}
+                    >
+                      <option value="day">Day</option>
+                      <option value="week">Week</option>
+                      <option value="month">Month</option>
+                      <option value="year">Year</option>
+                    </select>
+                    {topPeriodType === "day" && (
+                      <input
+                        type="date"
+                        className="input input-bordered input-sm"
+                        value={topDate || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setTopDate(e.target.value)}
+                        max={new Date().toISOString().split("T")[0]}
+                      />
+                    )}
+                    {topPeriodType === "week" && (
+                      <>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topMonth}
+                          onChange={(e) => {
+                            setTopMonth(Number(e.target.value));
+                            setTopWeek(1);
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                            <option key={m} value={m}>
+                              {new Date(2000, m - 1, 1).toLocaleString("default", { month: "short" })}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topYear}
+                          onChange={(e) => {
+                            setTopYear(Number(e.target.value));
+                            setTopWeek(1);
+                          }}
+                        >
+                          {[
+                            thisYear,
+                            thisYear - 1,
+                            thisYear - 2,
+                            thisYear - 3,
+                            thisYear - 4,
+                          ].map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topWeek}
+                          onChange={(e) => setTopWeek(Number(e.target.value))}
+                        >
+                          {(() => {
+                            // Calculate weeks in selected month
+                            const firstDay = new Date(topYear, topMonth - 1, 1);
+                            const lastDay = new Date(topYear, topMonth, 0);
+                            const firstMonday = new Date(firstDay);
+                            const dayOfWeek = firstDay.getDay();
+                            const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                            firstMonday.setDate(firstDay.getDate() + daysToMonday);
+                            const lastMonday = new Date(lastDay);
+                            const lastDayOfWeek = lastDay.getDay();
+                            lastMonday.setDate(lastDay.getDate() - lastDayOfWeek);
+                            const weeks = [];
+                            let currentWeek = new Date(firstMonday);
+                            let weekNum = 1;
+                            while (currentWeek <= lastMonday) {
+                              const weekStart = new Date(currentWeek);
+                              const weekEnd = new Date(currentWeek);
+                              weekEnd.setDate(weekStart.getDate() + 6);
+                              if (weekStart.getMonth() === topMonth - 1 || weekEnd.getMonth() === topMonth - 1) {
+                                weeks.push(weekNum);
+                              }
+                              currentWeek.setDate(currentWeek.getDate() + 7);
+                              weekNum++;
+                            }
+                            return weeks;
+                          })().map((w) => (
+                            <option key={w} value={w}>
+                              Week {w}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    {topPeriodType === "month" && (
+                      <>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topMonth}
+                          onChange={(e) => setTopMonth(Number(e.target.value))}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                            <option key={m} value={m}>
+                              {new Date(2000, m - 1, 1).toLocaleString("default", { month: "short" })}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="select select-bordered select-sm"
+                          value={topYear}
+                          onChange={(e) => setTopYear(Number(e.target.value))}
+                        >
+                          {[
+                            thisYear,
+                            thisYear - 1,
+                            thisYear - 2,
+                            thisYear - 3,
+                            thisYear - 4,
+                          ].map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    {topPeriodType === "year" && (
+                      <select
+                        className="select select-bordered select-sm"
+                        value={topYear}
+                        onChange={(e) => setTopYear(Number(e.target.value))}
+                      >
+                        {[
+                          thisYear,
+                          thisYear - 1,
+                          thisYear - 2,
+                          thisYear - 3,
+                          thisYear - 4,
+                        ].map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <select
                       className="select select-bordered select-sm"
                       value={type}
@@ -460,34 +615,42 @@ export default function Reports() {
                   <table className="table table-sm">
                     <thead>
                       <tr>
-                        <th>Top</th>
-                        <th>{type === "product" ? "Product" : "Category"}</th>
-                        <th>Quantity Sold</th>
+                        <th className="text-center">Rank</th>
+                        <th className="text-center">{type === "product" ? "Product" : "Category"}</th>
+                        <th className="text-center">Qty Sold</th>
+                        <th className="text-center">Revenue</th>
+                        <th className="text-center">Avg Price</th>
+                        <th className="text-center">Transactions</th>
+                        <th className="text-center">% of Sales</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loadingTop ? (
                         <tr>
-                          <td colSpan={3} className="text-center opacity-60">
+                          <td colSpan={7} className="text-center opacity-60">
                             Loading...
                           </td>
                         </tr>
                       ) : safeTop.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="text-center opacity-60">
+                          <td colSpan={7} className="text-center opacity-60">
                             No data
                           </td>
                         </tr>
                       ) : (
                         safeTop.map((item, i) => (
                           <tr key={`${item.name ?? item.category}-${i}`}>
-                            <td>{i + 1}</td>
-                            <td>
+                            <td className="text-center">{i + 1}</td>
+                            <td className="text-center">
                               {type === "product"
                                 ? item.name ?? "Unknown Product"
                                 : item.category ?? "Uncategorized"}
                             </td>
-                            <td>{item.sold ?? 0}</td>
+                            <td className="text-center">{item.sold ?? 0}</td>
+                            <td className="text-center">₱{(item.revenue || 0).toFixed(2)}</td>
+                            <td className="text-center">₱{(item.avgPrice || 0).toFixed(2)}</td>
+                            <td className="text-center">{item.transactions || 0}</td>
+                            <td className="text-center">{(item.percentageOfSales || 0).toFixed(2)}%</td>
                           </tr>
                         ))
                       )}

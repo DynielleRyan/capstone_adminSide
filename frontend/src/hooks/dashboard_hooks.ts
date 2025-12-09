@@ -79,7 +79,7 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   const [open, setOpen] = useState<null | "low" | "exp">(null);
 
   // -------- STATE: Chart --------
-  const [chartView, setChartView] = useState<ChartView>("month");
+  const [chartView, setChartView] = useState<ChartView>("day");
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [seriesCache, setSeriesCache] = useState<Record<ChartView, any[]>>({
@@ -219,9 +219,9 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     }
   };
 
-  // Load monthly chart initially
+  // Load chart initially based on default view
   useEffect(() => {
-    loadChart("month");
+    loadChart(chartView);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

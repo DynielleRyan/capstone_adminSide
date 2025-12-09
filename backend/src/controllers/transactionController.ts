@@ -29,7 +29,7 @@ export const getTransactionAndItemsByID: RequestHandler = async (req, res) => {
         }
         const { data: items, error: itemsError } = await supabase
             .from('Transaction_Item')
-            .select('*, Product(Name, Image, SellingPrice), Discount(DiscountPercent)')
+            .select('*, Product(Name, Image, SellingPrice, IsVATExemptYN, VATAmount), Discount(DiscountPercent, Name)')
             .eq('TransactionID',id);
         if (itemsError) throw itemsError;
         res.status(200).json({transaction, items});
@@ -68,8 +68,8 @@ export const getDetailedTransactionsForReport: RequestHandler = async (req, res)
   try {
     const { period, periodType, date, week, month, year } = req.query;
     
-    let startDate: Date;
-    let endDate: Date;
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
     
     // Determine date range based on period type
     if (periodType === 'day' && date) {
@@ -112,7 +112,10 @@ export const getDetailedTransactionsForReport: RequestHandler = async (req, res)
       startDate.setHours(0, 0, 0, 0);
       endDate = new Date(yearNum, 11, 31);
       endDate.setHours(23, 59, 59, 999);
-    } else {
+    }
+    
+    // Validate that dates were set
+    if (!startDate || !endDate) {
       return res.status(400).json({ message: 'Invalid parameters for report generation' });
     }
 
@@ -142,7 +145,7 @@ export const getDetailedTransactionsForReport: RequestHandler = async (req, res)
 
     if (itemsError) throw itemsError;
 
-    res.status(200).json({ 
+    return res.status(200).json({ 
       transactions, 
       items: items || [],
       period: {
@@ -152,6 +155,6 @@ export const getDetailedTransactionsForReport: RequestHandler = async (req, res)
       }
     });
   } catch (error: any) {
-    res.status(500).json({ message: error?.message || 'Internal Server Error' });
+    return res.status(500).json({ message: error?.message || 'Internal Server Error' });
   }
 };
