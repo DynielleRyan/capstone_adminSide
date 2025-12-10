@@ -7,20 +7,61 @@ import { toast } from 'react-toastify';
 
 interface Props {
   productList: ProductItem[];
-  onRefresh?: () => void | Promise<void>;
+  onRefresh?: (page?: number, search?: string, sortBy?: string, sortOrder?: string) => void | Promise<void>;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  loading?: boolean;
 }
 
-export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) => {
+export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pagination, loading }) => {
   const [selectedProductItem, setSelectedProductItem] = useState<ProductItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('none');
+  const [sortBy, setSortBy] = useState('Name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
   
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset to first page on search
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Trigger refresh when search, sort, or page changes
+  useEffect(() => {
+    if (!onRefresh) return;
+    
+    let isCancelled = false;
+    const sortByValue = sortBy === 'none' ? 'Name' : sortBy;
+    
+    // Use a flag to prevent duplicate calls
+    const fetchData = async () => {
+      if (!isCancelled) {
+        await onRefresh(currentPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
+      }
+    };
+    
+    fetchData();
+    
+    return () => {
+      isCancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, debouncedSearchTerm, sortBy, sortOrder]); // Removed onRefresh from deps to prevent re-runs
+
   // Delete product item from list
   const handleDeleteConfirmed = async () => {
     if (!DeleteItem) return;
@@ -33,7 +74,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
       
       // Auto-refresh the product list
       if (onRefresh) {
-        await onRefresh();
+        const sortByValue = sortBy === 'none' ? 'Name' : sortBy;
+        await onRefresh(currentPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
       }
     } catch (error) {
       console.error(error);
@@ -64,54 +106,29 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
       [productId]: !prev[productId]
     }));
   };
-  
-  // Search products
-  function filterProductList(productList: ProductItem[], searchTerm: string): ProductItem[] {
-    const term = searchTerm.toLowerCase();
 
-    return productList.filter((pl) => {
-      const prodID = String(pl.ProductItemID).toLowerCase();
-      const category = String(pl.Product.Category).toLowerCase();
-      const brand = String(pl.Product.Brand).toLowerCase();
-      const name = String(pl.Product.Name).toLowerCase();
-      const genericName = String(pl.Product.GenericName).toLowerCase();
-      const expiry = new Date(pl.ExpiryDate).toLocaleDateString().toLowerCase();
-
-      return (
-        prodID.includes(term) ||
-        category.includes(term) ||
-        brand.includes(term) ||
-        name.includes(term) ||
-        genericName.includes(term) ||
-        expiry.includes(term)
-      );
-    });
-  }
-
-  // Sort products
-  function sortProductList(productList: ProductItem[], sortBy: string): ProductItem[] {
-    const sorted = [...productList];
-  
-    if (sortBy === 'none') {
-      // Default alphabetical sort by product name
-      sorted.sort((a, b) => a.Product.Name.localeCompare(b.Product.Name));
-    } else if (sortBy === 'stock-asc') {
-      sorted.sort((a, b) => a.Stock - b.Stock);
-    } else if (sortBy === 'stock-desc') {
-      sorted.sort((a, b) => b.Stock - a.Stock);
-    } else if (sortBy === 'date-asc') {
-      sorted.sort(
-        (a, b) =>
-          new Date(a.ExpiryDate).getTime() - new Date(b.ExpiryDate).getTime()
-      );
-    } else if (sortBy === 'date-desc') {
-      sorted.sort(
-        (a, b) =>
-          new Date(b.ExpiryDate).getTime() - new Date(a.ExpiryDate).getTime()
-      );
+  // Handle sort change
+  const handleSortChange = (newSortBy: string) => {
+    if (newSortBy === 'none') {
+      setSortBy('Name');
+      setSortOrder('asc');
+    } else if (newSortBy === 'stock-asc') {
+      setSortBy('Stock');
+      setSortOrder('asc');
+    } else if (newSortBy === 'stock-desc') {
+      setSortBy('Stock');
+      setSortOrder('desc');
+    } else if (newSortBy === 'date-asc') {
+      setSortBy('ExpiryDate');
+      setSortOrder('asc');
+    } else if (newSortBy === 'date-desc') {
+      setSortBy('ExpiryDate');
+      setSortOrder('desc');
+    } else {
+      setSortBy('Name');
+      setSortOrder('asc');
     }
-
-    return sorted;
+    setCurrentPage(1); // Reset to first page on sort change
   };
 
   // Determine danger level of expiry date
@@ -178,37 +195,31 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
     document.body.removeChild(link);
   };
   
-  // Combine search and sort in render logic
-  const displayedProductList = useMemo(() => {
-    const filtered = filterProductList(productList, searchTerm);
-    return sortProductList(filtered, sortBy);
-  }, [productList, searchTerm, sortBy]);
-
-
-  // Group product items based on their ProductID
+  // Group product items based on their ProductID (client-side grouping for display)
   const groupedProducts = useMemo(() => {
-  // Product item will only be displayed if it satisfies the condition
-  const validItems = displayedProductList.filter(
-    item => item.IsActive === true && item.Stock > 0
-  );
+    // Product item will only be displayed if it satisfies the condition
+    const validItems = productList.filter(
+      item => item.IsActive === true && item.Stock > 0
+    );
 
-  // Groups product items based on their ProductID
-  const grouped: Record<string, ProductItem[]> = {};
-  
-  validItems.forEach(item => {
-    const productId = item.ProductID;
-    if (!grouped[productId]) grouped[productId] = [];
-    grouped[productId].push(item);
-  });
+    // Groups product items based on their ProductID
+    const grouped: Record<string, ProductItem[]> = {};
+    
+    validItems.forEach(item => {
+      const productId = item.ProductID;
+      if (!grouped[productId]) grouped[productId] = [];
+      grouped[productId].push(item);
+    });
 
-  // Sort each product group from earliest to latest expiry
-  Object.values(grouped).forEach(group => {
-    group.sort((a, b) => new Date(a.ExpiryDate).getTime() - new Date(b.ExpiryDate).getTime());
-  });
+    // Sort each product group from earliest to latest expiry
+    Object.values(grouped).forEach(group => {
+      group.sort((a, b) => new Date(a.ExpiryDate).getTime() - new Date(b.ExpiryDate).getTime());
+    });
 
-  return grouped;
-}, [displayedProductList]);
+    return grouped;
+  }, [productList]);
 
+  // Client-side pagination for grouped products (since we're grouping on the frontend)
   const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage);
 
   // Count products for pagination per ProductID, not per product item
@@ -217,11 +228,6 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
     const start = (currentPage - 1) * itemsPerPage;
     return entries.slice(start, start + itemsPerPage);
   }, [groupedProducts, currentPage]);
-
-  
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortBy]);
 
 
   return (
@@ -256,11 +262,14 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
             <label htmlFor="sortBy" className="text-sm font-medium text-gray-700">Sort By:</label>
             <select
               id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              value={sortBy === 'Stock' ? (sortOrder === 'asc' ? 'stock-asc' : 'stock-desc') : 
+                     sortBy === 'ExpiryDate' ? (sortOrder === 'asc' ? 'date-asc' : 'date-desc') : 
+                     'none'}
+              onChange={(e) => handleSortChange(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
             >
-            <option value="none">None</option>
+            <option value="none">Name (A-Z)</option>
             <option value="stock-asc">Quantity (Low to High)</option>
             <option value="stock-desc">Quantity (High to Low)</option>
             <option value="date-asc">Expiry Date (Oldest First)</option>
@@ -275,10 +284,11 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="None"
+                  placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -314,7 +324,13 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
           </thead>
           <tbody className=" bg-blue-50">
           {/* Check if products exist */}
-          {groupedEntries.length === 0 ? (
+          {loading && productList.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                Loading products...
+              </td>
+            </tr>
+          ) : groupedEntries.length === 0 ? (
             <tr>
               <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                 No products found.
@@ -481,23 +497,24 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh }) =
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {groupedEntries.length} of {itemsPerPage} products
+          Showing {groupedEntries.length} of {Object.keys(groupedProducts).length} product groups
+          {pagination && ` (${pagination.total} total items)`}
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setCurrentPage((prev) => prev - 1)}
-            disabled={currentPage === 1}
+            disabled={currentPage === 1 || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Go to previous page"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="px-4 py-2 text-sm">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages || 1}
           </span>
           <button 
             onClick={() => setCurrentPage((prev) => prev + 1)}
-            disabled={currentPage === totalPages}
+            disabled={currentPage === totalPages || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Go to next page"
           >

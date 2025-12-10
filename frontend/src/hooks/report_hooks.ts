@@ -613,7 +613,6 @@ export function report_hooks() {
       "Other Payments": "Other Payments",
       "PWD/Senior Count": "PWD/Senior Count",
       "Top Product": "Top Product",
-      "": "",
     });
 
     // Add daily summaries
@@ -635,7 +634,6 @@ export function report_hooks() {
         "Other Payments": dayData.paymentMethods.other || 0,
         "PWD/Senior Count": dayData.pwdSeniorCount,
         "Top Product": topProduct,
-        "": "",
       });
     });
 
@@ -688,7 +686,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Total Transactions",
@@ -702,7 +699,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Total Sales",
@@ -716,7 +712,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Total Units Sold",
@@ -730,7 +725,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Average Daily Sales",
@@ -744,7 +738,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Best Day",
@@ -758,7 +751,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Worst Day",
@@ -772,7 +764,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Payment Method - Cash",
@@ -786,7 +777,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "Payment Method - Card",
@@ -800,7 +790,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     rows.push({
       "Date": "PWD/Senior Transactions",
@@ -814,7 +803,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": pwdSeniorTotal,
       "Top Product": "",
-      "": "",
     });
     rows.push({});
     rows.push({
@@ -829,7 +817,6 @@ export function report_hooks() {
       "Other Payments": "",
       "PWD/Senior Count": "",
       "Top Product": "",
-      "": "",
     });
     top5Products.forEach(([product, qty], index) => {
       rows.push({
@@ -844,7 +831,6 @@ export function report_hooks() {
         "Other Payments": "",
         "PWD/Senior Count": "",
         "Top Product": "",
-        "": "",
       });
     });
 
@@ -921,11 +907,6 @@ export function report_hooks() {
       "Total Units Sold": "Total Units Sold",
       "Avg Daily Sales": "Avg Daily Sales",
       "Week-over-Week Growth": "Week-over-Week Growth",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
 
     // Add weekly summaries
@@ -945,11 +926,6 @@ export function report_hooks() {
         "Total Units Sold": weekData.totalUnits,
         "Avg Daily Sales": avgDailySales.toFixed(2),
         "Week-over-Week Growth": weekGrowth,
-        "": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
       });
 
       previousWeekSales = weekData.totalSales;
@@ -1012,11 +988,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "Total Transactions",
@@ -1026,11 +997,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "Total Sales",
@@ -1040,11 +1006,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "Total Units Sold",
@@ -1054,11 +1015,6 @@ export function report_hooks() {
       "Total Units Sold": monthlyTotalUnits,
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "Average Daily Sales",
@@ -1068,11 +1024,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": avgDailySales.toFixed(2),
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "Average Transaction Value",
@@ -1082,11 +1033,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": avgTransactionValue.toFixed(2),
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "Best Week",
@@ -1096,11 +1042,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Week": "PWD/Senior Transactions",
@@ -1110,11 +1051,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({});
     rows.push({
@@ -1125,11 +1061,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     top10Products.forEach(([product, qty], index) => {
       rows.push({
@@ -1140,11 +1071,6 @@ export function report_hooks() {
         "Total Units Sold": qty,
         "Avg Daily Sales": "",
         "Week-over-Week Growth": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
       });
     });
     rows.push({});
@@ -1156,11 +1082,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     top5Categories.forEach(([category, qty], index) => {
       rows.push({
@@ -1171,11 +1092,6 @@ export function report_hooks() {
         "Total Units Sold": qty,
         "Avg Daily Sales": "",
         "Week-over-Week Growth": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
       });
     });
     rows.push({});
@@ -1187,11 +1103,6 @@ export function report_hooks() {
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
-      "": "",
     });
     Object.entries(paymentMethods).forEach(([method, count]) => {
       const percentage = ((count / monthlyTotalTransactions) * 100).toFixed(1);
@@ -1204,11 +1115,6 @@ export function report_hooks() {
         "Total Units Sold": "",
         "Avg Daily Sales": "",
         "Week-over-Week Growth": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
-        "": "",
       });
     });
 
@@ -1274,9 +1180,6 @@ export function report_hooks() {
       "MoM Growth": "MoM Growth",
       "Best Day": "Best Day",
       "Top 5 Products": "Top 5 Products",
-      "": "",
-      "": "",
-      "": "",
     });
 
     // Add monthly summaries
@@ -1326,9 +1229,6 @@ export function report_hooks() {
         "MoM Growth": momGrowth,
         "Best Day": bestDay.toString(),
         "Top 5 Products": top5Products,
-        "": "",
-        "": "",
-        "": "",
       });
 
       previousMonthSales = monthData.totalSales;
@@ -1409,9 +1309,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     quarters.forEach(quarter => {
       rows.push({
@@ -1424,9 +1321,6 @@ export function report_hooks() {
         "MoM Growth": "",
         "Best Day": "",
         "Top 5 Products": `Avg Monthly: ${quarter.avgMonthly.toFixed(2)}`,
-        "": "",
-        "": "",
-        "": "",
       });
     });
 
@@ -1442,9 +1336,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Total Transactions",
@@ -1456,9 +1347,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Total Sales",
@@ -1470,9 +1358,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Total Units Sold",
@@ -1484,9 +1369,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Average Monthly Sales",
@@ -1498,9 +1380,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": avgMonthlySales.toFixed(2),
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Average Daily Sales",
@@ -1512,9 +1391,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Average Transaction Value",
@@ -1526,9 +1402,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Best Month",
@@ -1540,9 +1413,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": bestMonth[1].monthName,
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "Best Quarter",
@@ -1554,9 +1424,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": bestQuarter.quarter,
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({
       "Month": "PWD/Senior Transactions",
@@ -1568,9 +1435,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     rows.push({});
     rows.push({
@@ -1583,9 +1447,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     top20Products.forEach(([product, qty], index) => {
       rows.push({
@@ -1598,9 +1459,6 @@ export function report_hooks() {
         "MoM Growth": "",
         "Best Day": "",
         "Top 5 Products": "",
-        "": "",
-        "": "",
-        "": "",
       });
     });
     rows.push({});
@@ -1614,9 +1472,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     top10Categories.forEach(([category, qty], index) => {
       rows.push({
@@ -1629,9 +1484,6 @@ export function report_hooks() {
         "MoM Growth": "",
         "Best Day": "",
         "Top 5 Products": "",
-        "": "",
-        "": "",
-        "": "",
       });
     });
     rows.push({});
@@ -1645,9 +1497,6 @@ export function report_hooks() {
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
-      "": "",
-      "": "",
-      "": "",
     });
     Object.entries(paymentMethods).forEach(([method, count]) => {
       const percentage = ((count / annualTotalTransactions) * 100).toFixed(1);
@@ -1662,9 +1511,6 @@ export function report_hooks() {
         "MoM Growth": "",
         "Best Day": "",
         "Top 5 Products": `${percentage}%`,
-        "": "",
-        "": "",
-        "": "",
       });
     });
 
