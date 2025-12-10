@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import alertService from '../services/alertService'
 import { productService, ProductSourceItem, ProductSourceListParams } from '../services/productService'
 
 const ProductSourceList = () => {
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'ProductName' | 'SupplierName' | 'LastPurchaseDate' | 'none'>('none')
   const [products, setProducts] = useState<ProductSourceItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -12,52 +13,92 @@ const ProductSourceList = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalProducts, setTotalProducts] = useState(0)
+  
+  // Use refs to prevent duplicate requests and track mount status
+  const isMountedRef = useRef(true)
+  const isLoadingRef = useRef(false)
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+      setCurrentPage(1) // Reset to first page on search
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   // Fetch products from API
-  const fetchProducts = useCallback(async (page = 1, search = searchTerm, sort = sortBy) => {
+  const fetchProducts = useCallback(async (page = 1, search?: string, sort?: 'ProductName' | 'SupplierName' | 'LastPurchaseDate' | 'none') => {
+    // Prevent multiple simultaneous requests
+    if (isLoadingRef.current) return
+    
+    isLoadingRef.current = true
+    setLoading(true)
+    setError(null)
+    
     try {
-      setLoading(true)
-      setError(null)
-      
       const params: ProductSourceListParams = {
         page,
         limit: 10, // Display 10 items per page
         search: search || undefined,
-        sortBy: sort !== 'none' ? sort : undefined
+        sortBy: sort && sort !== 'none' ? sort : undefined
       }
       
       const response = await productService.getProductSourceList(params)
       
-      setProducts(response.products)
-      setCurrentPage(response.page)
-      setTotalPages(response.totalPages)
-      setTotalProducts(response.total)
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setProducts(response.products)
+        setCurrentPage(response.page)
+        setTotalPages(response.totalPages)
+        setTotalProducts(response.total)
+      }
     } catch (err) {
       console.error('Error fetching products:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products'
-      setError(errorMessage)
-      alertService.error(errorMessage)
-      if (!products.length) {
+      if (isMountedRef.current) {
+        setError(errorMessage)
+        alertService.error(errorMessage)
         setProducts([])
       }
     } finally {
-      setLoading(false)
+      isLoadingRef.current = false
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
     }
-  }, [])
+  }, []) // Empty deps - function is stable
 
   // Load products on component mount
   useEffect(() => {
-    fetchProducts()
-  }, [])
+    isMountedRef.current = true
+    fetchProducts(1, debouncedSearchTerm, sortBy)
+    
+    return () => {
+      isMountedRef.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
 
-  // Debounced search effect
+  // Trigger refresh when search, sort, or page changes
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchProducts(1, searchTerm, sortBy)
-    }, 500)
-
-    return () => clearTimeout(timeoutId)
-  }, [searchTerm, sortBy])
+    if (!isMountedRef.current) return
+    
+    let isCancelled = false
+    const fetchData = async () => {
+      if (!isCancelled) {
+        await fetchProducts(currentPage, debouncedSearchTerm || undefined, sortBy)
+      }
+    }
+    
+    fetchData()
+    
+    return () => {
+      isCancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, debouncedSearchTerm, sortBy]) // Removed fetchProducts from deps
 
   // Handle sort change
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -95,6 +136,7 @@ const ProductSourceList = () => {
                 value={sortBy}
                 onChange={handleSortChange}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+                disabled={loading}
               >
                 <option value="none">None</option>
                 <option value="ProductName">Product Name</option>
@@ -110,10 +152,11 @@ const ProductSourceList = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="None"
+                  placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -206,8 +249,8 @@ const ProductSourceList = () => {
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => fetchProducts(currentPage - 1, searchTerm, sortBy)}
-            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage <= 1 || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -216,8 +259,8 @@ const ProductSourceList = () => {
             Page {currentPage} of {totalPages}
           </span>
           <button 
-            onClick={() => fetchProducts(currentPage + 1, searchTerm, sortBy)}
-            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage >= totalPages || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronRight className="w-4 h-4" />

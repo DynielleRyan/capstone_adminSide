@@ -1,8 +1,8 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { ProductItem } from '../types/productItem';
 import { fetchProductItemByID, deleteProductItemByID } from '../services/productListService';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X  } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X, Loader2  } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface Props {
@@ -30,6 +30,9 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
   
+  // Separate state for item page (server-side pagination) vs currentPage (group pagination)
+  const [itemPage, setItemPage] = useState(pagination?.page || 1);
+  
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -40,17 +43,78 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Trigger refresh when search, sort, or page changes
+  // Track previous item page to detect when we've loaded a new item page
+  const prevItemPageRef = useRef(pagination?.page || 1);
+  // Track if this is the initial mount (shared between useEffects)
+  const isInitialMount = useRef(true);
+  // Track if we should skip the next fetch (to prevent loops)
+  const skipNextFetchRef = useRef(false);
+  // Track previous values to detect actual changes
+  const prevSearchRef = useRef(debouncedSearchTerm);
+  const prevSortRef = useRef(`${sortBy}-${sortOrder}`);
+  const prevItemPageForFetchRef = useRef(itemPage);
+  
+  // Only reset group page when we load a NEW item page (not when paginating groups)
+  useEffect(() => {
+    const currentItemPage = pagination?.page || 1;
+    // Skip on initial mount
+    if (isInitialMount.current) {
+      prevItemPageRef.current = currentItemPage;
+      prevItemPageForFetchRef.current = itemPage;
+      return;
+    }
+    
+    // Only reset if we've actually changed item pages (not just group pages)
+    if (currentItemPage !== prevItemPageRef.current) {
+      setCurrentPage(1); // Reset to first group page when new item page loads
+      prevItemPageRef.current = currentItemPage;
+      // Sync itemPage state but skip the fetch (data already loaded)
+      skipNextFetchRef.current = true;
+      setItemPage(currentItemPage);
+      prevItemPageForFetchRef.current = currentItemPage;
+    }
+  }, [pagination?.page, itemPage]);
+  
+  // Trigger refresh when search, sort changes, or when itemPage is explicitly changed by user
   useEffect(() => {
     if (!onRefresh) return;
+    
+    // Mark initial mount as complete after first render
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevSearchRef.current = debouncedSearchTerm;
+      prevSortRef.current = `${sortBy}-${sortOrder}`;
+      prevItemPageForFetchRef.current = itemPage;
+      return;
+    }
+    
+    // Skip if this fetch should be skipped (e.g., when syncing from pagination prop)
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      prevItemPageForFetchRef.current = itemPage;
+      return;
+    }
+    
+    // Only fetch if something actually changed
+    const searchChanged = prevSearchRef.current !== debouncedSearchTerm;
+    const sortChanged = prevSortRef.current !== `${sortBy}-${sortOrder}`;
+    const itemPageChanged = prevItemPageForFetchRef.current !== itemPage;
+    
+    if (!searchChanged && !sortChanged && !itemPageChanged) {
+      return; // No changes, skip fetch
+    }
+    
+    // Update refs
+    prevSearchRef.current = debouncedSearchTerm;
+    prevSortRef.current = `${sortBy}-${sortOrder}`;
+    prevItemPageForFetchRef.current = itemPage;
     
     let isCancelled = false;
     const sortByValue = sortBy === 'none' ? 'Name' : sortBy;
     
-    // Use a flag to prevent duplicate calls
     const fetchData = async () => {
       if (!isCancelled) {
-        await onRefresh(currentPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
+        await onRefresh(itemPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
       }
     };
     
@@ -60,7 +124,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearchTerm, sortBy, sortOrder]); // Removed onRefresh from deps to prevent re-runs
+  }, [debouncedSearchTerm, sortBy, sortOrder, itemPage]); // Only trigger when these change
 
   // Delete product item from list
   const handleDeleteConfirmed = async () => {
@@ -128,7 +192,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       setSortBy('Name');
       setSortOrder('asc');
     }
-    setCurrentPage(1); // Reset to first page on sort change
+    setCurrentPage(1); // Reset to first group page on sort change
+    setItemPage(1); // Reset to first item page on sort change
   };
 
   // Determine danger level of expiry date
@@ -220,7 +285,29 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   }, [productList]);
 
   // Client-side pagination for grouped products (since we're grouping on the frontend)
-  const totalPages = Math.ceil(Object.keys(groupedProducts).length / itemsPerPage);
+  const currentGroupCount = Object.keys(groupedProducts).length;
+  const currentGroupPages = Math.ceil(currentGroupCount / itemsPerPage);
+  
+  // Calculate total pages: 
+  // - If we have pagination info and more item pages, estimate total groups
+  // - Otherwise, use current group pages
+  let totalPages = currentGroupPages;
+  
+  if (pagination && pagination.total > 0) {
+    // Estimate: if we have X groups from Y items, estimate total groups from total items
+    // This is an approximation since grouping depends on product structure
+    const itemsPerGroup = currentGroupCount > 0 ? productList.length / currentGroupCount : 1;
+    const estimatedTotalGroups = Math.ceil(pagination.total / itemsPerGroup);
+    const estimatedTotalGroupPages = Math.ceil(estimatedTotalGroups / itemsPerPage);
+    
+    // Use the larger of: current pages or estimated pages
+    totalPages = Math.max(currentGroupPages, estimatedTotalGroupPages);
+    
+    // If there are more item pages to load, add 1 to indicate more available
+    if (pagination.page < pagination.totalPages) {
+      totalPages = Math.max(totalPages, currentGroupPages + 1);
+    }
+  }
 
   // Count products for pagination per ProductID, not per product item
   const groupedEntries = useMemo(() => {
@@ -326,8 +413,11 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
           {/* Check if products exist */}
           {loading && productList.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                Loading products...
+              <td colSpan={8} className="px-6 py-8 text-center">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  <p className="text-gray-600 font-medium">Loading products...</p>
+                </div>
               </td>
             </tr>
           ) : groupedEntries.length === 0 ? (
@@ -499,11 +589,22 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
         <div className="text-sm text-gray-700">
           Showing {groupedEntries.length} of {Object.keys(groupedProducts).length} product groups
           {pagination && ` (${pagination.total} total items)`}
+          {pagination && pagination.totalPages > 1 && ` - Item page ${pagination.page}/${pagination.totalPages}`}
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setCurrentPage((prev) => prev - 1)}
-            disabled={currentPage === 1 || loading}
+            onClick={() => {
+              if (currentPage === 1) {
+                // On first group page - fetch previous item page if available
+                if (pagination && pagination.page > 1) {
+                  setItemPage(pagination.page - 1);
+                }
+              } else {
+                // Just go to previous group page (no API call needed)
+                setCurrentPage((prev) => prev - 1);
+              }
+            }}
+            disabled={(currentPage === 1 && (!pagination || pagination.page === 1)) || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Go to previous page"
           >
@@ -511,10 +612,21 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
           </button>
           <span className="px-4 py-2 text-sm">
             Page {currentPage} of {totalPages || 1}
+            {pagination && pagination.totalPages > 1 && ` (${pagination.total} items, page ${pagination.page}/${pagination.totalPages})`}
           </span>
           <button 
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            disabled={currentPage === totalPages || loading}
+            onClick={() => {
+              if (currentPage === totalPages) {
+                // On last group page - fetch next item page if available
+                if (pagination && pagination.page < pagination.totalPages) {
+                  setItemPage(pagination.page + 1);
+                }
+              } else {
+                // Just go to next group page (no API call needed)
+                setCurrentPage((prev) => prev + 1);
+              }
+            }}
+            disabled={(currentPage === totalPages && (!pagination || pagination.page >= pagination.totalPages)) || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Go to next page"
           >

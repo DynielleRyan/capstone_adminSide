@@ -480,6 +480,20 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
     const offset = (pageNum - 1) * limitNum;
 
     // Build query with nested selects - this performs JOINs under the hood
+    // First, get total count for pagination
+    let countQuery = supabase
+      .from('Product')
+      .select('*', { count: 'exact', head: true })
+      .eq('IsActive', true);
+
+    if (search) {
+      countQuery = countQuery.ilike('Name', `%${search}%`);
+    }
+
+    const { count, error: countError } = await countQuery;
+    if (countError) throw countError;
+
+    // Build main query with pagination
     let query = supabase
       .from('Product')
       .select(`
@@ -505,6 +519,23 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
     if (search) {
       query = query.ilike('Name', `%${search}%`);
     }
+
+    // For complex sorting (SupplierName, LastPurchaseDate), we need to fetch more items,
+    // process them, sort, then paginate. For ProductName, we can sort at DB level.
+    const fetchLimit = (sortBy === 'SupplierName' || sortBy === 'LastPurchaseDate') 
+      ? limitNum * 3  // Fetch 3x for complex sorting
+      : limitNum;     // Normal fetch for simple sorting
+
+    // Apply sorting at database level if possible (for better performance)
+    if (sortBy === 'ProductName') {
+      query = query.order('Name', { ascending: true });
+    } else {
+      // Default order for complex sorts (will be sorted after processing)
+      query = query.order('ProductID', { ascending: true });
+    }
+
+    // Apply pagination - fetch more if complex sorting needed
+    query = query.range(0, fetchLimit - 1);
 
     // Execute main query
     const { data: products, error } = await query;
@@ -570,11 +601,18 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
       });
     }
 
-    // Update total count to reflect only products with purchase dates
-    const total = productSourceList.length;
+    // Total count from database query (already filtered)
+    const total = count || 0;
 
-    // Apply pagination
-    const paginatedList = productSourceList.slice(offset, offset + limitNum);
+    // Apply pagination after sorting (for complex sorts) or use already paginated data
+    let paginatedList: ProductSourceItem[];
+    if (sortBy === 'SupplierName' || sortBy === 'LastPurchaseDate') {
+      // For complex sorting, slice after sorting
+      paginatedList = productSourceList.slice(offset, offset + limitNum);
+    } else {
+      // For simple sorting or no sort, data is already paginated
+      paginatedList = productSourceList;
+    }
 
     const response: PaginatedProductSource = {
       products: paginatedList,

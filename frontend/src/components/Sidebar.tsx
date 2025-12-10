@@ -65,7 +65,7 @@ const Sidebar = () => {
   return (
     <aside className="w-64 bg-blue-50 border-r border-blue-50 h-full">
       <div className="p-4">
-        <h2 className="text-lg font-bold text-blue-600">Jambo's Pharmacy</h2>
+        <h2 className="text-lg font-bold text-blue-600 text-center">Jambo's Pharmacy</h2>
       </div>
       <ul className="p-4 w-full space-y-1">
         {menuItems.map((item) => {
