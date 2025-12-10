@@ -8,7 +8,7 @@ import {
   CreateProductData,
 } from "../../services/productService";
 import { productItemService } from "../../services/productItemService";
-import { searchProductByName } from "../../services/productListService";
+import { fetchProductList } from "../../services/productListService";
 import { ProductItem } from "../../types/productItem";
 import api from "../../services/api";
 import { ToastContainer } from "react-toastify";
@@ -298,11 +298,16 @@ const ProductUpload = () => {
     }
 
     try {
-      const results = await searchProductByName(searchName);
+      const response = await fetchProductList({
+        search: searchName,
+        limit: 100, // Get more results for search
+        onlyActive: true
+      });
+      const results = response.data;
       if (results.length > 0) {
         // Get unique products by ProductID
-        const uniqueProducts = results.reduce((acc, item) => {
-          if (!acc.find(p => p.ProductID === item.ProductID)) {
+        const uniqueProducts = results.reduce((acc: ProductItem[], item: ProductItem) => {
+          if (!acc.find((p: ProductItem) => p.ProductID === item.ProductID)) {
             acc.push(item);
           }
           return acc;
