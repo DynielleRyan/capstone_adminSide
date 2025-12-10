@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { ProductItem } from '../../types/productItem';
 import { fetchProductList, ProductListResponse } from '../../services/productListService';
 import { ProductListTable } from '../../components/ProductListTable';
+import { Loader2 } from 'lucide-react';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 
@@ -27,9 +28,11 @@ export const ProductList = () => {
     isLoadingRef.current = true;
     setLoading(true);
     try {
+      // Fetch more items to account for grouping (each product might have multiple items)
+      // We fetch 200 items per page to ensure we have enough groups to paginate
       const response: ProductListResponse = await fetchProductList({
         page,
-        limit: 50,
+        limit: 200, // Increased limit to cover multiple group pages
         search,
         sortBy: sortBy as 'Name' | 'Stock' | 'ExpiryDate' | undefined,
         sortOrder: sortOrder as 'asc' | 'desc' | undefined,
@@ -64,8 +67,9 @@ export const ProductList = () => {
   return (
     <div className="p-6 space-y-8">
       {loading && productList.length === 0 ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-gray-600">Loading products...</div>
+        <div className="flex flex-col justify-center items-center h-64 gap-4">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          <p className="text-lg text-gray-600 font-medium">Loading products...</p>
         </div>
       ) : (
         <ProductListTable 

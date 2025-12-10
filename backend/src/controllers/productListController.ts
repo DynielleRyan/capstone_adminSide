@@ -22,8 +22,46 @@ export const getProductList: RequestHandler = async (req, res) => {
         const limitNum = parseInt(limit as string);
         const offset = (pageNum - 1) * limitNum;
 
-        // Build base query - fetch more items if filtering is needed (to account for post-filtering)
-        const fetchLimit = (search || category || brand) ? limitNum * 3 : limitNum; // Fetch 3x if filtering to account for post-filtering
+        // First, get total count from database (for accurate pagination)
+        // Use count with the same filters as the main query
+        let countQuery = supabase
+            .from('Product_Item')
+            .select('*', { count: 'exact', head: true });
+
+        if (onlyActive === 'true') {
+            countQuery = countQuery.eq('IsActive', true);
+        }
+
+        if (minStock !== undefined) {
+            countQuery = countQuery.gte('Stock', parseInt(minStock as string));
+        }
+        if (maxStock !== undefined) {
+            countQuery = countQuery.lte('Stock', parseInt(maxStock as string));
+        }
+
+        const { count: totalDbCount, error: countError } = await countQuery;
+        if (countError) {
+            console.error('Count query error:', countError);
+            // Fallback: continue without accurate count
+        }
+
+        // For client-side filtering (search, category, brand), we need to fetch a larger batch
+        // Calculate how many items we need to fetch to cover the requested page after filtering
+        const needsClientFiltering = !!(search || category || brand);
+        
+        let fetchOffset: number;
+        let fetchLimit: number;
+        
+        if (needsClientFiltering) {
+            // When filtering, fetch a larger batch from an earlier offset to account for filtered items
+            const fetchMultiplier = 5; // Fetch 5x to ensure we have enough after filtering
+            fetchLimit = limitNum * fetchMultiplier;
+            fetchOffset = Math.max(0, offset - (limitNum * 2)); // Start 2 pages earlier
+        } else {
+            // No filtering needed - fetch exactly what's requested
+            fetchOffset = offset;
+            fetchLimit = limitNum;
+        }
         
         let query = supabase
             .from('Product_Item')
@@ -52,8 +90,8 @@ export const getProductList: RequestHandler = async (req, res) => {
             query = query.order('ProductItemID', { ascending: true });
         }
 
-        // Fetch data (with larger limit if filtering)
-        const { data, error } = await query.range(0, fetchLimit - 1);
+        // Fetch data with calculated offset and limit
+        const { data, error } = await query.range(fetchOffset, fetchOffset + fetchLimit - 1);
         
         if (error) throw error;
 
@@ -97,11 +135,25 @@ export const getProductList: RequestHandler = async (req, res) => {
             });
         }
 
-        // Get total count for pagination (before applying pagination slice)
-        const totalCount = filteredData.length;
+        // Calculate total count
+        // If no client-side filtering, use database count directly
+        // If client-side filtering is used, we need to estimate (can't get exact count without fetching all)
+        let totalCount = totalDbCount || 0;
+        
+        // If we have client-side filtering, estimate based on filter ratio
+        // This is an approximation - for exact count, we'd need to fetch all items
+        if (needsClientFiltering && data && data.length > 0 && totalDbCount) {
+            const filterRatio = filteredData.length / data.length;
+            totalCount = Math.max(filteredData.length, Math.ceil(totalDbCount * filterRatio));
+        } else if (!totalDbCount && filteredData.length > 0) {
+            // Fallback: if count query failed, use filtered data length as minimum
+            totalCount = filteredData.length;
+        }
         
         // Apply pagination to filtered data
-        const paginatedData = filteredData.slice(offset, offset + limitNum);
+        // If we fetched from an earlier offset (due to filtering), adjust the slice
+        const sliceOffset = needsClientFiltering ? (offset - fetchOffset) : 0;
+        const paginatedData = filteredData.slice(sliceOffset, sliceOffset + limitNum);
         
         res.status(200).json({
             data: paginatedData,
