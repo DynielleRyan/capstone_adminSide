@@ -136,7 +136,7 @@ export async function sendInventorySMSAlertCron(force = false) {
     `JAMBOS PHARMACY ALERT\n` +
     `Low Stock: ${low} products\n` +
     `Expiring: ${expiring} items\n` +
-    `${dateStr} ${timeStr}`;
+    `${dateStr}`;
   
   // Character count validation (should be ~85-95 chars)
   // Twilio limits: 160 chars (GSM-7) or 70 chars (UCS-2)
