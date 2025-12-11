@@ -93,15 +93,29 @@ export const UpdatePurchaseOrderForm = () => {
     loadOrder();
   }, [id, products, suppliers]);
 
-  const filteredProducts = products.filter(p =>
-    p.Name.toLowerCase().startsWith(searchTerm.trim().toLowerCase())
-  ); 
+  // Filter products by both name and ID
+  const filteredProducts = products.filter(p => {
+    const searchLower = searchTerm.toLowerCase().trim();
+    const nameMatch = p.Name.toLowerCase().includes(searchLower);
+    const idMatch = p.ProductID?.toLowerCase().includes(searchLower);
+    return nameMatch || idMatch;
+  }); 
   
    // Handle input changes
    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
     setDropdownOpen(value.trim().length > 0); // Open dropdown if there's input
+    
+    // Check if the input exactly matches a product ID
+    if (value.trim()) {
+      const exactIdMatch = products.find(p => 
+        p.ProductID?.toLowerCase() === value.trim().toLowerCase()
+      );
+      if (exactIdMatch) {
+        handleSelectProduct(exactIdMatch);
+      }
+    }
     };
   
     // Handle product selection
@@ -192,7 +206,7 @@ export const UpdatePurchaseOrderForm = () => {
                   id="productSearch"
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Search product name"
+                  placeholder="Search by product name or ID"
                   value={searchTerm}
                   onChange={handleSearchChange}
                   required
@@ -213,7 +227,10 @@ export const UpdatePurchaseOrderForm = () => {
                             }`}
                             onClick={() => handleSelectProduct(p)}
                           >
-                            {p.Name}
+                            <div className="flex items-center justify-between">
+                              <span>{p.Name}</span>
+                              <span className="text-xs text-gray-500 font-mono ml-2">ID: {p.ProductID}</span>
+                            </div>
                           </button>
                         </li>
                       ))

@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Copy, Check, X } from 'lucide-react'
 import alertService from '../services/alertService'
 import { productService, ProductSourceItem, ProductSourceListParams } from '../services/productService'
+import { supplierService, SupplierResponse } from '../services/supplierService'
+import { fetchPurchaseOrders } from '../services/purchaseOrderService'
+import { toast } from 'react-toastify'
 
 const ProductSourceList = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -13,6 +16,16 @@ const ProductSourceList = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalProducts, setTotalProducts] = useState(0)
+  const [copiedProductIDs, setCopiedProductIDs] = useState<Set<string>>(new Set())
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false)
+  const [suppliers, setSuppliers] = useState<SupplierResponse[]>([])
+  const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set())
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [previewData, setPreviewData] = useState<{
+    rows: any[]
+    filename: string
+  } | null>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
   
   // Use refs to prevent duplicate requests and track mount status
   const isMountedRef = useRef(true)
@@ -75,6 +88,19 @@ const ProductSourceList = () => {
     isMountedRef.current = true
     fetchProducts(1, debouncedSearchTerm, sortBy)
     
+    // Fetch suppliers for report generation
+    const loadSuppliers = async () => {
+      try {
+        const response = await supplierService.getSuppliers({ limit: 1000, isActive: true })
+        if (response.success && response.data) {
+          setSuppliers(response.data.suppliers)
+        }
+      } catch (err) {
+        console.error('Error fetching suppliers:', err)
+      }
+    }
+    loadSuppliers()
+    
     return () => {
       isMountedRef.current = false
     }
@@ -115,6 +141,157 @@ const ProductSourceList = () => {
       day: '2-digit', 
       year: 'numeric' 
     })
+  }
+
+  // Copy product ID to clipboard
+  const copyProductID = async (productID: string) => {
+    try {
+      await navigator.clipboard.writeText(productID);
+      setCopiedProductIDs(prev => new Set(prev).add(productID));
+      setTimeout(() => {
+        setCopiedProductIDs(prev => {
+          const next = new Set(prev);
+          next.delete(productID);
+          return next;
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // Open supplier selection modal
+  const handleGenerateReport = () => {
+    setSupplierModalOpen(true)
+  }
+
+  // Close supplier selection modal
+  const closeSupplierModal = () => {
+    setSupplierModalOpen(false)
+    setSelectedSuppliers(new Set())
+  }
+
+  // Toggle supplier selection
+  const toggleSupplier = (supplierID: string) => {
+    setSelectedSuppliers(prev => {
+      const next = new Set(prev)
+      if (next.has(supplierID)) {
+        next.delete(supplierID)
+      } else {
+        next.add(supplierID)
+      }
+      return next
+    })
+  }
+
+  // Generate preview from selected suppliers
+  const generatePreview = async () => {
+    if (selectedSuppliers.size === 0) {
+      toast.warning('Please select at least one supplier')
+      return
+    }
+
+    setLoadingPreview(true)
+    setSupplierModalOpen(false)
+
+    try {
+      // Fetch all purchase orders
+      const allPurchaseOrders = await fetchPurchaseOrders()
+      
+      // Filter by selected suppliers
+      const filteredOrders = allPurchaseOrders.filter(po => 
+        selectedSuppliers.has(po.SupplierID)
+      )
+
+      if (filteredOrders.length === 0) {
+        toast.warning('No purchase orders found for selected suppliers')
+        setLoadingPreview(false)
+        return
+      }
+
+      // Format data for preview and CSV
+      const rows = filteredOrders.map(po => ({
+        'Purchase Order ID': po.PurchaseOrderID,
+        'Supplier Name': po.Supplier?.Name || 'N/A',
+        'Product Name': po.Product?.Name || 'N/A',
+        'Quantity': po.Quantity,
+        'Base Price': `₱${Number(po.BasePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        'Total Purchase Cost': `₱${Number(po.TotalPurchaseCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        'Order Placed Date': po.OrderPlacedDateTime ? new Date(po.OrderPlacedDateTime).toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric'
+        }) : 'N/A',
+        'Order Arrival Date': po.OrderArrivalDateTime ? new Date(po.OrderArrivalDateTime).toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric'
+        }) : 'Pending',
+        'ETA': po.ETA ? new Date(po.ETA).toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric'
+        }) : 'N/A',
+      }))
+
+      const filename = `supplier_purchase_report_${new Date().toISOString().split('T')[0]}.csv`
+
+      setPreviewData({ rows, filename })
+      setPreviewModalOpen(true)
+    } catch (err) {
+      console.error('Error generating preview:', err)
+      toast.error('Failed to generate report preview')
+    } finally {
+      setLoadingPreview(false)
+    }
+  }
+
+  // Download CSV
+  const downloadCSV = (filename: string, rows: any[]) => {
+    if (rows.length === 0) {
+      toast.warning('No data to download')
+      return
+    }
+
+    const headers = Object.keys(rows[0])
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => 
+        headers.map(header => {
+          const value = row[header] || ''
+          // Escape commas and quotes in values
+          return `"${String(value).replace(/"/g, '""')}"`
+        }).join(',')
+      )
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success(`Report downloaded successfully!`)
+  }
+
+  // Confirm and download CSV
+  const confirmDownloadReport = () => {
+    if (!previewData) return
+    downloadCSV(previewData.filename, previewData.rows)
+    setPreviewModalOpen(false)
+    setPreviewData(null)
+    setSelectedSuppliers(new Set())
+  }
+
+  // Close preview modal
+  const closePreview = () => {
+    setPreviewModalOpen(false)
+    setPreviewData(null)
+    setSelectedSuppliers(new Set())
   }
 
 
@@ -161,6 +338,14 @@ const ProductSourceList = () => {
               </div>
             </div>
           </div>
+          
+          {/* Generate Report Button */}
+          <button
+            onClick={handleGenerateReport}
+            className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors whitespace-nowrap"
+          >
+            Generate Report
+          </button>
         </div>
       </div>
 
@@ -202,7 +387,23 @@ const ProductSourceList = () => {
                     key={product.ProductID}
                   >
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
-                    {product.ProductID}
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{product.ProductID}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyProductID(product.ProductID);
+                          }}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="Copy Product ID"
+                        >
+                          {copiedProductIDs.has(product.ProductID) ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                          )}
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <div className="flex items-center gap-3">
@@ -267,6 +468,165 @@ const ProductSourceList = () => {
           </button>
         </div>
       </div>
+
+      {/* Supplier Selection Modal */}
+      {supplierModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Select Suppliers for Report
+              </h3>
+              <button
+                onClick={closeSupplierModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 min-h-0">
+              {suppliers.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  No suppliers available
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {suppliers.map((supplier) => (
+                    <label
+                      key={supplier.SupplierID}
+                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSuppliers.has(supplier.SupplierID || '')}
+                        onChange={() => toggleSupplier(supplier.SupplierID || '')}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="font-medium text-gray-900">
+                          {supplier.Name}
+                        </div>
+                        {supplier.ContactNumber && (
+                          <div className="text-sm text-gray-500">
+                            {supplier.ContactNumber}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+              <button
+                className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                onClick={closeSupplierModal}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={generatePreview}
+                disabled={selectedSuppliers.size === 0 || loadingPreview}
+              >
+                {loadingPreview ? 'Generating...' : 'Generate Preview'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Preview Modal */}
+      {previewModalOpen && previewData && (
+        <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Report Preview
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {previewData.filename} ({previewData.rows.length} rows)
+                </p>
+              </div>
+              <button
+                onClick={closePreview}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 min-h-0">
+              {previewData.rows.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">No data to preview</div>
+                </div>
+              ) : (
+                <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+                  <table className="table table-zebra w-full text-sm min-w-full">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        {Object.keys(previewData.rows[0]).map((header) => (
+                          <th 
+                            key={header} 
+                            className={`px-4 py-2 font-semibold text-gray-700 whitespace-nowrap ${
+                              header === "Product Name" || header === "Supplier Name" ? "text-left" : "text-center"
+                            }`}
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.rows.slice(0, 50).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          {Object.keys(previewData.rows[0]).map((header) => (
+                            <td 
+                              key={header} 
+                              className={`px-4 py-2 border-b border-gray-200 whitespace-nowrap ${
+                                header === "Product Name" || header === "Supplier Name" ? "text-left" : "text-center"
+                              }`}
+                            >
+                              {row[header] !== null && row[header] !== undefined
+                                ? String(row[header])
+                                : ""}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {previewData.rows.length > 50 && (
+                    <div className="mt-4 text-center text-sm text-gray-500">
+                      Showing first 50 of {previewData.rows.length} rows. Full data will be included in download.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+              <button
+                className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                onClick={closePreview}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={confirmDownloadReport}
+                disabled={!previewData || previewData.rows.length === 0}
+              >
+                Generate Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

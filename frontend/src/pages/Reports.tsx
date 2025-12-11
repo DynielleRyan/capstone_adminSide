@@ -279,6 +279,125 @@ function ReportSelectionModal({
   );
 }
 
+function ReportPreviewModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  data,
+  filename,
+  loading,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  data: any[];
+  filename: string;
+  loading: boolean;
+}) {
+  if (!isOpen) return null;
+
+  // Get headers from first row
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
+  // Limit preview to first 50 rows for performance
+  const previewRows = data.slice(0, 50);
+  const hasMore = data.length > 50;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Report Preview
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {filename} ({data.length} rows)
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-6 min-h-0">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Loading preview...</div>
+            </div>
+          ) : data.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">No data to preview</div>
+            </div>
+          ) : (
+            <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+              <table className="table table-zebra w-full text-sm min-w-full">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    {headers.map((header) => (
+                      <th 
+                        key={header} 
+                        className={`px-4 py-2 font-semibold text-gray-700 whitespace-nowrap ${
+                          header === "Product Name" ? "text-left" : "text-center"
+                        }`}
+                      >
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      {headers.map((header) => (
+                        <td 
+                          key={header} 
+                          className={`px-4 py-2 border-b border-gray-200 whitespace-nowrap ${
+                            header === "Product Name" ? "text-left" : "text-center"
+                          }`}
+                        >
+                          {row[header] !== null && row[header] !== undefined
+                            ? String(row[header])
+                            : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {hasMore && (
+                <div className="mt-4 text-center text-sm text-gray-500">
+                  Showing first 50 of {data.length} rows. Full data will be included in download.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+            onClick={onConfirm}
+            disabled={loading || data.length === 0}
+          >
+            Generate Report
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Reports() {
   const {
     // controls
@@ -311,14 +430,25 @@ export default function Reports() {
     loadingTop,
     loadingReorder,
     // actions
-    downloadTopCSV,
-    downloadReorderCSV,
+    generateTopReport,
+    confirmDownloadTopReport,
+    closeTopPreview,
+    topPreviewData,
+    generateReorderReport,
+    confirmDownloadReorderReport,
+    closeReorderPreview,
+    reorderPreviewData,
     // modal
     modalState,
     openDownloadModal,
     closeModal,
     // detailed report
     generateDetailedReport,
+    // preview
+    previewData,
+    loadingPreview,
+    confirmDownloadReport,
+    closePreview,
   } = report_hooks();
 
   // 🔒 SAFETY: never let Recharts / tables receive undefined
@@ -340,7 +470,7 @@ export default function Reports() {
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   onClick={() => openDownloadModal("Detailed Report", () => {})}
                 >
-                  Download Report
+                  Generate Report
                 </button>
               </div>
 
@@ -432,13 +562,15 @@ export default function Reports() {
               <div className="px-6 py-4 flex justify-end border-b border-gray-200">
                 <button
                   className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={() =>
-                    safeTop.length === 0
-                      ? toast.warning("No report available to download.")
-                      : openDownloadModal("Top Selling", downloadTopCSV)
-                  }
+                  onClick={() => {
+                    if (safeTop.length === 0) {
+                      toast.warning("No report available to download.");
+                    } else {
+                      generateTopReport();
+                    }
+                  }}
                 >
-                  Download Report
+                  Generate Report
                 </button>
               </div>
 
@@ -663,59 +795,88 @@ export default function Reports() {
         </div>
 
         {/* Reorder Level */}
-        <div className="bg-gray-50 ">
-          <div className="px-6 py-4 flex justify-end border-b border-gray-200 ">
+        <div className="bg-gray-50 rounded-lg shadow">
+          <div className="px-6 py-4 flex justify-between items-center border-b border-gray-200">
+            <div>
+              <h2 className="font-semibold text-lg text-gray-900">
+                Low Stock - Reorder Recommendations
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Products that need to be restocked to maintain minimum stock levels
+              </p>
+            </div>
             <button
               className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              onClick={() =>
-                safeReorder.length === 0
-                  ? toast.warning("No report available to download.")
-                  : openDownloadModal("Reorder Level", downloadReorderCSV)
-              }
+              onClick={() => {
+                if (safeReorder.length === 0) {
+                  toast.warning("No report available to generate.");
+                } else {
+                  generateReorderReport();
+                }
+              }}
             >
-              Download Report
+              Generate Report
             </button>
           </div>
 
-          <div className="bg-white rounded-lg p-6 min-w-0 shadow">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="font-semibold text-lg">
-                Reorder Level for Low on Stock
-              </h2>
-            </div>
-
-            <div className="overflow-x-auto h-dvh">
-              <table className="table table-sm">
-                <thead>
+          <div className="bg-white rounded-lg p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-blue-800 text-white">
                   <tr>
-                    <th>Name</th>
-                    <th>Current Qty</th>
-                    <th>Reorder Level</th>
-                    <th>Suggested Reorder Qty</th>
+                    <th className="px-6 py-3 text-left font-semibold border-r border-white/20">Product Name</th>
+                    <th className="px-6 py-3 text-center font-semibold border-r border-white/20">Current Quantity</th>
+                    <th className="px-6 py-3 text-center font-semibold border-r border-white/20">Minimum Stock Level</th>
+                    <th className="px-6 py-3 text-center font-semibold">Suggested Reorder Quantity</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingReorder ? (
                     <tr>
-                      <td colSpan={4} className="text-center opacity-60">
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                         Loading...
                       </td>
                     </tr>
                   ) : safeReorder.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center opacity-60">
-                        No low stock
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                        No products below minimum stock level
                       </td>
                     </tr>
                   ) : (
-                    safeReorder.map((r) => (
-                      <tr key={r.productId ?? r.name}>
-                        <td>{r.name}</td>
-                        <td>{r.totalStock ?? 0}</td>
-                        <td>{r.reorderLevel ?? 0}</td>
-                        <td>{r.reorderQuantity ?? 0}</td>
-                      </tr>
-                    ))
+                    safeReorder.map((r, index) => {
+                      const currentStock = r.totalStock ?? 0;
+                      const minimumStockLevel = r.reorderLevel ?? 0;
+                      const suggestedReorderQty = currentStock < minimumStockLevel ? 30 : 0;
+                      
+                      return (
+                        <tr
+                          key={r.productId ?? r.name}
+                          className={`${
+                            index % 2 === 0 ? "bg-blue-50" : "bg-white"
+                          } hover:bg-blue-100 transition-colors`}
+                        >
+                          <td className="px-6 py-4 text-gray-700 font-medium border-r border-gray-200">
+                            {r.name}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 text-center">
+                            {currentStock}
+                          </td>
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 text-center">
+                            {minimumStockLevel}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              suggestedReorderQty > 0 
+                                ? "bg-orange-100 text-orange-800" 
+                                : "bg-gray-100 text-gray-600"
+                            }`}>
+                              {suggestedReorderQty > 0 ? `${suggestedReorderQty} units` : "No reorder needed"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -727,6 +888,35 @@ export default function Reports() {
           isOpen={modalState.isOpen}
           onClose={closeModal}
           onGenerate={generateDetailedReport}
+        />
+        
+        <ReportPreviewModal
+          isOpen={previewData.isOpen}
+          onClose={closePreview}
+          onConfirm={confirmDownloadReport}
+          data={previewData.rows}
+          filename={previewData.filename}
+          loading={loadingPreview}
+        />
+
+        {/* Top Selling Report Preview Modal */}
+        <ReportPreviewModal
+          isOpen={topPreviewData.isOpen}
+          onClose={closeTopPreview}
+          onConfirm={confirmDownloadTopReport}
+          data={topPreviewData.rows}
+          filename={topPreviewData.filename}
+          loading={false}
+        />
+
+        {/* Reorder Level Report Preview Modal */}
+        <ReportPreviewModal
+          isOpen={reorderPreviewData.isOpen}
+          onClose={closeReorderPreview}
+          onConfirm={confirmDownloadReorderReport}
+          data={reorderPreviewData.rows}
+          filename={reorderPreviewData.filename}
+          loading={false}
         />
       </div>
     </div>
