@@ -112,17 +112,22 @@ export async function sendInventorySMSAlertCron(force = false) {
   // SMS MESSAGE (Professional format, optimized for Twilio)
   // Target: < 160 chars for single SMS segment (GSM-7 encoding)
   // Avoids special characters to prevent UCS-2 encoding (70 char limit)
-  // Reuse 'now' variable declared above for expiring count
+  // Format date/time in Philippine timezone (Asia/Manila, UTC+8)
   
-  const dateStr = now.toLocaleDateString("en-PH", { 
+  // Convert to Philippine timezone explicitly
+  const phTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+  
+  const dateStr = phTime.toLocaleDateString("en-US", { 
     month: "short", 
     day: "numeric", 
-    year: "numeric" 
+    year: "numeric",
+    timeZone: "Asia/Manila"
   });
-  const timeStr = now.toLocaleTimeString("en-PH", { 
+  const timeStr = phTime.toLocaleTimeString("en-US", { 
     hour: "2-digit", 
     minute: "2-digit",
-    hour12: true 
+    hour12: true,
+    timeZone: "Asia/Manila"
   });
 
   // Professional, concise format
