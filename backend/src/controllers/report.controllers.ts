@@ -855,7 +855,8 @@ export const getReorderLevelFromItems: RequestHandler = async (req, res) => {
         if (!product) return null;
 
         const total = totalStock[pid] || 0;
-        const suggestedQty = total < threshold ? 30 : 0;
+        // Calculate suggested reorder: (minimum - current) + 10 headroom
+        const suggestedQty = total < threshold ? (threshold - total) + 10 : 0;
 
         return {
           productId: pid,

@@ -190,9 +190,12 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   // ===============================
   //  CHART LOADER FUNCTION
   // ===============================
-  const loadChart = async (view: ChartView) => {
-    // Use cached data if available
-    if (seriesCache[view]?.length) {
+  const loadChart = async (view: ChartView, forceRefresh = false) => {
+    // For "day" view, always refresh to get latest transactions (including today)
+    // For other views, use cache if available and not forcing refresh
+    const shouldUseCache = view !== "day" && !forceRefresh && seriesCache[view]?.length;
+    
+    if (shouldUseCache) {
       setChartData(seriesCache[view]);
       return;
     }
@@ -222,6 +225,7 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
         label: r.day || r.week || r.month || r.year,
         total: r.total,
         units: r.units,
+        totalTransactions: r.count || r.units || 0, // Use count if available, fallback to units
       }));
 
       // Cache and apply
@@ -235,15 +239,35 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     }
   };
 
+  // Refresh chart data (clears cache and reloads)
+  const refreshChart = () => {
+    setSeriesCache({ day: [], week: [], month: [], year: [] });
+    loadChart(chartView, true);
+  };
+
   // Load chart initially based on default view
   useEffect(() => {
-    loadChart(chartView);
+    loadChart(chartView, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-load when view changes
   useEffect(() => {
-    loadChart(chartView);
+    loadChart(chartView, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartView]);
+
+  // Auto-refresh day view every 10 seconds to catch new transactions immediately
+  useEffect(() => {
+    if (chartView === "day") {
+      // Immediate refresh on mount
+      loadChart("day", true);
+      
+      const interval = setInterval(() => {
+        loadChart("day", true);
+      }, 10000); // Refresh every 10 seconds for faster updates
+      return () => clearInterval(interval);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartView]);
 
@@ -782,6 +806,7 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     setChartView,
     chartData,
     chartLoading,
+    refreshChart,
 
     // Low Stock Report
     generateLowReport,

@@ -585,6 +585,18 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                     <span className="font-semibold">Staff:</span>
                     <span>{selectedTransaction.User.FirstName} {selectedTransaction.User.LastName}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">PWD/Senior Accredited:</span>
+                    <span className={selectedTransaction.SeniorPWDID ? "text-green-600 font-medium" : "text-gray-600"}>
+                      {selectedTransaction.SeniorPWDID ? "Yes" : "No"}
+                    </span>
+                  </div>
+                  {selectedTransaction.SeniorPWDID && (
+                    <div className="flex justify-between">
+                      <span className="font-semibold">PWD/Senior ID:</span>
+                      <span className="text-xs font-mono">{selectedTransaction.SeniorPWDID}</span>
+                    </div>
+                  )}
                 </div>
 
                 <hr className="border-gray-300" />
