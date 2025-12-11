@@ -36,31 +36,72 @@ export async function sendInventorySMSAlertCron(force = false) {
     return { smsSent: false, reason: "already_sent_today" };
   }
 
-  // COUNT LOW STOCK
-  const { count: low, error: lowErr } = await supabase
+  // COUNT LOW STOCK PRODUCTS (matching reorder report logic)
+  // Count products where TOTAL stock (sum of all batches) <= threshold
+  const threshold = 20;
+  
+  // Get all active product items
+  const { data: allItems, error: itemErr } = await supabase
     .from("Product_Item")
-    .select("*", { count: "exact", head: true })
-    .eq("IsActive", true)
-    .lte("Stock", 20);
-  if (lowErr) throw lowErr;
+    .select("ProductID, Stock, IsActive")
+    .eq("IsActive", true);
+  
+  if (itemErr) throw itemErr;
 
-  // COUNT EXPIRING
+  // Calculate total stock per product
+  const totalStock: Record<string, number> = {};
+  for (const it of allItems ?? []) {
+    const pid = it.ProductID;
+    const stock = Number(it.Stock) || 0;
+    if (!(pid in totalStock)) {
+      totalStock[pid] = stock;
+    } else {
+      totalStock[pid] += stock;
+    }
+  }
+
+  // Get product IDs where total stock <= threshold
+  const lowStockProductIds = Object.keys(totalStock).filter(
+    pid => (totalStock[pid] || 0) <= threshold
+  );
+
+  // Only count products that are active
+  let low = 0;
+  if (lowStockProductIds.length > 0) {
+    const { data: activeProducts, error: prodErr } = await supabase
+      .from("Product")
+      .select("ProductID")
+      .eq("IsActive", true)
+      .in("ProductID", lowStockProductIds);
+    
+    if (prodErr) throw prodErr;
+    low = activeProducts?.length || 0;
+  }
+
+  // COUNT EXPIRING (matching dashboard logic)
+  // Count items expiring within 6 months, excluding already expired items
   const now = new Date();
-  const warnUntil = new Date();
+  const warnUntil = new Date(now);
   warnUntil.setMonth(warnUntil.getMonth() + 6);
 
-  const { data: items, error: expErr } = await supabase
+  const { data: expiringItems, error: expErr } = await supabase
     .from("Product_Item")
-    .select("ExpiryDate, IsActive")
+    .select("ProductItemID, ExpiryDate, IsActive")
     .eq("IsActive", true)
     .not("ExpiryDate", "is", null);
   if (expErr) throw expErr;
 
-  const expiring =
-    items?.filter((it) => {
-      const expDate = new Date(it.ExpiryDate);
-      return expDate > now && expDate <= warnUntil;
-    }).length ?? 0;
+  // Filter items: must be future date and within 6 months
+  // This matches getExpiringCounts logic exactly
+  let expiring = 0;
+  for (const it of expiringItems ?? []) {
+    const exp = new Date(it.ExpiryDate as any);
+    if (isNaN(exp.getTime())) continue; // Skip invalid dates
+    if (exp <= now) continue; // Skip already expired items
+    if (exp <= warnUntil) {
+      expiring++; // Count items expiring within 6 months
+    }
+  }
 
   // If nothing critical, skip SMS
   if (!force && low === 0 && expiring === 0) {
@@ -68,12 +109,36 @@ export async function sendInventorySMSAlertCron(force = false) {
     return { smsSent: false, reason: "no_critical_items" };
   }
 
-  // SMS MESSAGE
-  const text =
-    `Jambo's Pharmacy Alert\n` +
-    `Low Stock: ${low}\n` +
-    `Expiring Soon: ${expiring}\n` +
-    `Date: ${new Date().toLocaleString("en-PH")}`;
+  // SMS MESSAGE (Professional format, optimized for Twilio)
+  // Target: < 160 chars for single SMS segment (GSM-7 encoding)
+  // Avoids special characters to prevent UCS-2 encoding (70 char limit)
+  // Reuse 'now' variable declared above for expiring count
+  
+  const dateStr = now.toLocaleDateString("en-PH", { 
+    month: "short", 
+    day: "numeric", 
+    year: "numeric" 
+  });
+  const timeStr = now.toLocaleTimeString("en-PH", { 
+    hour: "2-digit", 
+    minute: "2-digit",
+    hour12: true 
+  });
+
+  // Professional, concise format
+  // Example output: ~85-95 characters (well under 160 limit)
+  const text = 
+    `JAMBOS PHARMACY ALERT\n` +
+    `Low Stock: ${low} products\n` +
+    `Expiring: ${expiring} items\n` +
+    `${dateStr} ${timeStr}`;
+  
+  // Character count validation (should be ~85-95 chars)
+  // Twilio limits: 160 chars (GSM-7) or 70 chars (UCS-2)
+  // This format uses only standard ASCII, stays in GSM-7 encoding
+  if (text.length > 160) {
+    console.warn(`SMS message length (${text.length}) exceeds recommended limit`);
+  }
 
   // SEND SMS
   const sms = await sendSMS(ADMIN_PHONE, text);
