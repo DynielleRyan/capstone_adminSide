@@ -358,12 +358,14 @@ export function report_hooks() {
       return;
     }
 
-    // Calculate suggested reorder quantity: if current stock is below minimum stock level, suggest 30
+    // Calculate suggested reorder quantity: (minimum - current) + 10 headroom
     const rows = all.map((r) => {
       const currentStock = r.totalStock ?? 0;
       const minimumStockLevel = r.reorderLevel ?? 0;
-      // If current stock is below minimum, suggest reordering 30 units
-      const suggestedReorderQty = currentStock < minimumStockLevel ? 30 : 0;
+      // If current stock is below minimum, calculate: (minimum - current) + 10
+      const suggestedReorderQty = currentStock < minimumStockLevel 
+        ? (minimumStockLevel - currentStock) + 10 
+        : 0;
       
       return {
         "Product Name": r.name,

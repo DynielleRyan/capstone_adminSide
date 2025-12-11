@@ -319,56 +319,87 @@ export const getDailySales: RequestHandler = async (req, res) => {
   try {
     const daysLimit = Number(req.query.days ?? 60); // default 60 days
     const now = new Date();
-    const from = new Date();
+    
+    // Calculate date range - get transactions from N days ago to end of today
+    const from = new Date(now);
     from.setDate(now.getDate() - daysLimit);
+    from.setHours(0, 0, 0, 0); // Start of day
+    
+    // Set end of today for filtering
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
 
-    // 1️⃣ Get all transactions within the last N days
+    // 1️⃣ Get ALL transactions (no date filter in query - filter in code to avoid timezone issues)
+    // This ensures we always get today's transactions regardless of server timezone
     const { data: txs, error } = await supabase
       .from("Transaction")
-      .select("Total, OrderDateTime")
-      .gte("OrderDateTime", from.toISOString())
-      .lte("OrderDateTime", now.toISOString());
+      .select("TransactionID, Total, OrderDateTime")
+      .order("OrderDateTime", { ascending: false })
+      .limit(10000); // Get enough transactions to cover the date range
 
     if (error) return res.status(500).json({ message: error.message });
 
     // 2️⃣ Group totals by date
-    const dayTotals: Record<string, { total: number; units: number }> = {};
+    const dayTotals: Record<string, { total: number; units: number; count: number }> = {};
 
-    // Transactions (total)
+    // Transactions (total and count)
+    // Filter transactions in code to avoid timezone issues
     for (const t of txs ?? []) {
       const d = new Date(t.OrderDateTime);
-      const dayKey = d.toISOString().slice(0, 10); // e.g., "2025-10-28"
-      if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0 };
+      
+      // Use local date string to match user's timezone
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dayKey = `${year}-${month}-${day}`; // e.g., "2025-12-11"
+      if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0, count: 0 };
       dayTotals[dayKey].total += Number(t.Total || 0);
+      dayTotals[dayKey].count += 1; // Count transactions
     }
 
-    // Transaction items (units sold)
-    const { data: items, error: iErr } = await supabase
-      .from("Transaction_Item")
-      .select(`
-        Quantity,
-        Transaction:TransactionID ( OrderDateTime )
-      `);
+    // Transaction items (units sold) - only get items for transactions we already have
+    const transactionIds = (txs ?? []).map(t => t.TransactionID || '').filter(Boolean);
+    
+    if (transactionIds.length > 0) {
+      const { data: items, error: iErr } = await supabase
+        .from("Transaction_Item")
+        .select(`
+          Quantity,
+          TransactionID,
+          Transaction:TransactionID ( OrderDateTime )
+        `)
+        .in("TransactionID", transactionIds);
 
-    if (iErr) return res.status(500).json({ message: iErr.message });
+      if (iErr) return res.status(500).json({ message: iErr.message });
 
-    for (const it of items ?? []) {
-      const transaction = Array.isArray(it.Transaction) ? it.Transaction[0] : it.Transaction;
-      if (!transaction?.OrderDateTime) continue;
-      const d = new Date(transaction.OrderDateTime);
-      if (d < from || d > now) continue;
+      // Create a map of transaction dates for quick lookup
+      const txnDateMap = new Map<string, Date>();
+      for (const t of txs ?? []) {
+        if (t.TransactionID && t.OrderDateTime) {
+          txnDateMap.set(t.TransactionID, new Date(t.OrderDateTime));
+        }
+      }
 
-      const dayKey = d.toISOString().slice(0, 10);
-      if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0 };
-      dayTotals[dayKey].units += Number(it.Quantity || 0);
+      for (const it of items ?? []) {
+        const txnDate = txnDateMap.get(it.TransactionID);
+        if (!txnDate) continue;
+        
+        // Use local date string to match user's timezone
+        const year = txnDate.getFullYear();
+        const month = String(txnDate.getMonth() + 1).padStart(2, '0');
+        const day = String(txnDate.getDate()).padStart(2, '0');
+        const dayKey = `${year}-${month}-${day}`;
+        if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0, count: 0 };
+        dayTotals[dayKey].units += Number(it.Quantity || 0);
+      }
     }
 
     // 3️⃣ Convert to sorted array
     const data = Object.entries(dayTotals)
-      .map(([day, { total, units }]) => ({ day, total, units }))
+      .map(([day, { total, units, count }]) => ({ day, total, units, count }))
       .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
 
-    return res.json({ from: from.toISOString(), to: now.toISOString(), data });
+    return res.json({ from: from.toISOString(), to: todayEnd.toISOString(), data });
   } catch (err: any) {
     return res.status(500).json({ message: err?.message ?? "Internal Server Error" });
   }

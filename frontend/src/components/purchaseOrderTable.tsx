@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { PurchaseOrder } from "../types/purchaseOrder";
-import { Search, PenSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, PenSquare, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 
 interface Props {
@@ -13,6 +13,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   const [sortBy, setSortBy] = useState("none");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
+  const [copiedPurchaseOrderIDs, setCopiedPurchaseOrderIDs] = useState<Set<string>>(new Set());
 
   // 🔍 Search function
   function filterPurchaseOrders(
@@ -103,6 +104,23 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
     setCurrentPage(1);
   }, [searchTerm, sortBy]);
 
+  // Copy purchase order ID to clipboard
+  const copyPurchaseOrderID = async (purchaseOrderID: string) => {
+    try {
+      await navigator.clipboard.writeText(purchaseOrderID);
+      setCopiedPurchaseOrderIDs(prev => new Set(prev).add(purchaseOrderID));
+      setTimeout(() => {
+        setCopiedPurchaseOrderIDs(prev => {
+          const next = new Set(prev);
+          next.delete(purchaseOrderID);
+          return next;
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   return (
     <div className="p-6 bg-white min-h-screen">
       {/* Blue background div */}
@@ -180,7 +198,25 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
             <tbody className=" bg-blue-50">
               {paginatedData.map((order => (
               <tr key={order.PurchaseOrderID} >
-                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(order.PurchaseOrderID).padStart(2, '0')}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{String(order.PurchaseOrderID).padStart(2, '0')}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyPurchaseOrderID(order.PurchaseOrderID);
+                      }}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      title="Copy Purchase Order ID"
+                    >
+                      {copiedPurchaseOrderIDs.has(order.PurchaseOrderID) ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                      )}
+                    </button>
+                  </div>
+                </td>
                 <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div className="flex items-center gap-2">
                         {order.Product.Image ? (

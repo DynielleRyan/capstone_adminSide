@@ -847,7 +847,10 @@ export default function Reports() {
                     safeReorder.map((r, index) => {
                       const currentStock = r.totalStock ?? 0;
                       const minimumStockLevel = r.reorderLevel ?? 0;
-                      const suggestedReorderQty = currentStock < minimumStockLevel ? 30 : 0;
+                      // Calculate: (minimum - current) + 10 headroom
+                      const suggestedReorderQty = currentStock < minimumStockLevel 
+                        ? (minimumStockLevel - currentStock) + 10 
+                        : 0;
                       
                       return (
                         <tr

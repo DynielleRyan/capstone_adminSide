@@ -120,12 +120,15 @@ export default function Dashboard() {
                         if (typeof value === "number" && name === "total") {
                           return [`₱${value.toFixed(2)}`, "total"];
                         }
+                        if (typeof value === "number" && name === "totalTransactions") {
+                          return [value, "totalTransactions"];
+                        }
                         return [value, name];
                       }}
                     />
                     <Bar
                       yAxisId="left"
-                      dataKey="units"
+                      dataKey="totalTransactions"
                       fill="#4B9CE2"
                       isAnimationActive={!disableAnim}
                     />
