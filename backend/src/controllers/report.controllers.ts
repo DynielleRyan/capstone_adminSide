@@ -807,17 +807,26 @@ export const getReorderLevelFromItems: RequestHandler = async (req, res) => {
 
     if (itemErr) return res.status(500).json({ error: itemErr.message });
 
-    // 2️⃣ Group by product, track lowest batch stock
+    // 2️⃣ Group by product, track lowest batch stock and total stock
     const lowestBatchStock: Record<string, number> = {};
+    const totalStock: Record<string, number> = {};
 
     for (const it of items ?? []) {
       const pid = it.ProductID;
       const stock = Number(it.Stock) || 0;
 
+      // Track lowest batch stock
       if (!(pid in lowestBatchStock)) {
         lowestBatchStock[pid] = stock;
       } else {
         lowestBatchStock[pid] = Math.min(lowestBatchStock[pid], stock);
+      }
+
+      // Track total stock across all batches
+      if (!(pid in totalStock)) {
+        totalStock[pid] = stock;
+      } else {
+        totalStock[pid] += stock;
       }
     }
 
@@ -845,15 +854,17 @@ export const getReorderLevelFromItems: RequestHandler = async (req, res) => {
 
         if (!product) return null;
 
-        const suggestedQty = Math.max(threshold - lowest, 0);
+        const total = totalStock[pid] || 0;
+        const suggestedQty = total < threshold ? 30 : 0;
 
         return {
           productId: pid,
           name: product.Name,
+          totalStock: total,
           lowestBatchStock: lowest,
           reorderLevel: threshold,
           suggestedReorderQty: suggestedQty,
-          status: lowest <= threshold ? "LOW STOCK" : "OK",
+          status: total < threshold ? "LOW STOCK" : "OK",
         };
       })
       .filter((r) => r && r.status === "LOW STOCK");

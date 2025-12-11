@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -15,6 +15,7 @@ import { useAuth } from "../hooks/useAuth";
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isPharmacist } = useAuth();
 
   // Pharmacist menu items
@@ -65,7 +66,12 @@ const Sidebar = () => {
   return (
     <aside className="w-64 bg-blue-50 border-r border-blue-50 h-full">
       <div className="p-4">
-        <h2 className="text-lg font-bold text-blue-600 text-center">Jambo's Pharmacy</h2>
+        <h2 
+          className="text-lg font-bold text-blue-600 text-center cursor-pointer hover:text-blue-800 transition-colors"
+          onClick={() => navigate(isPharmacist ? "/pharmacist/dashboard" : "/")}
+        >
+          Jambo's Pharmacy
+        </h2>
       </div>
       <ul className="p-4 w-full space-y-1">
         {menuItems.map((item) => {

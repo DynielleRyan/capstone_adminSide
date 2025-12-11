@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Edit3, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Edit3, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import alertService from "../services/alertService";
 import {
   userService,
@@ -21,6 +21,7 @@ const RoleManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [copiedUserIDs, setCopiedUserIDs] = useState<Set<string>>(new Set());
 
   // Fetch users from API
   const fetchUsers = useCallback(
@@ -117,6 +118,23 @@ const RoleManagement = () => {
 
     return filtered;
   }, [users, searchTerm, sortBy]);
+
+  // Copy user ID to clipboard
+  const copyUserID = async (userID: string) => {
+    try {
+      await navigator.clipboard.writeText(userID);
+      setCopiedUserIDs(prev => new Set(prev).add(userID));
+      setTimeout(() => {
+        setCopiedUserIDs(prev => {
+          const next = new Set(prev);
+          next.delete(userID);
+          return next;
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -222,6 +240,7 @@ const RoleManagement = () => {
           <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">USER ID</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">USERNAME</th>
@@ -232,7 +251,7 @@ const RoleManagement = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Loading users...
@@ -241,7 +260,7 @@ const RoleManagement = () => {
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-red-500"
                   >
                     Error: {error}
@@ -250,7 +269,7 @@ const RoleManagement = () => {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No users found
@@ -261,6 +280,25 @@ const RoleManagement = () => {
                   <tr
                     key={user.UserID}
                   >
+                    <td className="px-6 py-4 text-gray-700 text-center border border-white font-mono text-sm">
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{user.UserID}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyUserID(user.UserID || '');
+                          }}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="Copy User ID"
+                        >
+                          {copiedUserIDs.has(user.UserID || '') ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {user.FirstName} {user.MiddleInitial} {user.LastName}
                     </td>

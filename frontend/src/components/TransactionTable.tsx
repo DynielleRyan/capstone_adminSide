@@ -3,7 +3,8 @@ import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
-import { Search, Eye, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, X, Copy, Check } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface Props {
   transactions: Transaction[];
@@ -18,6 +19,19 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
   const [qtyMap, setQtyMap] = useState<Record<string, number>>({});
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("all");
+  const [previewData, setPreviewData] = useState<{
+    transactions: Transaction[];
+    filename: string;
+  } | null>(null);
+  const [transactionItemsMap, setTransactionItemsMap] = useState<Map<string, TransactionItem[]>>(new Map());
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [copiedTransactionIDs, setCopiedTransactionIDs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!transactions.length) return;
@@ -55,8 +69,156 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     }, 0);
   };
 
-  // Prepare CSV headers for all Transaction table columns
-  const handleDownloadCSV = () => {
+  // Copy transaction ID to clipboard
+  const copyTransactionID = async (transactionID: string) => {
+    try {
+      await navigator.clipboard.writeText(transactionID);
+      setCopiedTransactionIDs(prev => new Set(prev).add(transactionID));
+      setTimeout(() => {
+        setCopiedTransactionIDs(prev => {
+          const next = new Set(prev);
+          next.delete(transactionID);
+          return next;
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // Get unique staff members and payment methods from transactions
+  const uniqueStaff = useMemo(() => {
+    const staffMap = new Map<string, string>();
+    transactions.forEach(tx => {
+      const staffId = tx.UserID;
+      const staffName = `${tx.User.FirstName} ${tx.User.LastName}`;
+      if (!staffMap.has(staffId)) {
+        staffMap.set(staffId, staffName);
+      }
+    });
+    return Array.from(staffMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [transactions]);
+
+  const uniquePaymentMethods = useMemo(() => {
+    const methods = new Set<string>();
+    transactions.forEach(tx => {
+      if (tx.PaymentMethod) {
+        methods.add(tx.PaymentMethod);
+      }
+    });
+    return Array.from(methods).sort();
+  }, [transactions]);
+
+  // Filter transactions based on selected filters
+  const getFilteredTransactions = () => {
+    let filtered = transactions;
+
+    // Filter by staff
+    if (selectedStaff !== "all") {
+      filtered = filtered.filter(tx => tx.UserID === selectedStaff);
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      filtered = filtered.filter(tx => {
+        const txnDate = new Date(tx.OrderDateTime);
+        if (startDate && endDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          return txnDate >= start && txnDate <= end;
+        } else if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          return txnDate >= start;
+        } else if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          return txnDate <= end;
+        }
+        return true;
+      });
+    }
+
+    // Filter by payment method
+    if (selectedPaymentMethod !== "all") {
+      filtered = filtered.filter(tx => tx.PaymentMethod === selectedPaymentMethod);
+    }
+
+    return filtered;
+  };
+
+  // Fetch transaction items for discount calculation
+  const fetchTransactionItems = async (transactionIds: string[]) => {
+    setLoadingItems(true);
+    const itemsMap = new Map<string, TransactionItem[]>();
+    
+    try {
+      // Fetch items for all transactions in parallel
+      const itemPromises = transactionIds.map(async (id) => {
+        try {
+          const result = await fetchTransactionWithItems(id);
+          if (result && result.items) {
+            itemsMap.set(id, result.items);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch items for transaction ${id}:`, error);
+        }
+      });
+      
+      await Promise.all(itemPromises);
+      setTransactionItemsMap(itemsMap);
+    } catch (error) {
+      console.error("Error fetching transaction items:", error);
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  // Show preview instead of downloading immediately
+  const handleDownloadCSV = async () => {
+    const filteredTransactions = getFilteredTransactions();
+
+    if (filteredTransactions.length === 0) {
+      toast.warning("No transactions match the selected filters.");
+      return;
+    }
+
+    // Fetch transaction items for discount calculation
+    toast.info("Loading transaction details...");
+    const transactionIds = filteredTransactions.map(tx => tx.TransactionID);
+    await fetchTransactionItems(transactionIds);
+
+    // Create filename with filter info
+    let filename = `transactions_${new Date().toISOString().split("T")[0]}`;
+    if (selectedStaff !== "all") {
+      const staffName = uniqueStaff.find(s => s.id === selectedStaff)?.name || "";
+      filename += `_${staffName.replace(/\s+/g, '_')}`;
+    }
+    if (startDate || endDate) {
+      filename += `_${startDate || 'start'}_to_${endDate || 'end'}`;
+    }
+    if (selectedPaymentMethod !== "all") {
+      filename += `_${selectedPaymentMethod.replace(/\s+/g, '_')}`;
+    }
+    filename += ".csv";
+
+    setPreviewData({
+      transactions: filteredTransactions,
+      filename,
+    });
+    setFilterModalOpen(false);
+    setPreviewModalOpen(true);
+  };
+
+  // Actually download the CSV
+  const confirmDownloadCSV = () => {
+    if (!previewData || previewData.transactions.length === 0) {
+      toast.warning("No transactions to download.");
+      return;
+    }
+
     const headers = [
       "TransactionID",
       "Clerk",
@@ -68,21 +230,33 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       "Payment Change",
       "Reference No.",
       "Quantity",
+      "PWD/Senior Accredited",
+      "PWD/Senior ID",
+      "Total Discount",
     ];
 
     // Prepare CSV data with all Transaction table fields
-    const csvData = transactions.map((tx) => [
-      tx.TransactionID,
-      tx.User.FirstName + " " + tx.User.LastName,
-      tx.Total.toString(),
-      tx.PaymentMethod,
-      tx.VATAmount,
-      tx.OrderDateTime,
-      tx.CashReceived,
-      tx.PaymentChange,
-      tx.ReferenceNo,
-      qtyMap[tx.TransactionID] ?? 0,
-    ]);
+    const csvData = previewData.transactions.map((tx) => {
+      const items = transactionItemsMap.get(tx.TransactionID) || [];
+      const totalDiscount = calculateTotalDiscount(items);
+      const isPWDSenior = tx.SeniorPWDID ? "Yes" : "No";
+      
+      return [
+        tx.TransactionID,
+        tx.User.FirstName + " " + tx.User.LastName,
+        `₱${tx.Total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        tx.PaymentMethod,
+        `₱${(tx.VATAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        tx.OrderDateTime,
+        tx.CashReceived ? `₱${parseFloat(tx.CashReceived).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
+        tx.PaymentChange ? `₱${parseFloat(tx.PaymentChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
+        tx.ReferenceNo,
+        qtyMap[tx.TransactionID] ?? 0,
+        isPWDSenior,
+        tx.SeniorPWDID || "",
+        `₱${totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      ];
+    });
 
     // Combine headers and data
     const csvContent = [headers, ...csvData]
@@ -94,14 +268,15 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `transactions_${new Date().toISOString().split("T")[0]}.csv`
-    );
+    link.setAttribute("download", previewData.filename);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast.success(`Downloaded ${previewData.transactions.length} transaction(s)`);
+    setPreviewModalOpen(false);
+    setPreviewData(null);
   };
 
   // Search function
@@ -233,7 +408,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           {/* Download CSV Button */}
           <button
             className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-500 transition-colors flex items-center gap-2"
-            onClick={handleDownloadCSV}
+            onClick={() => setFilterModalOpen(true)}
           >
             DOWNLOAD CSV 
           </button>
@@ -258,7 +433,25 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <tbody className=" bg-blue-50">
             {paginatedData.map((tx => (
               <tr key={tx.TransactionID} >
-                <td className="px-4 py-4 text-gray-700 text-center border border-white">{String(tx.TransactionID).padStart(2, '0')}</td>
+                <td className="px-4 py-4 text-gray-700 text-center border border-white">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{String(tx.TransactionID).padStart(2, '0')}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyTransactionID(tx.TransactionID);
+                      }}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      title="Copy Transaction ID"
+                    >
+                      {copiedTransactionIDs.has(tx.TransactionID) ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                      )}
+                    </button>
+                  </div>
+                </td>
                 <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 
@@ -529,6 +722,249 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           )}
         </div>
       </dialog>
+
+      {/* CSV Download Filter Modal */}
+      {filterModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50">
+          <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Download CSV with Filters
+              </h3>
+              <button
+                onClick={() => setFilterModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Staff Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Staff Member
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedStaff}
+                  onChange={(e) => setSelectedStaff(e.target.value)}
+                >
+                  <option value="all">All Staff</option>
+                  {uniqueStaff.map((staff) => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date Range Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transaction Date Range
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      max={new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      max={new Date().toISOString().split("T")[0]}
+                      min={startDate || undefined}
+                    />
+                  </div>
+                </div>
+                {(startDate || endDate) && (
+                  <button
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Clear dates
+                  </button>
+                )}
+              </div>
+
+              {/* Payment Method Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Method
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={selectedPaymentMethod}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                >
+                  <option value="all">All Payment Methods</option>
+                  {uniquePaymentMethods.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview count */}
+              <div className="bg-gray-50 p-3 rounded-md">
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold">{getFilteredTransactions().length}</span> transaction(s) will be downloaded
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                  onClick={() => {
+                    setFilterModalOpen(false);
+                    setSelectedStaff("all");
+                    setStartDate("");
+                    setEndDate("");
+                    setSelectedPaymentMethod("all");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+                  onClick={handleDownloadCSV}
+                >
+                  Generate Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Preview Modal */}
+      {previewModalOpen && previewData && (
+        <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Transaction CSV Preview
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {previewData.filename} ({previewData.transactions.length} transactions)
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setPreviewModalOpen(false);
+                  setPreviewData(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 min-h-0">
+              {loadingItems ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">Loading transaction details...</div>
+                </div>
+              ) : previewData.transactions.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">No transactions to preview</div>
+                </div>
+              ) : (
+                <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+                  <table className="table table-zebra w-full text-sm min-w-full">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Transaction ID</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Clerk</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Total</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Payment Method</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">VAT Amount</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Transaction Date</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Reference No.</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Quantity</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">PWD/Senior Accredited</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">PWD/Senior ID</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Total Discount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.transactions.slice(0, 50).map((tx) => {
+                        const items = transactionItemsMap.get(tx.TransactionID) || [];
+                        const totalDiscount = calculateTotalDiscount(items);
+                        const isPWDSenior = tx.SeniorPWDID ? "Yes" : "No";
+                        
+                        return (
+                          <tr key={tx.TransactionID} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{tx.TransactionID}</td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                              {tx.User.FirstName} {tx.User.LastName}
+                            </td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                              ₱{tx.Total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{tx.PaymentMethod}</td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                              ₱{(tx.VATAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                              {new Date(tx.OrderDateTime).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{tx.ReferenceNo || ""}</td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{qtyMap[tx.TransactionID] ?? 0}</td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{isPWDSenior}</td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{tx.SeniorPWDID || ""}</td>
+                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                              ₱{totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {previewData.transactions.length > 50 && (
+                    <div className="mt-4 text-center text-sm text-gray-500">
+                      Showing first 50 of {previewData.transactions.length} transactions. Full data will be included in download.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+              <button
+                className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                onClick={() => {
+                  setPreviewModalOpen(false);
+                  setPreviewData(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={confirmDownloadCSV}
+                disabled={!previewData || previewData.transactions.length === 0 || loadingItems}
+              >
+                {loadingItems ? "Loading..." : "Generate Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

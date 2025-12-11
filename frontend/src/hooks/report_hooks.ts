@@ -90,6 +90,40 @@ export function report_hooks() {
   const [loadingChart, setLoadingChart] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
   const [loadingReorder, setLoadingReorder] = useState(false);
+  
+  // -------- STATE: Preview --------
+  const [previewData, setPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  }>({
+    rows: [],
+    filename: "",
+    isOpen: false,
+  });
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // -------- STATE: Top Selling Preview --------
+  const [topPreviewData, setTopPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  }>({
+    rows: [],
+    filename: "",
+    isOpen: false,
+  });
+
+  // -------- STATE: Reorder Level Preview --------
+  const [reorderPreviewData, setReorderPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  }>({
+    rows: [],
+    filename: "",
+    isOpen: false,
+  });
 
   // ===============================
   //  FETCH: Chart (Daily/Weekly/Monthly/Yearly)
@@ -205,7 +239,7 @@ export function report_hooks() {
       return {
         Day: r.dayLabel || r.day,
         TotalTransactions: r.totalTransactions,
-        TotalSales: r.totalSales,
+        TotalSales: `₱${(r.totalSales || 0).toFixed(2)}`,
         TotalUnitsSold: r.totalUnitsSold,
         BestSellingProduct: r.bestProduct ?? "",
       };
@@ -213,7 +247,7 @@ export function report_hooks() {
       return {
         Week: r.weekTooltip || r.week,
         TotalTransactions: r.totalTransactions,
-        TotalSales: r.totalSales,
+        TotalSales: `₱${(r.totalSales || 0).toFixed(2)}`,
         TotalUnitsSold: r.totalUnitsSold,
         BestSellingProduct: r.bestProduct ?? "",
       };
@@ -221,7 +255,7 @@ export function report_hooks() {
       return {
         Month: r.month,
         TotalTransactions: r.totalTransactions,
-        TotalSales: r.totalSales,
+        TotalSales: `₱${(r.totalSales || 0).toFixed(2)}`,
         TotalUnitsSold: r.totalUnitsSold,
         BestSellingProduct: r.bestProduct ?? "",
       };
@@ -229,7 +263,7 @@ export function report_hooks() {
       return {
         Year: r.year,
         TotalTransactions: r.totalTransactions,
-        TotalSales: r.totalSales,
+        TotalSales: `₱${(r.totalSales || 0).toFixed(2)}`,
         TotalUnitsSold: r.totalUnitsSold,
         BestSellingProduct: r.bestProduct ?? "",
       };
@@ -240,71 +274,142 @@ export function report_hooks() {
 };
 
 
-  const downloadTopCSV = () => {
-  if (!topItems || topItems.length === 0) {
-    toast.warning("No report available to download.");
-    return;
-  }
+  const generateTopReport = () => {
+    if (!topItems || topItems.length === 0) {
+      toast.warning("No report available to generate.");
+      return;
+    }
 
-  const totalSales = topItems.reduce((sum, item) => sum + (item.revenue || 0), 0);
+    const totalSales = topItems.reduce((sum, item) => sum + (item.revenue || 0), 0);
 
-  const rows: any[] = topItems.map((it, i) => ({
-    Rank: i + 1,
-    [type === "product" ? "Product" : "Category"]:
-      type === "product"
-        ? it.name ?? "Unknown Product"
-        : it.category ?? "Uncategorized",
-    "Quantity Sold": it.sold,
-    "Revenue": (it.revenue || 0).toFixed(2),
-    "Average Unit Price": (it.avgPrice || 0).toFixed(2),
-    "Number of Transactions": it.transactions || 0,
-    "Percentage of Total Sales": `${(it.percentageOfSales || 0).toFixed(2)}%`,
-  }));
+    // Explicitly define only the columns we want - exclude PWD/Senior, Discount, Payment Method
+    const rows: any[] = topItems.map((it, i) => {
+      const row: any = {
+        Rank: i + 1,
+        [type === "product" ? "Product" : "Category"]:
+          type === "product"
+            ? it.name ?? "Unknown Product"
+            : it.category ?? "Uncategorized",
+        "Quantity Sold": it.sold,
+        "Revenue": `₱${(it.revenue || 0).toFixed(2)}`,
+        "Average Unit Price": `₱${(it.avgPrice || 0).toFixed(2)}`,
+        "Number of Transactions": it.transactions || 0,
+        "Percentage of Total Sales": `${(it.percentageOfSales || 0).toFixed(2)}%`,
+      };
+      // Explicitly exclude unwanted columns
+      delete row["PWD/Senior Accredited"];
+      delete row["Total Discount"];
+      delete row["Payment Method"];
+      delete row["Discount"];
+      delete row["PWD/Senior ID"];
+      return row;
+    });
 
-  // Add summary row
-  const totalQty = topItems.reduce((sum, item) => sum + item.sold, 0);
-  const totalTxn = topItems.reduce((sum, item) => sum + (item.transactions || 0), 0);
-  rows.push({
-    Rank: "",
-    [type === "product" ? "Product" : "Category"]: "TOTAL",
-    "Quantity Sold": totalQty,
-    "Revenue": totalSales.toFixed(2),
-    "Average Unit Price": totalQty > 0 ? (totalSales / totalQty).toFixed(2) : "0.00",
-    "Number of Transactions": totalTxn,
-    "Percentage of Total Sales": "100.00%",
-  });
+    // Add summary row
+    const totalQty = topItems.reduce((sum, item) => sum + item.sold, 0);
+    const totalTxn = topItems.reduce((sum, item) => sum + (item.transactions || 0), 0);
+    const summaryRow: any = {
+      Rank: "",
+      [type === "product" ? "Product" : "Category"]: "TOTAL",
+      "Quantity Sold": totalQty,
+      "Revenue": `₱${totalSales.toFixed(2)}`,
+      "Average Unit Price": `₱${totalQty > 0 ? (totalSales / totalQty).toFixed(2) : "0.00"}`,
+      "Number of Transactions": totalTxn,
+      "Percentage of Total Sales": "100.00%",
+    };
+    // Explicitly exclude unwanted columns from summary
+    delete summaryRow["PWD/Senior Accredited"];
+    delete summaryRow["Total Discount"];
+    delete summaryRow["Payment Method"];
+    delete summaryRow["Discount"];
+    delete summaryRow["PWD/Senior ID"];
+    rows.push(summaryRow);
 
-  downloadCSV(`top_${type}_${topPeriodType}_${limit}.csv`, rows);
-};
+    const filename = `top_${type}_${topPeriodType}_${limit}.csv`;
+    setTopPreviewData({
+      rows,
+      filename,
+      isOpen: true,
+    });
+  };
 
-  const downloadReorderCSV = async () => {
-  const all = await getReorder();
+  const confirmDownloadTopReport = () => {
+    if (topPreviewData.rows.length === 0) {
+      toast.warning("No report data to download.");
+      return;
+    }
+    downloadCSV(topPreviewData.filename, topPreviewData.rows);
+    toast.success("Report downloaded successfully!");
+    setTopPreviewData({ rows: [], filename: "", isOpen: false });
+  };
 
-  if (!all || all.length === 0) {
-    toast.warning("No report available to download.");
-    return;
-  }
+  const closeTopPreview = () => {
+    setTopPreviewData({ rows: [], filename: "", isOpen: false });
+  };
 
-  const rows = all.map((r) => ({
-    Name: r.name,
-    CurrentQty: r.totalStock,
-    ReorderLevel: r.reorderLevel,
-    SuggestedReorderQuantity: r.reorderQuantity,
-  }));
+  // Keep downloadTopCSV for backward compatibility if needed
+  const downloadTopCSV = generateTopReport;
 
-  downloadCSV("low_stock.csv", rows);
-};
+  const generateReorderReport = async () => {
+    const all = await getReorder();
+
+    if (!all || all.length === 0) {
+      toast.warning("No report available to generate.");
+      return;
+    }
+
+    // Calculate suggested reorder quantity: if current stock is below minimum stock level, suggest 30
+    const rows = all.map((r) => {
+      const currentStock = r.totalStock ?? 0;
+      const minimumStockLevel = r.reorderLevel ?? 0;
+      // If current stock is below minimum, suggest reordering 30 units
+      const suggestedReorderQty = currentStock < minimumStockLevel ? 30 : 0;
+      
+      return {
+        "Product Name": r.name,
+        "Current Quantity": currentStock,
+        "Minimum Stock Level": minimumStockLevel,
+        "Suggested Reorder Quantity": suggestedReorderQty,
+      };
+    });
+
+    const filename = `reorder_level_report_${new Date().toISOString().split("T")[0]}.csv`;
+    setReorderPreviewData({
+      rows,
+      filename,
+      isOpen: true,
+    });
+  };
+
+  const confirmDownloadReorderReport = () => {
+    if (reorderPreviewData.rows.length === 0) {
+      toast.warning("No report data to download.");
+      return;
+    }
+    downloadCSV(reorderPreviewData.filename, reorderPreviewData.rows);
+    toast.success("Report downloaded successfully!");
+    setReorderPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  const closeReorderPreview = () => {
+    setReorderPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Keep downloadReorderCSV for backward compatibility
+  const downloadReorderCSV = generateReorderReport;
 
   // ===============================
   //  DETAILED REPORT GENERATION
   // ===============================
   const generateDetailedReport = async (params: ReportParams) => {
     try {
+      setLoadingPreview(true);
       toast.info("Generating report...");
       const reportData = await fetchDetailedTransactionsForReport(params);
       
       if (!reportData.transactions || reportData.transactions.length === 0) {
         toast.warning("No transactions found for the selected period.");
+        setLoadingPreview(false);
         return;
       }
 
@@ -347,12 +452,45 @@ export function report_hooks() {
         }
       }
 
-      downloadCSV(filename, rows);
-      toast.success("Report downloaded successfully!");
+      // Show preview instead of downloading
+      setPreviewData({
+        rows,
+        filename,
+        isOpen: true,
+      });
+      setLoadingPreview(false);
+      toast.success("Report generated successfully!");
     } catch (error: any) {
       console.error("Failed to generate report:", error);
       toast.error(error?.response?.data?.message || "Failed to generate report");
+      setLoadingPreview(false);
     }
+  };
+
+  // Confirm and download the previewed report
+  const confirmDownloadReport = () => {
+    if (previewData.rows.length === 0) {
+      toast.warning("No report data to download.");
+      return;
+    }
+    downloadCSV(previewData.filename, previewData.rows);
+    toast.success("Report downloaded successfully!");
+    setPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Close preview modal
+  const closePreview = () => {
+    setPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Helper function to calculate total discount for a transaction
+  const calculateTransactionDiscount = (items: TransactionItem[]): number => {
+    return items.reduce((sum, item) => {
+      const discountPercent = item.DiscountID && item.Discount?.DiscountPercent ? item.Discount.DiscountPercent : 0;
+      const basePrice = (item.Product?.SellingPrice || 0) * (item.Quantity || 0);
+      const discountAmount = (discountPercent / 100) * basePrice;
+      return sum + discountAmount;
+    }, 0);
   };
 
   // Helper function to generate DAY report (transaction-level detail)
@@ -375,12 +513,16 @@ export function report_hooks() {
       "Unit Price": "Unit Price",
       "Subtotal": "Subtotal",
       "Discount": "Discount",
+      "PWD/Senior Accredited": "PWD/Senior Accredited",
       "PWD/Senior ID": "PWD/Senior ID",
+      "Total Discount": "Total Discount",
       "Transaction Total": "Transaction Total",
     });
 
     transactions.forEach((transaction: Transaction) => {
       const items = itemsByTransaction.get(transaction.TransactionID) || [];
+      const totalDiscount = calculateTransactionDiscount(items);
+      const isPWDSenior = transaction.SeniorPWDID ? "Yes" : "No";
       
       if (items.length === 0) {
         rows.push({
@@ -394,8 +536,10 @@ export function report_hooks() {
           "Unit Price": "",
           "Subtotal": "",
           "Discount": "",
+          "PWD/Senior Accredited": isPWDSenior,
           "PWD/Senior ID": transaction.SeniorPWDID || "",
-          "Transaction Total": transaction.Total,
+          "Total Discount": `₱${totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          "Transaction Total": `₱${(transaction.Total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         });
       } else {
         items.forEach((item: TransactionItem, index: number) => {
@@ -405,13 +549,15 @@ export function report_hooks() {
             "Date": index === 0 ? new Date(transaction.OrderDateTime).toLocaleString() : "",
             "Cashier": index === 0 ? `${transaction.User?.FirstName || ""} ${transaction.User?.LastName || ""}`.trim() : "",
             "Payment Method": index === 0 ? transaction.PaymentMethod : "",
-            "Product Name": item.Product?.Name || "",
-            "Quantity": item.Quantity,
-            "Unit Price": item.Product?.SellingPrice || 0,
-            "Subtotal": item.Subtotal,
-            "Discount": item.Discount?.DiscountPercent ? `${item.Discount.DiscountPercent}%` : "",
-            "PWD/Senior ID": index === 0 ? (transaction.SeniorPWDID || "") : "",
-            "Transaction Total": index === 0 ? transaction.Total : "",
+          "Product Name": item.Product?.Name || "",
+          "Quantity": item.Quantity,
+          "Unit Price": `₱${(item.Product?.SellingPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          "Subtotal": `₱${(item.Subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          "Discount": item.Discount?.DiscountPercent ? `${item.Discount.DiscountPercent}%` : "",
+          "PWD/Senior Accredited": index === 0 ? isPWDSenior : "",
+          "PWD/Senior ID": index === 0 ? (transaction.SeniorPWDID || "") : "",
+          "Total Discount": index === 0 ? `₱${totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
+          "Transaction Total": index === 0 ? `₱${(transaction.Total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
           });
         });
       }
@@ -426,6 +572,12 @@ export function report_hooks() {
     const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
     const pwdSeniorCount = transactions.filter(t => t.SeniorPWDID).length;
 
+    // Calculate total discount across all transactions
+    const totalDiscountAmount = transactions.reduce((sum, t) => {
+      const items = itemsByTransaction.get(t.TransactionID) || [];
+      return sum + calculateTransactionDiscount(items);
+    }, 0);
+
     // Add summary section
     rows.push({
       "Transaction ID": "",
@@ -438,7 +590,9 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
+      "Total Discount": "",
       "Transaction Total": "",
     });
     rows.push({
@@ -452,7 +606,9 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
+      "Total Discount": "",
       "Transaction Total": "",
     });
     rows.push({
@@ -466,7 +622,9 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
+      "Total Discount": "",
       "Transaction Total": "",
     });
     rows.push({
@@ -480,8 +638,10 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
-      "Transaction Total": totalSales,
+      "Total Discount": "",
+      "Transaction Total": `₱${totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
     rows.push({
       "Transaction ID": "Total Units Sold",
@@ -494,12 +654,14 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
+      "Total Discount": "",
       "Transaction Total": "",
     });
     rows.push({
       "Transaction ID": "Average Transaction Value",
-      "Receipt Number": avgTransactionValue.toFixed(2),
+      "Receipt Number": `₱${avgTransactionValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       "Date": "",
       "Cashier": "",
       "Payment Method": "",
@@ -508,7 +670,25 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
+      "Total Discount": "",
+      "Transaction Total": "",
+    });
+    rows.push({
+      "Transaction ID": "Total Discount Amount",
+      "Receipt Number": "",
+      "Date": "",
+      "Cashier": "",
+      "Payment Method": "",
+      "Product Name": "",
+      "Quantity": "",
+      "Unit Price": "",
+      "Subtotal": "",
+      "Discount": "",
+      "PWD/Senior Accredited": "",
+      "PWD/Senior ID": "",
+      "Total Discount": `₱${totalDiscountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       "Transaction Total": "",
     });
     rows.push({
@@ -522,7 +702,9 @@ export function report_hooks() {
       "Unit Price": "",
       "Subtotal": "",
       "Discount": "",
+      "PWD/Senior Accredited": "",
       "PWD/Senior ID": "",
+      "Total Discount": "",
       "Transaction Total": "",
     });
 
@@ -626,9 +808,9 @@ export function report_hooks() {
         "Date": new Date(dateKey).toLocaleDateString(),
         "Day of Week": dayData.dayOfWeek,
         "Total Transactions": dayData.totalTransactions,
-        "Total Sales": dayData.totalSales.toFixed(2),
+        "Total Sales": `₱${dayData.totalSales.toFixed(2)}`,
         "Total Units Sold": dayData.totalUnits,
-        "Avg Transaction Value": avgTxnValue.toFixed(2),
+        "Avg Transaction Value": `₱${avgTxnValue.toFixed(2)}`,
         "Cash Transactions": dayData.paymentMethods.cash || 0,
         "Card Transactions": dayData.paymentMethods.card || 0,
         "Other Payments": dayData.paymentMethods.other || 0,
@@ -704,7 +886,7 @@ export function report_hooks() {
       "Date": "Total Sales",
       "Day of Week": "",
       "Total Transactions": "",
-      "Total Sales": weeklyTotalSales.toFixed(2),
+      "Total Sales": `₱${weeklyTotalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Transaction Value": "",
       "Cash Transactions": "",
@@ -732,7 +914,7 @@ export function report_hooks() {
       "Total Transactions": "",
       "Total Sales": "",
       "Total Units Sold": "",
-      "Avg Transaction Value": avgDailySales.toFixed(2),
+      "Avg Transaction Value": `₱${avgDailySales.toFixed(2)}`,
       "Cash Transactions": "",
       "Card Transactions": "",
       "Other Payments": "",
@@ -743,7 +925,7 @@ export function report_hooks() {
       "Date": "Best Day",
       "Day of Week": bestDay[1].dayOfWeek,
       "Total Transactions": "",
-      "Total Sales": bestDay[1].totalSales.toFixed(2),
+      "Total Sales": `₱${bestDay[1].totalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Transaction Value": "",
       "Cash Transactions": "",
@@ -756,7 +938,7 @@ export function report_hooks() {
       "Date": "Worst Day",
       "Day of Week": worstDay[1].dayOfWeek,
       "Total Transactions": "",
-      "Total Sales": worstDay[1].totalSales.toFixed(2),
+      "Total Sales": `₱${worstDay[1].totalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Transaction Value": "",
       "Cash Transactions": "",
@@ -922,14 +1104,65 @@ export function report_hooks() {
         "Week": `Week ${weekNum}`,
         "Week Period": `${weekData.weekStart.toLocaleDateString()} - ${weekData.weekEnd.toLocaleDateString()}`,
         "Total Transactions": weekData.totalTransactions,
-        "Total Sales": weekData.totalSales.toFixed(2),
+        "Total Sales": `₱${weekData.totalSales.toFixed(2)}`,
         "Total Units Sold": weekData.totalUnits,
-        "Avg Daily Sales": avgDailySales.toFixed(2),
+        "Avg Daily Sales": `₱${avgDailySales.toFixed(2)}`,
         "Week-over-Week Growth": weekGrowth,
       });
 
       previousWeekSales = weekData.totalSales;
     });
+
+    // Check for remaining days after the last complete week
+    if (sortedWeeks.length > 0) {
+      const lastWeek = sortedWeeks[sortedWeeks.length - 1][1];
+      const monthEnd = new Date(_period.end);
+      monthEnd.setHours(23, 59, 59, 999);
+      
+      // Check if there are days after the last complete week
+      if (lastWeek.weekEnd < monthEnd) {
+        const remainingStart = new Date(lastWeek.weekEnd);
+        remainingStart.setDate(remainingStart.getDate() + 1);
+        remainingStart.setHours(0, 0, 0, 0);
+        
+        // Calculate totals for remaining days
+        let remainingSales = 0;
+        let remainingTransactions = 0;
+        let remainingUnits = 0;
+        
+        transactions.forEach(transaction => {
+          const date = new Date(transaction.OrderDateTime);
+          if (date >= remainingStart && date <= monthEnd) {
+            remainingSales += transaction.Total || 0;
+            remainingTransactions += 1;
+            
+            const items = itemsByTransaction.get(transaction.TransactionID) || [];
+            items.forEach(item => {
+              remainingUnits += item.Quantity || 0;
+            });
+          }
+        });
+        
+        // Only add remaining days row if there are transactions
+        if (remainingTransactions > 0) {
+          const remainingDays = Math.ceil((monthEnd.getTime() - remainingStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+          const avgDailySales = remainingDays > 0 ? remainingSales / remainingDays : 0;
+          const weekGrowth = previousWeekSales > 0 
+            ? ((remainingSales - previousWeekSales) / previousWeekSales * 100).toFixed(2) + "%"
+            : "N/A";
+          
+          rows.push({
+            "Week": "Remaining Days",
+            "Week Period": `${remainingStart.toLocaleDateString()} - ${monthEnd.toLocaleDateString()}`,
+            "Total Transactions": remainingTransactions,
+            "Total Sales": `₱${remainingSales.toFixed(2)}`,
+            "Total Units Sold": remainingUnits,
+            "Avg Daily Sales": `₱${avgDailySales.toFixed(2)}`,
+            "Week-over-Week Growth": weekGrowth,
+          });
+        }
+      }
+    }
 
     // Calculate monthly totals
     const monthlyTotalSales = transactions.reduce((sum, t) => sum + (t.Total || 0), 0);
@@ -1002,7 +1235,7 @@ export function report_hooks() {
       "Week": "Total Sales",
       "Week Period": "",
       "Total Transactions": "",
-      "Total Sales": monthlyTotalSales.toFixed(2),
+      "Total Sales": `₱${monthlyTotalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Week-over-Week Growth": "",
@@ -1022,7 +1255,7 @@ export function report_hooks() {
       "Total Transactions": "",
       "Total Sales": "",
       "Total Units Sold": "",
-      "Avg Daily Sales": avgDailySales.toFixed(2),
+      "Avg Daily Sales": `₱${avgDailySales.toFixed(2)}`,
       "Week-over-Week Growth": "",
     });
     rows.push({
@@ -1031,12 +1264,12 @@ export function report_hooks() {
       "Total Transactions": "",
       "Total Sales": "",
       "Total Units Sold": "",
-      "Avg Daily Sales": avgTransactionValue.toFixed(2),
+      "Avg Daily Sales": `₱${avgTransactionValue.toFixed(2)}`,
       "Week-over-Week Growth": "",
     });
     rows.push({
       "Week": "Best Week",
-      "Week Period": `Week ${bestWeek[0]} (${bestWeek[1].totalSales.toFixed(2)})`,
+      "Week Period": `Week ${bestWeek[0]} (₱${bestWeek[1].totalSales.toFixed(2)})`,
       "Total Transactions": "",
       "Total Sales": "",
       "Total Units Sold": "",
@@ -1222,10 +1455,10 @@ export function report_hooks() {
       rows.push({
         "Month": monthData.monthName,
         "Total Transactions": monthData.totalTransactions,
-        "Total Sales": monthData.totalSales.toFixed(2),
+        "Total Sales": `₱${monthData.totalSales.toFixed(2)}`,
         "Total Units Sold": monthData.totalUnits,
-        "Avg Daily Sales": avgDailySales.toFixed(2),
-        "Avg Transaction Value": avgTransactionValue.toFixed(2),
+        "Avg Daily Sales": `₱${avgDailySales.toFixed(2)}`,
+        "Avg Transaction Value": `₱${avgTransactionValue.toFixed(2)}`,
         "MoM Growth": momGrowth,
         "Best Day": bestDay.toString(),
         "Top 5 Products": top5Products,
@@ -1314,7 +1547,7 @@ export function report_hooks() {
       rows.push({
         "Month": quarter.quarter,
         "Total Transactions": "",
-        "Total Sales": quarter.totalSales.toFixed(2),
+        "Total Sales": `₱${quarter.totalSales.toFixed(2)}`,
         "Total Units Sold": "",
         "Avg Daily Sales": "",
         "Avg Transaction Value": "",
@@ -1351,7 +1584,7 @@ export function report_hooks() {
     rows.push({
       "Month": "Total Sales",
       "Total Transactions": "",
-      "Total Sales": annualTotalSales.toFixed(2),
+      "Total Sales": `₱${annualTotalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Avg Transaction Value": "",
@@ -1379,14 +1612,14 @@ export function report_hooks() {
       "Avg Transaction Value": "",
       "MoM Growth": "",
       "Best Day": "",
-      "Top 5 Products": avgMonthlySales.toFixed(2),
+      "Top 5 Products": `₱${avgMonthlySales.toFixed(2)}`,
     });
     rows.push({
       "Month": "Average Daily Sales",
       "Total Transactions": "",
       "Total Sales": "",
       "Total Units Sold": "",
-      "Avg Daily Sales": avgDailySales.toFixed(2),
+      "Avg Daily Sales": `₱${avgDailySales.toFixed(2)}`,
       "Avg Transaction Value": "",
       "MoM Growth": "",
       "Best Day": "",
@@ -1398,7 +1631,7 @@ export function report_hooks() {
       "Total Sales": "",
       "Total Units Sold": "",
       "Avg Daily Sales": "",
-      "Avg Transaction Value": avgTransactionValue.toFixed(2),
+      "Avg Transaction Value": `₱${avgTransactionValue.toFixed(2)}`,
       "MoM Growth": "",
       "Best Day": "",
       "Top 5 Products": "",
@@ -1406,7 +1639,7 @@ export function report_hooks() {
     rows.push({
       "Month": "Best Month",
       "Total Transactions": "",
-      "Total Sales": bestMonth[1].totalSales.toFixed(2),
+      "Total Sales": `₱${bestMonth[1].totalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Avg Transaction Value": "",
@@ -1417,7 +1650,7 @@ export function report_hooks() {
     rows.push({
       "Month": "Best Quarter",
       "Total Transactions": "",
-      "Total Sales": bestQuarter.totalSales.toFixed(2),
+      "Total Sales": `₱${bestQuarter.totalSales.toFixed(2)}`,
       "Total Units Sold": "",
       "Avg Daily Sales": "",
       "Avg Transaction Value": "",
@@ -1574,7 +1807,15 @@ export function report_hooks() {
     // CSV Actions
     downloadChartCSV,
     downloadTopCSV,
+    generateTopReport,
+    confirmDownloadTopReport,
+    closeTopPreview,
+    topPreviewData,
     downloadReorderCSV,
+    generateReorderReport,
+    confirmDownloadReorderReport,
+    closeReorderPreview,
+    reorderPreviewData,
     refetchReorder,
     // Modal
     modalState,
@@ -1582,5 +1823,10 @@ export function report_hooks() {
     closeModal,
     // Detailed Report
     generateDetailedReport,
+    // Preview
+    previewData,
+    loadingPreview,
+    confirmDownloadReport,
+    closePreview,
   } as const;
 }
