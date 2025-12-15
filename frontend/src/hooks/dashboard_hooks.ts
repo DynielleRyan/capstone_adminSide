@@ -324,8 +324,28 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   }, [chartView]);
 
   // ===============================
-  //  CSV EXPORTS (direct download)
+  //  CSV EXPORTS (with preview support)
   // ===============================
+  // State for low stock and expiring report previews
+  const [lowStockPreviewData, setLowStockPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  }>({
+    rows: [],
+    filename: "",
+    isOpen: false,
+  });
+  const [expiringPreviewData, setExpiringPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  }>({
+    rows: [],
+    filename: "",
+    isOpen: false,
+  });
+
   function generateLowReport() {
     const rows = lowRows.map((r) => ({
       "Product ID": r.productId,
@@ -338,8 +358,11 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     }));
     
     const filename = `low_on_stock_${new Date().toISOString().split("T")[0]}.csv`;
-    downloadCSV(filename, rows);
-    toast.success("Report downloaded successfully!");
+    setLowStockPreviewData({
+      rows,
+      filename,
+      isOpen: true,
+    });
   }
 
   function generateExpReport() {
@@ -358,9 +381,44 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     }));
     
     const filename = `expiring_batches_${new Date().toISOString().split("T")[0]}.csv`;
-    downloadCSV(filename, rows);
-    toast.success("Report downloaded successfully!");
+    setExpiringPreviewData({
+      rows,
+      filename,
+      isOpen: true,
+    });
+  }
+
+  // Confirm and download low stock report
+  const confirmDownloadLowReport = () => {
+    if (lowStockPreviewData.rows.length === 0) {
+      toast.warning("No report data to download.");
+      return;
     }
+    downloadCSV(lowStockPreviewData.filename, lowStockPreviewData.rows);
+    toast.success("Report downloaded successfully!");
+    setLowStockPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Close low stock preview
+  const closeLowStockPreview = () => {
+    setLowStockPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Confirm and download expiring report
+  const confirmDownloadExpReport = () => {
+    if (expiringPreviewData.rows.length === 0) {
+      toast.warning("No report data to download.");
+      return;
+    }
+    downloadCSV(expiringPreviewData.filename, expiringPreviewData.rows);
+    toast.success("Report downloaded successfully!");
+    setExpiringPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Close expiring preview
+  const closeExpiringPreview = () => {
+    setExpiringPreviewData({ rows: [], filename: "", isOpen: false });
+  };
 
   // ===============================
   //  SALES REPORT GENERATION
@@ -1247,9 +1305,15 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     // Low Stock Report
     generateLowReport,
     downloadLowCSV: generateLowReport, // Alias for backward compatibility
+    lowStockPreviewData,
+    confirmDownloadLowReport,
+    closeLowStockPreview,
     // Expiring Report
     generateExpReport,
     downloadExpCSV: generateExpReport, // Alias for backward compatibility
+    expiringPreviewData,
+    confirmDownloadExpReport,
+    closeExpiringPreview,
 
     // Sales Report
     salesPreviewData,
