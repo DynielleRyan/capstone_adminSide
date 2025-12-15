@@ -209,7 +209,7 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button
                     className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={generateLowReport}
+                  onClick={() => generateLowReport()}
                   >
                   Generate Report
                   </button>
@@ -335,7 +335,7 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button
                     className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={generateExpReport}
+                  onClick={() => generateExpReport()}
                   >
                   Generate Report
                   </button>

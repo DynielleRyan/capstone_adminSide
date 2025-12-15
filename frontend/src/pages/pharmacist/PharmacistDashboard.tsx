@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDashboard } from "../../hooks/dashboard_hooks";
-import { ArrowLeft, Copy, Check } from "lucide-react";
+import { ArrowLeft, Copy, Check, Search } from "lucide-react";
 
 const PharmacistDashboard = () => {
   const {
@@ -27,6 +27,120 @@ const PharmacistDashboard = () => {
 
   const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
 
+  // Filter states for Expiring Products
+  const [expSearchTerm, setExpSearchTerm] = useState("");
+  const [expCategory, setExpCategory] = useState("");
+  const [expBrand, setExpBrand] = useState("");
+  const [expExpiryLevel, setExpExpiryLevel] = useState<"all" | "danger" | "warn">("all");
+
+  // Filter states for Low Stock
+  const [lowSearchTerm, setLowSearchTerm] = useState("");
+  const [lowCategory, setLowCategory] = useState("");
+  const [lowBrand, setLowBrand] = useState("");
+  const [lowMinQty, setLowMinQty] = useState("");
+  const [lowMaxQty, setLowMaxQty] = useState("");
+
+  // Get unique categories and brands for filters
+  const expCategories = useMemo(() => {
+    const cats = new Set<string>();
+    (Array.isArray(expRows) ? expRows : []).forEach(r => {
+      if (r.category) cats.add(r.category);
+    });
+    return Array.from(cats).sort();
+  }, [expRows]);
+
+  const expBrands = useMemo(() => {
+    const brands = new Set<string>();
+    (Array.isArray(expRows) ? expRows : []).forEach(r => {
+      if (r.brand) brands.add(r.brand);
+    });
+    return Array.from(brands).sort();
+  }, [expRows]);
+
+  const lowCategories = useMemo(() => {
+    const cats = new Set<string>();
+    (Array.isArray(lowRows) ? lowRows : []).forEach(r => {
+      if (r.category) cats.add(r.category);
+    });
+    return Array.from(cats).sort();
+  }, [lowRows]);
+
+  const lowBrands = useMemo(() => {
+    const brands = new Set<string>();
+    (Array.isArray(lowRows) ? lowRows : []).forEach(r => {
+      if (r.brand) brands.add(r.brand);
+    });
+    return Array.from(brands).sort();
+  }, [lowRows]);
+
+  // Filter expiring rows
+  const filteredExpRows = useMemo(() => {
+    let filtered = Array.isArray(expRows) ? expRows : [];
+    
+    if (expSearchTerm) {
+      const term = expSearchTerm.toLowerCase();
+      filtered = filtered.filter(r => 
+        r.productId.toLowerCase().includes(term) ||
+        r.productName.toLowerCase().includes(term) ||
+        r.category.toLowerCase().includes(term) ||
+        r.brand.toLowerCase().includes(term)
+      );
+    }
+    
+    if (expCategory) {
+      filtered = filtered.filter(r => r.category === expCategory);
+    }
+    
+    if (expBrand) {
+      filtered = filtered.filter(r => r.brand === expBrand);
+    }
+    
+    if (expExpiryLevel !== "all") {
+      filtered = filtered.filter(r => r.expiryLevel === expExpiryLevel);
+    }
+    
+    return filtered;
+  }, [expRows, expSearchTerm, expCategory, expBrand, expExpiryLevel]);
+
+  // Filter low stock rows
+  const filteredLowRows = useMemo(() => {
+    let filtered = Array.isArray(lowRows) ? lowRows : [];
+    
+    if (lowSearchTerm) {
+      const term = lowSearchTerm.toLowerCase();
+      filtered = filtered.filter(r => 
+        r.productId.toLowerCase().includes(term) ||
+        r.name.toLowerCase().includes(term) ||
+        r.category.toLowerCase().includes(term) ||
+        r.brand.toLowerCase().includes(term)
+      );
+    }
+    
+    if (lowCategory) {
+      filtered = filtered.filter(r => r.category === lowCategory);
+    }
+    
+    if (lowBrand) {
+      filtered = filtered.filter(r => r.brand === lowBrand);
+    }
+    
+    if (lowMinQty) {
+      const min = Number(lowMinQty);
+      if (!isNaN(min)) {
+        filtered = filtered.filter(r => (r.qty ?? 0) >= min);
+      }
+    }
+    
+    if (lowMaxQty) {
+      const max = Number(lowMaxQty);
+      if (!isNaN(max)) {
+        filtered = filtered.filter(r => (r.qty ?? 0) <= max);
+      }
+    }
+    
+    return filtered;
+  }, [lowRows, lowSearchTerm, lowCategory, lowBrand, lowMinQty, lowMaxQty]);
+
   // 🧩 Handlers
   const handleOpenLow = async () => {
     await openLowModal();
@@ -39,8 +153,12 @@ const PharmacistDashboard = () => {
   const handleClose = () => setOpen(null);
 
   const handleGenerateReport = () => {
-    if (open === "low") generateLowReport();
-    if (open === "exp") generateExpReport();
+    if (open === "low") {
+      generateLowReport(filteredLowRows);
+    }
+    if (open === "exp") {
+      generateExpReport(filteredExpRows);
+    }
   };
 
   // Copy ID to clipboard
@@ -83,11 +201,60 @@ const PharmacistDashboard = () => {
             </div>
           </div>
           <button
-            className="text-blue-600 font-semibold hover:underline"
+            className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             onClick={handleOpenExp}
           >
             Generate Report
           </button>
+        </div>
+
+        {/* Filters for Expiring Products */}
+        <div className="px-6 py-4 border-b bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={expSearchTerm}
+                onChange={(e) => setExpSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm"
+              />
+            </div>
+            {/* Category */}
+            <select
+              value={expCategory}
+              onChange={(e) => setExpCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All Categories</option>
+              {expCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            {/* Brand */}
+            <select
+              value={expBrand}
+              onChange={(e) => setExpBrand(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All Brands</option>
+              {expBrands.map(brand => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+            {/* Expiry Level */}
+            <select
+              value={expExpiryLevel}
+              onChange={(e) => setExpExpiryLevel(e.target.value as "all" | "danger" | "warn")}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="all">All Levels</option>
+              <option value="danger">Danger (≤3 months)</option>
+              <option value="warn">Warning (3-6 months)</option>
+            </select>
+          </div>
         </div>
 
         <div className="p-6 overflow-auto max-h-[80vh]">
@@ -112,17 +279,19 @@ const PharmacistDashboard = () => {
                     Loading…
                   </td>
                 </tr>
-              ) : (Array.isArray(expRows) ? expRows : []).length === 0 ? (
+              ) : filteredExpRows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-6 py-8 text-center text-gray-500"
                   >
-                    No expiring items
+                    {expSearchTerm || expCategory || expBrand || expExpiryLevel !== "all" 
+                      ? "No items match the filters" 
+                      : "No expiring items"}
                   </td>
                 </tr>
               ) : (
-                expRows.slice(0, limit).map((r, _i) => (
+                filteredExpRows.slice(0, limit).map((r, _i) => (
                   <tr
                     key={r.productItemId}
                   >
@@ -178,11 +347,68 @@ const PharmacistDashboard = () => {
             {typeof lowCount === "number" ? ` · ${lowCount}` : ""}
           </h3>
           <button
-            className="text-blue-600 font-semibold hover:underline"
+            className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             onClick={handleOpenLow}
           >
             Generate Report
           </button>
+        </div>
+
+        {/* Filters for Low Stock */}
+        <div className="px-6 py-4 border-b bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={lowSearchTerm}
+                onChange={(e) => setLowSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm"
+              />
+            </div>
+            {/* Category */}
+            <select
+              value={lowCategory}
+              onChange={(e) => setLowCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All Categories</option>
+              {lowCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            {/* Brand */}
+            <select
+              value={lowBrand}
+              onChange={(e) => setLowBrand(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All Brands</option>
+              {lowBrands.map(brand => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+            {/* Min Quantity */}
+            <input
+              type="number"
+              placeholder="Min Qty"
+              value={lowMinQty}
+              onChange={(e) => setLowMinQty(e.target.value)}
+              min="0"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+            {/* Max Quantity */}
+            <input
+              type="number"
+              placeholder="Max Qty"
+              value={lowMaxQty}
+              onChange={(e) => setLowMaxQty(e.target.value)}
+              min="0"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
         </div>
 
         <div className="p-6 overflow-auto max-h-[80vh]">
@@ -208,17 +434,19 @@ const PharmacistDashboard = () => {
                     Loading…
                   </td>
                 </tr>
-              ) : (Array.isArray(lowRows) ? lowRows : []).length === 0 ? (
+              ) : filteredLowRows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
                     className="px-6 py-8 text-center text-gray-500"
                   >
-                    No low stock
+                    {lowSearchTerm || lowCategory || lowBrand || lowMinQty || lowMaxQty
+                      ? "No items match the filters" 
+                      : "No low stock"}
                   </td>
                 </tr>
               ) : (
-                lowRows.slice(0, limit).map((r, _index) => (
+                filteredLowRows.slice(0, limit).map((r, _index) => (
                   <tr
                     key={r.productId}
                   >
@@ -293,7 +521,7 @@ const PharmacistDashboard = () => {
 
                 <button
                   onClick={handleGenerateReport}
-                  className="text-blue-700 font-semibold text-sm hover:underline px-3"
+                  className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                 >
                   Generate Report
                 </button>
@@ -361,7 +589,7 @@ const PharmacistDashboard = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {lowRows.map((r, i) => (
+                            {filteredLowRows.map((r, i) => (
                               <tr
                                 key={r.productId}
                                 className={`${
@@ -454,7 +682,7 @@ const PharmacistDashboard = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {expRows.map((r, i) => (
+                            {filteredExpRows.map((r, i) => (
                               <tr
                                 key={r.productItemId}
                                 className={`${
