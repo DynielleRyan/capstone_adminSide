@@ -9,15 +9,34 @@ export const getLowStockCount: RequestHandler = async (req, res) => {
   try {
     const threshold = Number(req.query.threshold ?? 20);
 
-    const { count, error } = await supabase
+    // Get all matching Product_Item rows (≤ threshold)
+    const { data: items, error: iErr } = await supabase
       .from("Product_Item")
-      .select("*", { count: "exact", head: true })
+      .select("ProductID, Stock, IsActive")
       .eq("IsActive", true)
       .lte("Stock", threshold);
 
-    if (error) return res.status(500).json({ message: error.message });
+    if (iErr) return res.status(500).json({ message: iErr.message });
 
-    return res.json({ count: count ?? 0, threshold });
+    if (!items || items.length === 0) {
+      return res.json({ count: 0, threshold });
+    }
+
+    // Get unique product IDs that have active products
+    const productIds = [...new Set(items.map((it) => it.ProductID))];
+    
+    const { data: products, error: pErr } = await supabase
+      .from("Product")
+      .select("ProductID")
+      .eq("IsActive", true)
+      .in("ProductID", productIds);
+
+    if (pErr) return res.status(500).json({ message: pErr.message });
+
+    // Count unique active products (matching what listLowStock returns)
+    const count = products?.length || 0;
+
+    return res.json({ count, threshold });
   } catch (err: any) {
     return res.status(500).json({ message: err.message || "Internal Server Error" });
   }
