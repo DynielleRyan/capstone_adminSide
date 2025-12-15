@@ -242,16 +242,16 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       const isPWDSenior = tx.SeniorPWDID ? "Yes" : "No";
       
       return [
-        tx.TransactionID,
-        tx.User.FirstName + " " + tx.User.LastName,
+      tx.TransactionID,
+      tx.User.FirstName + " " + tx.User.LastName,
         `₱${tx.Total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        tx.PaymentMethod,
+      tx.PaymentMethod,
         `₱${(tx.VATAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        tx.OrderDateTime,
+      tx.OrderDateTime,
         tx.CashReceived ? `₱${parseFloat(tx.CashReceived).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
         tx.PaymentChange ? `₱${parseFloat(tx.PaymentChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
-        tx.ReferenceNo,
-        qtyMap[tx.TransactionID] ?? 0,
+      tx.ReferenceNo,
+      qtyMap[tx.TransactionID] ?? 0,
         isPWDSenior,
         tx.SeniorPWDID || "",
         `₱${totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,

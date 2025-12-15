@@ -31,9 +31,9 @@ export const PurchaseOrderForm = () => {
   
   // Handle input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    setDropdownOpen(value.trim().length > 0); // Open dropdown if there's input
+  const value = e.target.value;
+  setSearchTerm(value);
+  setDropdownOpen(value.trim().length > 0); // Open dropdown if there's input
     
     // Check if the input exactly matches a product ID
     if (value.trim()) {

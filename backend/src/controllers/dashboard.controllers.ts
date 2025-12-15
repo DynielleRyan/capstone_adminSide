@@ -361,16 +361,16 @@ export const getDailySales: RequestHandler = async (req, res) => {
     const transactionIds = (txs ?? []).map(t => t.TransactionID || '').filter(Boolean);
     
     if (transactionIds.length > 0) {
-      const { data: items, error: iErr } = await supabase
-        .from("Transaction_Item")
-        .select(`
-          Quantity,
+    const { data: items, error: iErr } = await supabase
+      .from("Transaction_Item")
+      .select(`
+        Quantity,
           TransactionID,
-          Transaction:TransactionID ( OrderDateTime )
+        Transaction:TransactionID ( OrderDateTime )
         `)
         .in("TransactionID", transactionIds);
 
-      if (iErr) return res.status(500).json({ message: iErr.message });
+    if (iErr) return res.status(500).json({ message: iErr.message });
 
       // Create a map of transaction dates for quick lookup
       const txnDateMap = new Map<string, Date>();
@@ -380,7 +380,7 @@ export const getDailySales: RequestHandler = async (req, res) => {
         }
       }
 
-      for (const it of items ?? []) {
+    for (const it of items ?? []) {
         const txnDate = txnDateMap.get(it.TransactionID);
         if (!txnDate) continue;
         
@@ -390,7 +390,7 @@ export const getDailySales: RequestHandler = async (req, res) => {
         const day = String(txnDate.getDate()).padStart(2, '0');
         const dayKey = `${year}-${month}-${day}`;
         if (!dayTotals[dayKey]) dayTotals[dayKey] = { total: 0, units: 0, count: 0 };
-        dayTotals[dayKey].units += Number(it.Quantity || 0);
+      dayTotals[dayKey].units += Number(it.Quantity || 0);
       }
     }
 

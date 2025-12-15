@@ -90,7 +90,7 @@ export function report_hooks() {
   const [loadingChart, setLoadingChart] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
   const [loadingReorder, setLoadingReorder] = useState(false);
-  
+
   // -------- STATE: Preview --------
   const [previewData, setPreviewData] = useState<{
     rows: any[];
@@ -275,26 +275,26 @@ export function report_hooks() {
 
 
   const generateTopReport = () => {
-    if (!topItems || topItems.length === 0) {
+  if (!topItems || topItems.length === 0) {
       toast.warning("No report available to generate.");
-      return;
-    }
+    return;
+  }
 
-    const totalSales = topItems.reduce((sum, item) => sum + (item.revenue || 0), 0);
+  const totalSales = topItems.reduce((sum, item) => sum + (item.revenue || 0), 0);
 
     // Explicitly define only the columns we want - exclude PWD/Senior, Discount, Payment Method
     const rows: any[] = topItems.map((it, i) => {
       const row: any = {
-        Rank: i + 1,
-        [type === "product" ? "Product" : "Category"]:
-          type === "product"
-            ? it.name ?? "Unknown Product"
-            : it.category ?? "Uncategorized",
-        "Quantity Sold": it.sold,
+    Rank: i + 1,
+    [type === "product" ? "Product" : "Category"]:
+      type === "product"
+        ? it.name ?? "Unknown Product"
+        : it.category ?? "Uncategorized",
+    "Quantity Sold": it.sold,
         "Revenue": `₱${(it.revenue || 0).toFixed(2)}`,
         "Average Unit Price": `₱${(it.avgPrice || 0).toFixed(2)}`,
-        "Number of Transactions": it.transactions || 0,
-        "Percentage of Total Sales": `${(it.percentageOfSales || 0).toFixed(2)}%`,
+    "Number of Transactions": it.transactions || 0,
+    "Percentage of Total Sales": `${(it.percentageOfSales || 0).toFixed(2)}%`,
       };
       // Explicitly exclude unwanted columns
       delete row["PWD/Senior Accredited"];
@@ -305,17 +305,17 @@ export function report_hooks() {
       return row;
     });
 
-    // Add summary row
-    const totalQty = topItems.reduce((sum, item) => sum + item.sold, 0);
-    const totalTxn = topItems.reduce((sum, item) => sum + (item.transactions || 0), 0);
+  // Add summary row
+  const totalQty = topItems.reduce((sum, item) => sum + item.sold, 0);
+  const totalTxn = topItems.reduce((sum, item) => sum + (item.transactions || 0), 0);
     const summaryRow: any = {
-      Rank: "",
-      [type === "product" ? "Product" : "Category"]: "TOTAL",
-      "Quantity Sold": totalQty,
+    Rank: "",
+    [type === "product" ? "Product" : "Category"]: "TOTAL",
+    "Quantity Sold": totalQty,
       "Revenue": `₱${totalSales.toFixed(2)}`,
       "Average Unit Price": `₱${totalQty > 0 ? (totalSales / totalQty).toFixed(2) : "0.00"}`,
-      "Number of Transactions": totalTxn,
-      "Percentage of Total Sales": "100.00%",
+    "Number of Transactions": totalTxn,
+    "Percentage of Total Sales": "100.00%",
     };
     // Explicitly exclude unwanted columns from summary
     delete summaryRow["PWD/Senior Accredited"];
@@ -331,7 +331,7 @@ export function report_hooks() {
       filename,
       isOpen: true,
     });
-  };
+};
 
   const confirmDownloadTopReport = () => {
     if (topPreviewData.rows.length === 0) {
@@ -351,12 +351,12 @@ export function report_hooks() {
   const downloadTopCSV = generateTopReport;
 
   const generateReorderReport = async () => {
-    const all = await getReorder();
+  const all = await getReorder();
 
-    if (!all || all.length === 0) {
+  if (!all || all.length === 0) {
       toast.warning("No report available to generate.");
-      return;
-    }
+    return;
+  }
 
     // Calculate suggested reorder quantity: (minimum - current) + 10 headroom
     const rows = all.map((r) => {
@@ -395,7 +395,7 @@ export function report_hooks() {
 
   const closeReorderPreview = () => {
     setReorderPreviewData({ rows: [], filename: "", isOpen: false });
-  };
+};
 
   // Keep downloadReorderCSV for backward compatibility
   const downloadReorderCSV = generateReorderReport;
@@ -551,13 +551,13 @@ export function report_hooks() {
             "Date": index === 0 ? new Date(transaction.OrderDateTime).toLocaleString() : "",
             "Cashier": index === 0 ? `${transaction.User?.FirstName || ""} ${transaction.User?.LastName || ""}`.trim() : "",
             "Payment Method": index === 0 ? transaction.PaymentMethod : "",
-          "Product Name": item.Product?.Name || "",
-          "Quantity": item.Quantity,
+            "Product Name": item.Product?.Name || "",
+            "Quantity": item.Quantity,
           "Unit Price": `₱${(item.Product?.SellingPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           "Subtotal": `₱${(item.Subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          "Discount": item.Discount?.DiscountPercent ? `${item.Discount.DiscountPercent}%` : "",
+            "Discount": item.Discount?.DiscountPercent ? `${item.Discount.DiscountPercent}%` : "",
           "PWD/Senior Accredited": index === 0 ? isPWDSenior : "",
-          "PWD/Senior ID": index === 0 ? (transaction.SeniorPWDID || "") : "",
+            "PWD/Senior ID": index === 0 ? (transaction.SeniorPWDID || "") : "",
           "Total Discount": index === 0 ? `₱${totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
           "Transaction Total": index === 0 ? `₱${(transaction.Total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
           });
