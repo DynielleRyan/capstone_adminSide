@@ -81,7 +81,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     }
   }, [pagination?.page, itemPage]);
   
-  // Trigger refresh when search, sort changes, or when itemPage is explicitly changed by user
+  // Trigger refresh when sort changes or when itemPage is explicitly changed by user
+  // Note: Search is now handled client-side since we fetch all products
   useEffect(() => {
     if (!onRefresh) return;
     
@@ -101,17 +102,15 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       return;
     }
     
-    // Only fetch if something actually changed
-    const searchChanged = prevSearchRef.current !== debouncedSearchTerm;
+    // Only fetch if sort or itemPage changed (search is now client-side)
     const sortChanged = prevSortRef.current !== `${sortBy}-${sortOrder}`;
     const itemPageChanged = prevItemPageForFetchRef.current !== itemPage;
     
-    if (!searchChanged && !sortChanged && !itemPageChanged) {
+    if (!sortChanged && !itemPageChanged) {
       return; // No changes, skip fetch
     }
     
     // Update refs
-    prevSearchRef.current = debouncedSearchTerm;
     prevSortRef.current = `${sortBy}-${sortOrder}`;
     prevItemPageForFetchRef.current = itemPage;
     
@@ -120,7 +119,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     
     const fetchData = async () => {
       if (!isCancelled) {
-        await onRefresh(itemPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
+        // Don't pass search term since we filter client-side now
+        await onRefresh(itemPage, undefined, sortByValue, sortOrder);
       }
     };
     
@@ -130,7 +130,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, sortBy, sortOrder, itemPage]); // Only trigger when these change
+  }, [sortBy, sortOrder, itemPage]); // Removed debouncedSearchTerm - search is client-side now
 
   // Delete product item from list
   const handleDeleteConfirmed = async () => {
@@ -145,7 +145,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       // Auto-refresh the product list
       if (onRefresh) {
         const sortByValue = sortBy === 'none' ? 'Name' : sortBy;
-        await onRefresh(currentPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
+        // Don't pass search term since we filter client-side now
+        await onRefresh(currentPage, undefined, sortByValue, sortOrder);
       }
     } catch (error) {
       console.error(error);
@@ -326,9 +327,26 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   // Group product items based on their ProductID (client-side grouping for display)
   const groupedProducts = useMemo(() => {
     // Product item will only be displayed if it satisfies the condition
-    const validItems = productList.filter(
+    let validItems = productList.filter(
       item => item.IsActive === true && item.Stock > 0
     );
+
+    // Apply search filter if search term exists
+    if (debouncedSearchTerm) {
+      const searchTerm = debouncedSearchTerm.toLowerCase();
+      validItems = validItems.filter(item => {
+        const product = item.Product;
+        if (!product) return false;
+        return (
+          product.Name?.toLowerCase().includes(searchTerm) ||
+          product.GenericName?.toLowerCase().includes(searchTerm) ||
+          product.Category?.toLowerCase().includes(searchTerm) ||
+          product.Brand?.toLowerCase().includes(searchTerm) ||
+          item.ProductID?.toLowerCase().includes(searchTerm) ||
+          item.ProductItemID?.toLowerCase().includes(searchTerm)
+        );
+      });
+    }
 
     // Groups product items based on their ProductID
     const grouped: Record<string, ProductItem[]> = {};
@@ -345,7 +363,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     });
 
     return grouped;
-  }, [productList]);
+  }, [productList, debouncedSearchTerm]);
 
   // Client-side pagination for grouped products (since we're grouping on the frontend)
   const currentGroupCount = Object.keys(groupedProducts).length;
@@ -382,26 +400,25 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Legend */}
-      <div className="px-6 py-4 mb-8 bg-blue-50 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h3 className="text-2xl font-bold text-blue-900">
-              LEGEND
-            </h3>
-            <div className="flex items-center gap-3 text-sm text-gray-600">
-              <span className="inline-block w-4 h-4 rounded bg-yellow-300" />
-              <span className="text-blue-900 font-medium text-base">Yellow - 6 months</span>
-              <span className="inline-block w-4 h-4 rounded bg-red-400 ml-2" />
-              <span className="text-blue-900 font-semibold text-base">Red - 3 months</span>
-            </div>
-          </div>
-      </div>
-
       {/* Blue background div */}
       <div className="p-6 bg-blue-50 rounded-lg">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-900 mb-4">PRODUCTS</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-blue-900">PRODUCTS</h1>
+          {/* Compact Legend */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-600">Expiry:</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-50 border border-yellow-200 rounded-md">
+              <span className="inline-block w-3.5 h-3.5 rounded-full bg-yellow-400 border border-yellow-500" />
+              <span className="text-xs font-medium text-yellow-900">6mo</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 border border-red-200 rounded-md">
+              <span className="inline-block w-3.5 h-3.5 rounded-full bg-red-500 border border-red-600" />
+              <span className="text-xs font-medium text-red-900">3mo</span>
+            </div>
+          </div>
+        </div>
 
       {/* Search and Sort*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">

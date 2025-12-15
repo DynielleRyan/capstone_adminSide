@@ -325,11 +325,15 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Expiring Products
                   </h3>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <span className="inline-block w-4 h-4 rounded bg-yellow-300" />
-                    <span>6 months</span>
-                    <span className="inline-block w-4 h-4 rounded bg-red-400 ml-2" />
-                    <span>3 months</span>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <span className="inline-block w-5 h-5 rounded-full bg-yellow-400 shadow-sm border-2 border-yellow-500" />
+                      <span className="font-medium text-yellow-900">6 months</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
+                      <span className="inline-block w-5 h-5 rounded-full bg-red-500 shadow-sm border-2 border-red-600" />
+                      <span className="font-medium text-red-900">3 months</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">

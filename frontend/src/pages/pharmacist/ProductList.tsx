@@ -21,18 +21,18 @@ export const ProductList = () => {
   // Use ref to prevent duplicate requests
   const isLoadingRef = useRef(false);
 
-  const loadProductList = useCallback(async (page: number = 1, search?: string, sortBy?: string, sortOrder?: string) => {
+  const loadProductList = useCallback(async (_page: number = 1, search?: string, sortBy?: string, sortOrder?: string) => {
     // Prevent multiple simultaneous requests
     if (isLoadingRef.current) return;
     
     isLoadingRef.current = true;
     setLoading(true);
     try {
-      // Fetch more items to account for grouping (each product might have multiple items)
-      // We fetch 200 items per page to ensure we have enough groups to paginate
+      // Fetch ALL products - no limit, get everything
+      // Page parameter is ignored since we fetch all products at once
       const response: ProductListResponse = await fetchProductList({
-        page,
-        limit: 200, // Increased limit to cover multiple group pages
+        page: 1, // Always fetch from page 1 to get all products
+        limit: 10000, // Very high limit to fetch all products
         search,
         sortBy: sortBy as 'Name' | 'Stock' | 'ExpiryDate' | undefined,
         sortOrder: sortOrder as 'asc' | 'desc' | undefined,

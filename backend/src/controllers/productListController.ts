@@ -23,10 +23,10 @@ export const getProductList: RequestHandler = async (req, res) => {
         const offset = (pageNum - 1) * limitNum;
 
         // First, get total count from database (for accurate pagination)
-        // Use count with the same filters as the main query
+        // For category/brand filtering, we need to join with Product table
         let countQuery = supabase
             .from('Product_Item')
-            .select('*', { count: 'exact', head: true });
+            .select('ProductID', { count: 'exact', head: true });
 
         if (onlyActive === 'true') {
             countQuery = countQuery.eq('IsActive', true);
@@ -39,30 +39,87 @@ export const getProductList: RequestHandler = async (req, res) => {
             countQuery = countQuery.lte('Stock', parseInt(maxStock as string));
         }
 
-        const { count: totalDbCount, error: countError } = await countQuery;
-        if (countError) {
-            console.error('Count query error:', countError);
-            // Fallback: continue without accurate count
+        // For category/brand, we'll need to fetch and filter (Supabase limitation)
+        let totalDbCount = 0;
+        if (category || brand) {
+            // Fetch ProductIDs that match category/brand, then count matching Product_Items
+            let productQuery = supabase
+                .from('Product')
+                .select('ProductID')
+                .eq('IsActive', true);
+            
+            if (category) {
+                productQuery = productQuery.eq('Category', category);
+            }
+            if (brand) {
+                productQuery = productQuery.eq('Brand', brand);
+            }
+            
+            const { data: matchingProducts } = await productQuery;
+            const matchingProductIds = matchingProducts?.map(p => p.ProductID) || [];
+            
+            if (matchingProductIds.length > 0) {
+                let itemCountQuery = supabase
+                    .from('Product_Item')
+                    .select('ProductItemID', { count: 'exact', head: true })
+                    .in('ProductID', matchingProductIds)
+                    .eq('IsActive', true);
+                
+                if (minStock !== undefined) {
+                    itemCountQuery = itemCountQuery.gte('Stock', parseInt(minStock as string));
+                }
+                if (maxStock !== undefined) {
+                    itemCountQuery = itemCountQuery.lte('Stock', parseInt(maxStock as string));
+                }
+                
+                const { count } = await itemCountQuery;
+                totalDbCount = count || 0;
+            }
+        } else {
+            // No category/brand filter - use simple count
+            const { count, error: countError } = await countQuery;
+            if (countError) {
+                console.error('Count query error:', countError);
+            } else {
+                totalDbCount = count || 0;
+            }
         }
 
-        // For client-side filtering (search, category, brand), we need to fetch a larger batch
-        // Calculate how many items we need to fetch to cover the requested page after filtering
-        const needsClientFiltering = !!(search || category || brand);
+        // For category/brand filtering, first get matching ProductIDs, then filter Product_Items
+        let productIdsToFilter: string[] | undefined = undefined;
         
-        let fetchOffset: number;
-        let fetchLimit: number;
-        
-        if (needsClientFiltering) {
-            // When filtering, fetch a larger batch from an earlier offset to account for filtered items
-            const fetchMultiplier = 5; // Fetch 5x to ensure we have enough after filtering
-            fetchLimit = limitNum * fetchMultiplier;
-            fetchOffset = Math.max(0, offset - (limitNum * 2)); // Start 2 pages earlier
-        } else {
-            // No filtering needed - fetch exactly what's requested
-            fetchOffset = offset;
-            fetchLimit = limitNum;
+        if (category || brand) {
+            let productQuery = supabase
+                .from('Product')
+                .select('ProductID')
+                .eq('IsActive', true);
+            
+            if (category) {
+                productQuery = productQuery.eq('Category', category);
+            }
+            if (brand) {
+                productQuery = productQuery.eq('Brand', brand);
+            }
+            
+            const { data: matchingProducts } = await productQuery;
+            productIdsToFilter = matchingProducts?.map(p => p.ProductID) || [];
+            
+            // If no products match, return empty result early
+            if (productIdsToFilter.length === 0) {
+                res.status(200).json({
+                    data: [],
+                    pagination: {
+                        page: pageNum,
+                        limit: limitNum,
+                        total: 0,
+                        totalPages: 0
+                    }
+                });
+                return;
+            }
         }
-        
+
+        // Build query with database-side filtering for better performance
         let query = supabase
             .from('Product_Item')
             .select('*, Product (Name, GenericName, Category, Brand, SellingPrice, Image, IsVATExemptYN)');
@@ -70,6 +127,11 @@ export const getProductList: RequestHandler = async (req, res) => {
         // Filter by active status
         if (onlyActive === 'true') {
             query = query.eq('IsActive', true);
+        }
+
+        // Apply ProductID filter if category/brand filtering is active
+        if (productIdsToFilter && productIdsToFilter.length > 0) {
+            query = query.in('ProductID', productIdsToFilter);
         }
 
         // Apply stock filters
@@ -80,7 +142,7 @@ export const getProductList: RequestHandler = async (req, res) => {
             query = query.lte('Stock', parseInt(maxStock as string));
         }
 
-        // Apply sorting
+        // Apply sorting - for Name sorting, we'll need to handle it differently
         if (sortBy === 'Stock') {
             query = query.order('Stock', { ascending: sortOrder === 'asc' });
         } else if (sortBy === 'ExpiryDate') {
@@ -90,12 +152,23 @@ export const getProductList: RequestHandler = async (req, res) => {
             query = query.order('ProductItemID', { ascending: true });
         }
 
-        // Fetch data with calculated offset and limit
-        const { data, error } = await query.range(fetchOffset, fetchOffset + fetchLimit - 1);
+        // Fetch ALL products - no pagination limit when limit is very high (10000)
+        // This ensures we get all products for the product list
+        let data: any[];
         
-        if (error) throw error;
+        if (limitNum >= 10000) {
+            // Fetch all products (no range limit)
+            const { data: allData, error } = await query;
+            if (error) throw error;
+            data = allData || [];
+        } else {
+            // Normal pagination for other use cases
+            const { data: paginatedData, error } = await query.range(offset, offset + limitNum - 1);
+            if (error) throw error;
+            data = paginatedData || [];
+        }
 
-        // Apply client-side filtering for search, category, brand (due to Supabase nested query limitations)
+        // Apply client-side filtering for search (works across all fetched products)
         let filteredData = data || [];
         
         if (search) {
@@ -112,19 +185,7 @@ export const getProductList: RequestHandler = async (req, res) => {
             });
         }
 
-        if (category) {
-            filteredData = filteredData.filter((item: any) => 
-                item.Product?.Category === category
-            );
-        }
-
-        if (brand) {
-            filteredData = filteredData.filter((item: any) => 
-                item.Product?.Brand === brand
-            );
-        }
-
-        // Apply Product Name sorting if needed
+        // Apply Product Name sorting if needed (client-side for now)
         if (sortBy === 'Name') {
             filteredData.sort((a: any, b: any) => {
                 const nameA = a.Product?.Name || '';
@@ -136,24 +197,34 @@ export const getProductList: RequestHandler = async (req, res) => {
         }
 
         // Calculate total count
-        // If no client-side filtering, use database count directly
-        // If client-side filtering is used, we need to estimate (can't get exact count without fetching all)
         let totalCount = totalDbCount || 0;
         
-        // If we have client-side filtering, estimate based on filter ratio
-        // This is an approximation - for exact count, we'd need to fetch all items
-        if (needsClientFiltering && data && data.length > 0 && totalDbCount) {
-            const filterRatio = filteredData.length / data.length;
-            totalCount = Math.max(filteredData.length, Math.ceil(totalDbCount * filterRatio));
-        } else if (!totalDbCount && filteredData.length > 0) {
-            // Fallback: if count query failed, use filtered data length as minimum
-            totalCount = filteredData.length;
+        // If we fetched all products (limit >= 10000), use the actual filtered count
+        if (limitNum >= 10000) {
+            if (search) {
+                // For search, use the filtered count
+                totalCount = filteredData.length;
+            } else {
+                // For no search, use database count or actual data length
+                totalCount = totalDbCount || filteredData.length;
+            }
+        } else {
+            // For paginated requests, use database count
+            if (search) {
+                // Estimate based on filter ratio
+                if (data && data.length > 0 && totalDbCount) {
+                    const filterRatio = filteredData.length / data.length;
+                    totalCount = Math.max(filteredData.length, Math.ceil(totalDbCount * filterRatio));
+                } else {
+                    totalCount = filteredData.length;
+                }
+            } else if (!totalDbCount && filteredData.length > 0) {
+                totalCount = filteredData.length;
+            }
         }
         
-        // Apply pagination to filtered data
-        // If we fetched from an earlier offset (due to filtering), adjust the slice
-        const sliceOffset = needsClientFiltering ? (offset - fetchOffset) : 0;
-        const paginatedData = filteredData.slice(sliceOffset, sliceOffset + limitNum);
+        // Use filtered data (no pagination when fetching all)
+        const paginatedData = filteredData;
         
         res.status(200).json({
             data: paginatedData,

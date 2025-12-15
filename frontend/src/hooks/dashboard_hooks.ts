@@ -191,7 +191,8 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   const loadLowRows = async () => {
     setLoadingLow(true);
     try {
-      const rows = await listLowStock(threshold, 200, 0);
+      // Fetch with a very high limit to get all items (or implement pagination later)
+      const rows = await listLowStock(threshold, 10000, 0);
       setLowRows(Array.isArray(rows) ? rows : []);
     } catch (e) {
       console.error("loadLowRows error", e);
@@ -204,7 +205,8 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   const loadExpRows = async () => {
     setLoadingExp(true);
     try {
-      const rows = await listExpiringBatches(warnMonths, dangerMonths, 200, 0);
+      // Fetch with a very high limit to get all items (or implement pagination later)
+      const rows = await listExpiringBatches(warnMonths, dangerMonths, 10000, 0);
       setExpRows(Array.isArray(rows) ? rows : []);
     } catch (e) {
       console.error("loadExpRows error", e);
