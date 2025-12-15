@@ -346,8 +346,9 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     isOpen: false,
   });
 
-  function generateLowReport() {
-    const rows = lowRows.map((r) => ({
+  function generateLowReport(filteredRows?: LowStockRow[]) {
+    const rowsToUse = filteredRows || lowRows;
+    const rows = rowsToUse.map((r) => ({
       "Product ID": r.productId,
         Product: r.name,
         Category: r.category,
@@ -365,9 +366,10 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     });
   }
 
-  function generateExpReport() {
+  function generateExpReport(filteredRows?: ExpiringRow[]) {
     // Filter out expired products (daysLeft < 0)
-    const validRows = expRows.filter((r) => Number(r.daysLeft) >= 0);
+    const rowsToUse = filteredRows || expRows;
+    const validRows = rowsToUse.filter((r) => Number(r.daysLeft) >= 0);
   
     const rows = validRows.map((r) => ({
         ID: r.productId,
