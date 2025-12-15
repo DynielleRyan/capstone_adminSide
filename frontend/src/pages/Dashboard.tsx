@@ -10,8 +10,9 @@ import {
   Bar,
   Line,
 } from "recharts";
-import { useMemo, useState } from "react"; // 🆕 to memoize chart data
+import { useMemo, useState, useEffect } from "react"; // 🆕 to memoize chart data
 import { toast } from "react-toastify";
+import { userService, UserResponse } from "../services/userService";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -45,6 +46,15 @@ export default function Dashboard() {
     salesReportModalOpen,
     openSalesReportModal,
     closeSalesReportModal,
+    // End of Day Settlement
+    endOfDayModalOpen,
+    openEndOfDayModal,
+    closeEndOfDayModal,
+    generateEndOfDayReport,
+    endOfDayPreviewData,
+    loadingEndOfDayPreview,
+    confirmDownloadEndOfDayReport,
+    closeEndOfDayPreview,
   } = useDashboard();
 
   // 🧠 Optimize chart performance
@@ -94,12 +104,20 @@ export default function Dashboard() {
                   <span className="font-medium capitalize">{chartView}</span>
                 </div>
               </div>
-              <button
-                className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                onClick={openSalesReportModal}
-              >
-                Generate Report
-              </button>
+              <div className="flex gap-2">
+                <button
+                  className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  onClick={openSalesReportModal}
+                >
+                  Generate Report
+                </button>
+                <button
+                  className="px-4 py-2 text-sm border border-green-600 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                  onClick={openEndOfDayModal}
+                >
+                  End of Day Settlement
+                </button>
+              </div>
             </div>
 
             {/* 🆕 Chart area with loading state */}
@@ -184,25 +202,25 @@ export default function Dashboard() {
       {open === "low" && (
         <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Low on Stock (≤ 20)
-              </h3>
-              <div className="flex gap-2">
-                <button
-                  className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Low on Stock (≤ 20)
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   onClick={generateLowReport}
-                >
+                  >
                   Generate Report
-                </button>
-                <button
-                  className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
-                  onClick={() => setOpen(null)}
-                >
-                  Close
-                </button>
+                  </button>
+                  <button
+                    className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+                    onClick={() => setOpen(null)}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
-            </div>
 
             <div className="flex-1 p-6 overflow-auto min-h-0">
               <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
@@ -210,88 +228,88 @@ export default function Dashboard() {
                   <thead className="bg-blue-800 text-white sticky top-0 z-10">
                     <tr>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Product
-                      </th>
+                          Product
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Category
-                      </th>
+                          Category
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Brand
-                      </th>
+                          Brand
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Price
-                      </th>
+                          Price
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Expiry
-                      </th>
+                          Expiry
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold whitespace-nowrap">
-                        Qty
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loadingLow ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-6 py-8 text-center text-gray-500"
-                        >
-                          Loading…
-                        </td>
+                          Qty
+                        </th>
                       </tr>
-                    ) : (Array.isArray(lowRows) ? lowRows : []).length ===
-                      0 ? (
-                      <tr>
-                        <td
+                    </thead>
+                    <tbody>
+                      {loadingLow ? (
+                        <tr>
+                          <td
                           colSpan={6}
-                          className="px-6 py-8 text-center text-gray-500"
-                        >
-                          No low stock
-                        </td>
-                      </tr>
-                    ) : (
-                      (Array.isArray(lowRows) ? lowRows : []).map(
-                        (r, index) => (
-                          <tr
-                            key={r.productId}
-                            className={`${
-                              index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                            } hover:bg-blue-100 transition-colors`}
+                            className="px-6 py-8 text-center text-gray-500"
                           >
+                            Loading…
+                          </td>
+                        </tr>
+                      ) : (Array.isArray(lowRows) ? lowRows : []).length ===
+                        0 ? (
+                        <tr>
+                          <td
+                          colSpan={6}
+                            className="px-6 py-8 text-center text-gray-500"
+                          >
+                            No low stock
+                          </td>
+                        </tr>
+                      ) : (
+                        (Array.isArray(lowRows) ? lowRows : []).map(
+                          (r, index) => (
+                            <tr
+                              key={r.productId}
+                              className={`${
+                                index % 2 === 0 ? "bg-blue-50" : "bg-white"
+                              } hover:bg-blue-100 transition-colors`}
+                            >
                             <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                {r.image && (
-                                  <img
-                                    src={r.image}
-                                    alt={r.name}
-                                    className="w-8 h-8 object-cover rounded"
-                                  />
-                                )}
-                                <span>{r.name}</span>
-                              </div>
-                            </td>
+                                <div className="flex items-center gap-2">
+                                  {r.image && (
+                                    <img
+                                      src={r.image}
+                                      alt={r.name}
+                                      className="w-8 h-8 object-cover rounded"
+                                    />
+                                  )}
+                                  <span>{r.name}</span>
+                                </div>
+                              </td>
                             <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                              {r.category}
-                            </td>
+                                {r.category}
+                              </td>
                             <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                              {r.brand}
-                            </td>
+                                {r.brand}
+                              </td>
                             <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                              {currency}
-                              {(r.price ?? 0).toFixed(2)}
-                            </td>
+                                {currency}
+                                {(r.price ?? 0).toFixed(2)}
+                              </td>
                             <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                              {r.expiry ?? "—"}
-                            </td>
+                                {r.expiry ?? "—"}
+                              </td>
                             <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
-                              {r.qty ?? 0}
-                            </td>
-                          </tr>
+                                {r.qty ?? 0}
+                              </td>
+                            </tr>
+                          )
                         )
-                      )
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
               </div>
             </div>
           </div>
@@ -302,122 +320,122 @@ export default function Dashboard() {
       {open === "exp" && (
         <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Expiring Products
-                </h3>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <span className="inline-block w-4 h-4 rounded bg-yellow-300" />
-                  <span>6 months</span>
-                  <span className="inline-block w-4 h-4 rounded bg-red-400 ml-2" />
-                  <span>3 months</span>
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Expiring Products
+                  </h3>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span className="inline-block w-4 h-4 rounded bg-yellow-300" />
+                    <span>6 months</span>
+                    <span className="inline-block w-4 h-4 rounded bg-red-400 ml-2" />
+                    <span>3 months</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  onClick={generateExpReport}
+                  >
+                  Generate Report
+                  </button>
+                  <button
+                    className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+                    onClick={() => setOpen(null)}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={generateExpReport}
-                >
-                  Generate Report
-                </button>
-                <button
-                  className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
-                  onClick={() => setOpen(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
 
             <div className="flex-1 p-6 overflow-auto min-h-0">
               <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
                 <table className="w-full text-sm border-collapse min-w-full">
                   <thead className="bg-blue-800 text-white sticky top-0 z-10">
-                    <tr>
+                      <tr>
                       <th className="px-6 py-3 text-left font-semibold w-[20%] whitespace-nowrap">
-                        ID
-                      </th>
+                          ID
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold whitespace-nowrap">
-                        Product
-                      </th>
+                          Product
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Category
-                      </th>
+                          Category
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Brand
-                      </th>
+                          Brand
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
-                        Expiry
-                      </th>
+                          Expiry
+                        </th>
                       <th className="px-6 py-3 text-left font-semibold whitespace-nowrap">
-                        Qty
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loadingExp ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-6 py-8 text-center text-gray-500"
-                        >
-                          Loading…
-                        </td>
+                          Qty
+                        </th>
                       </tr>
-                    ) : (Array.isArray(expRows) ? expRows : []).length ===
-                      0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-6 py-8 text-center text-gray-500"
-                        >
-                          No expiring items
-                        </td>
-                      </tr>
-                    ) : (
-                      (Array.isArray(expRows) ? expRows : []).map((r, i) => (
-                        <tr
-                          key={r.productItemId}
-                          className={`${
-                            i % 2 === 0 ? "bg-blue-50" : "bg-white"
-                          } hover:bg-blue-100 transition-colors`}
-                        >
-                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
-                            {r.productId}
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                            {r.productName}
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                            {r.category}
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                            {r.brand}
-                          </td>
-                          <td className="px-6 py-4 border-r border-gray-200 whitespace-nowrap">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                r.expiryLevel === "danger"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {r.expiryDate}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
-                            {r.qty ?? 0}
+                    </thead>
+                    <tbody>
+                      {loadingExp ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-6 py-8 text-center text-gray-500"
+                          >
+                            Loading…
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (Array.isArray(expRows) ? expRows : []).length ===
+                        0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-6 py-8 text-center text-gray-500"
+                          >
+                            No expiring items
+                          </td>
+                        </tr>
+                      ) : (
+                        (Array.isArray(expRows) ? expRows : []).map((r, i) => (
+                          <tr
+                            key={r.productItemId}
+                            className={`${
+                              i % 2 === 0 ? "bg-blue-50" : "bg-white"
+                            } hover:bg-blue-100 transition-colors`}
+                          >
+                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
+                              {r.productId}
+                            </td>
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                              {r.productName}
+                            </td>
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                              {r.category}
+                            </td>
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                              {r.brand}
+                            </td>
+                          <td className="px-6 py-4 border-r border-gray-200 whitespace-nowrap">
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  r.expiryLevel === "danger"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
+                              >
+                                {r.expiryDate}
+                              </span>
+                            </td>
+                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
+                              {r.qty ?? 0}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
       )}
 
       {/* SALES REPORT PERIOD SELECTION MODAL */}
@@ -435,6 +453,23 @@ export default function Dashboard() {
         data={salesPreviewData.rows}
         filename={salesPreviewData.filename}
         loading={loadingSalesPreview}
+      />
+
+      {/* END OF DAY SETTLEMENT MODAL */}
+      <EndOfDaySettlementModal
+        isOpen={endOfDayModalOpen}
+        onClose={closeEndOfDayModal}
+        onGenerate={generateEndOfDayReport}
+      />
+
+      {/* END OF DAY SETTLEMENT PREVIEW MODAL */}
+      <EndOfDayPreviewModal
+        isOpen={endOfDayPreviewData.isOpen}
+        onClose={closeEndOfDayPreview}
+        onConfirm={confirmDownloadEndOfDayReport}
+        data={endOfDayPreviewData.rows}
+        filename={endOfDayPreviewData.filename}
+        loading={loadingEndOfDayPreview}
       />
 
     </div>
@@ -848,8 +883,8 @@ function SalesReportPreviewModal({
                   Showing first 50 of {data.length} rows. Full data will be included in download.
                 </div>
               )}
-            </div>
-          )}
+        </div>
+      )}
         </div>
 
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
@@ -865,6 +900,278 @@ function SalesReportPreviewModal({
             disabled={loading || data.length === 0}
           >
             Download Report
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EndOfDaySettlementModal({
+  isOpen,
+  onClose,
+  onGenerate,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onGenerate: (params: { date: string; userId?: string }) => void;
+}) {
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [userFilter, setUserFilter] = useState<"all" | "specific">("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && userFilter === "specific") {
+      loadUsers();
+    }
+  }, [isOpen, userFilter]);
+
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await userService.getUsers({
+        limit: 1000,
+        page: 1,
+      });
+      if (response.success && response.data) {
+        // Filter to only Pharmacist and Clerk roles
+        const posUsers = response.data.users.filter(
+          (u) => u.Roles === "Pharmacist" || u.Roles === "Clerk"
+        );
+        setUsers(posUsers);
+      }
+    } catch (error) {
+      console.error("Failed to load users:", error);
+      toast.error("Failed to load users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const handleGenerate = () => {
+    if (!selectedDate) {
+      toast.warning("Please select a date");
+      return;
+    }
+    if (userFilter === "specific" && !selectedUserId) {
+      toast.warning("Please select a user");
+      return;
+    }
+    onGenerate({
+      date: selectedDate,
+      userId: userFilter === "specific" ? selectedUserId : undefined,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50">
+      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">
+            End of Day Settlement
+          </h3>
+        </div>
+        <div className="p-6 space-y-4">
+          {/* Date Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+
+          {/* User Filter Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by User
+            </label>
+            <div className="space-y-3">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="userFilter"
+                  value="all"
+                  checked={userFilter === "all"}
+                  onChange={(e) => {
+                    setUserFilter("all");
+                    setSelectedUserId("");
+                  }}
+                  className="mr-2"
+                />
+                <span>All Users (All PoS transactions for the day)</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="userFilter"
+                  value="specific"
+                  checked={userFilter === "specific"}
+                  onChange={(e) => setUserFilter("specific")}
+                  className="mr-2"
+                />
+                <span>Specific User</span>
+              </label>
+            </div>
+          </div>
+
+          {/* User Selection Dropdown */}
+          {userFilter === "specific" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select User <span className="text-red-500">*</span>
+              </label>
+              {loadingUsers ? (
+                <div className="text-sm text-gray-500">Loading users...</div>
+              ) : (
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                >
+                  <option value="">-- Select a user --</option>
+                  {users.map((user) => (
+                    <option key={user.UserID} value={user.UserID}>
+                      {user.FirstName} {user.LastName} ({user.Roles})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md transition-colors"
+              onClick={handleGenerate}
+            >
+              Generate Settlement
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EndOfDayPreviewModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  data,
+  filename,
+  loading,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  data: any[];
+  filename: string;
+  loading: boolean;
+}) {
+  if (!isOpen) return null;
+
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
+  const previewRows = data.slice(0, 50);
+  const hasMore = data.length > 50;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              End of Day Settlement Preview
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {filename} ({data.length} rows)
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-6 min-h-0">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Loading preview...</div>
+            </div>
+          ) : data.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">No data to preview</div>
+            </div>
+          ) : (
+            <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+              <table className="table table-zebra w-full text-sm min-w-full">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    {headers.map((header) => (
+                      <th key={header} className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      {headers.map((header) => (
+                        <td key={header} className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                          {row[header] !== null && row[header] !== undefined
+                            ? String(row[header])
+                            : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {hasMore && (
+                <div className="mt-4 text-center text-sm text-gray-500">
+                  Showing first 50 of {data.length} rows. Full data will be included in download.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md transition-colors"
+            onClick={onConfirm}
+            disabled={loading || data.length === 0}
+          >
+            Download Settlement
           </button>
         </div>
       </div>

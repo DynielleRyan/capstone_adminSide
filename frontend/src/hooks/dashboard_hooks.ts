@@ -22,7 +22,8 @@ import {
   LowStockRow,
   ExpiringRow,
 } from "../types/dashboard.api";
-import { fetchTransactions } from "../services/transactionService";
+import { fetchTransactions, fetchTransactionWithItems } from "../services/transactionService";
+import { userService, UserResponse } from "../services/userService";
 import { toast } from "react-toastify";
 
 // ===============================
@@ -40,11 +41,49 @@ type UseDashboardOptions = {
 // ===============================
 function downloadCSV(filename: string, rows: Record<string, any>[]) {
   if (!rows?.length) return;
-  const headers = Object.keys(rows[0]);
+  
+  // Filter out completely empty rows
+  const validRows = rows.filter(row => {
+    if (!row || typeof row !== 'object') return false;
+    const keys = Object.keys(row);
+    return keys.length > 0 && keys.some(key => row[key] !== undefined && row[key] !== null && row[key] !== "");
+  });
+  
+  if (validRows.length === 0) {
+    console.warn("No valid rows to export");
+    return;
+  }
+  
+  // Collect all unique headers from all rows
+  const allHeaders = new Set<string>();
+  validRows.forEach(row => {
+    Object.keys(row).forEach(key => {
+      if (key !== "") allHeaders.add(key);
+    });
+  });
+  
+  const headers = Array.from(allHeaders);
+  if (headers.length === 0) {
+    console.warn("No headers found");
+    return;
+  }
+  
   const csv = [
-    headers.join(","), // column headers
-    ...rows.map((r) => headers.map((h) => JSON.stringify(r[h] ?? "")).join(",")),
+    headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","), // column headers
+    ...validRows.map((r) => 
+      headers.map((h) => {
+        const value = r[h];
+        if (value === null || value === undefined || value === "") return "";
+        const stringValue = String(value);
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      }).join(",")
+    ),
   ].join("\n");
+  
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -103,6 +142,19 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   });
   const [loadingSalesPreview, setLoadingSalesPreview] = useState(false);
   const [salesReportModalOpen, setSalesReportModalOpen] = useState(false);
+
+  // -------- STATE: End of Day Settlement --------
+  const [endOfDayModalOpen, setEndOfDayModalOpen] = useState(false);
+  const [endOfDayPreviewData, setEndOfDayPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  }>({
+    rows: [],
+    filename: "",
+    isOpen: false,
+  });
+  const [loadingEndOfDayPreview, setLoadingEndOfDayPreview] = useState(false);
 
 
   // ===============================
@@ -277,12 +329,12 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   function generateLowReport() {
     const rows = lowRows.map((r) => ({
       "Product ID": r.productId,
-      Product: r.name,
-      Category: r.category,
-      Brand: r.brand,
+        Product: r.name,
+        Category: r.category,
+        Brand: r.brand,
       Price: `₱${Number(r.price ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      Expiry: r.expiry ?? "",
-      Qty: r.qty,
+        Expiry: r.expiry ?? "",
+        Qty: r.qty,
     }));
     
     const filename = `low_on_stock_${new Date().toISOString().split("T")[0]}.csv`;
@@ -293,22 +345,22 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   function generateExpReport() {
     // Filter out expired products (daysLeft < 0)
     const validRows = expRows.filter((r) => Number(r.daysLeft) >= 0);
-    
+  
     const rows = validRows.map((r) => ({
-      ID: r.productId,
-      Product: r.productName,
-      Category: r.category,
-      Brand: r.brand,
-      Expiry: r.expiryDate,
+        ID: r.productId,
+        Product: r.productName,
+        Category: r.category,
+        Brand: r.brand,
+        Expiry: r.expiryDate,
       "Days Left": r.daysLeft,
-      Qty: r.qty,
-      Level: r.expiryLevel,
+        Qty: r.qty,
+        Level: r.expiryLevel,
     }));
     
     const filename = `expiring_batches_${new Date().toISOString().split("T")[0]}.csv`;
     downloadCSV(filename, rows);
     toast.success("Report downloaded successfully!");
-  }
+    }
 
   // ===============================
   //  SALES REPORT GENERATION
@@ -777,6 +829,390 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
   };
 
   // ===============================
+  //  END OF DAY SETTLEMENT GENERATION
+  // ===============================
+  const generateEndOfDayReport = async (params: {
+    date: string;
+    userId?: string;
+  }) => {
+    try {
+      setLoadingEndOfDayPreview(true);
+      toast.info("Generating end of day settlement...");
+
+      // Fetch all transactions for the selected date
+      let allTransactions = await fetchTransactions();
+
+      if (!allTransactions || allTransactions.length === 0) {
+        toast.warning("No transactions found.");
+        setLoadingEndOfDayPreview(false);
+        return;
+      }
+
+      // Filter transactions by date
+      const selectedDate = new Date(params.date);
+      selectedDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(selectedDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      let transactions = allTransactions.filter((t) => {
+        const txnDate = new Date(t.OrderDateTime);
+        return txnDate >= selectedDate && txnDate < nextDay;
+      });
+
+      // Filter by user if specified
+      if (params.userId) {
+        transactions = transactions.filter((t) => t.UserID === params.userId);
+      }
+
+      if (transactions.length === 0) {
+        toast.warning(
+          `No transactions found for ${params.date}${params.userId ? " for the selected user" : ""}.`
+        );
+        setLoadingEndOfDayPreview(false);
+        return;
+      }
+
+      // Fetch transaction items for all transactions
+      const allItems: any[] = [];
+
+      // Fetch items for each transaction
+      for (const txn of transactions) {
+        try {
+          const response = await fetchTransactionWithItems(txn.TransactionID);
+          if (response && response.items && Array.isArray(response.items)) {
+            allItems.push(...response.items);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch items for transaction ${txn.TransactionID}:`, error);
+        }
+      }
+
+      // Calculate summary totals
+      const totalWithVAT = transactions.reduce((sum, t) => sum + (t.Total || 0), 0);
+      const totalVAT = transactions.reduce((sum, t) => sum + (t.VATAmount || 0), 0);
+      const totalWithoutVAT = totalWithVAT - totalVAT;
+      const pwdSeniorCount = transactions.filter((t) => t.SeniorPWDID).length;
+      const cashTotal = transactions
+        .filter((t) => t.PaymentMethod === "Cash")
+        .reduce((sum, t) => sum + (t.Total || 0), 0);
+      const cardTotal = transactions
+        .filter((t) => t.PaymentMethod === "Card")
+        .reduce((sum, t) => sum + (t.Total || 0), 0);
+
+      // Calculate Gross Sales, Net Sales, and Total Discounts from items
+      let grossSales = 0; // Total before discounts
+      let netSales = 0; // Total after discounts (subtotal)
+      let totalDiscounts = 0; // Total discount amount
+
+      allItems.forEach((item) => {
+        const product = item.Product || {};
+        const sellingPrice = product.SellingPrice || 0;
+        const quantity = item.Quantity || 0;
+        const subtotal = item.Subtotal || 0; // This is after discount
+        const discount = item.Discount || {};
+        const discountPercent = discount.DiscountPercent || 0;
+
+        // Gross sales = original price × quantity (before discount)
+        const itemGross = sellingPrice * quantity;
+        grossSales += itemGross;
+
+        // Net sales = subtotal (after discount)
+        netSales += subtotal;
+
+        // Calculate discount amount
+        if (discountPercent > 0) {
+          const discountAmount = (discountPercent / 100) * itemGross;
+          totalDiscounts += discountAmount;
+        }
+      });
+
+      // Get user name if filtering by user
+      let userName = "All Users";
+      if (params.userId) {
+        try {
+          const userResponse = await userService.getUserById(params.userId);
+          if (userResponse.success && userResponse.data) {
+            userName = `${userResponse.data.FirstName} ${userResponse.data.LastName}`;
+          }
+        } catch (error) {
+          console.error("Failed to fetch user:", error);
+        }
+      }
+
+      const formatCurrency = (num: number): string => {
+        return `₱${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      };
+
+      const formatNumber = (num: number): string => {
+        return num.toLocaleString("en-US");
+      };
+
+      const rows: any[] = [];
+
+      // ===== SUMMARY SECTION =====
+      rows.push({
+        "Section": "END OF DAY SETTLEMENT SUMMARY",
+        "Value": "",
+      });
+      rows.push({
+        "Section": "Date",
+        "Value": params.date,
+      });
+      rows.push({
+        "Section": "User",
+        "Value": userName,
+      });
+      rows.push({
+        "Section": "Number of Transactions",
+        "Value": formatNumber(transactions.length),
+      });
+      rows.push({
+        "Section": "PWD/Senior Discount Transactions",
+        "Value": formatNumber(pwdSeniorCount),
+      });
+      rows.push({
+        "Section": "Gross Sales (Before Discounts)",
+        "Value": formatCurrency(grossSales),
+      });
+      rows.push({
+        "Section": "Total Discounts",
+        "Value": formatCurrency(totalDiscounts),
+      });
+      rows.push({
+        "Section": "Net Sales (After Discounts)",
+        "Value": formatCurrency(netSales),
+      });
+      rows.push({
+        "Section": "Total VAT Amount",
+        "Value": formatCurrency(totalVAT),
+      });
+      rows.push({
+        "Section": "Cash Payments Total",
+        "Value": formatCurrency(cashTotal),
+      });
+      rows.push({
+        "Section": "Card Payments Total",
+        "Value": formatCurrency(cardTotal),
+      });
+      rows.push({
+        "Section": "Total Sales (Without VAT)",
+        "Value": formatCurrency(totalWithoutVAT),
+      });
+      rows.push({
+        "Section": "Total Sales (With VAT)",
+        "Value": formatCurrency(totalWithVAT),
+      });
+      // Add empty row for spacing
+      rows.push({
+        "Section": "",
+        "Value": "",
+      });
+      rows.push({
+        "Section": "",
+        "Value": "",
+      });
+
+      // ===== TRANSACTION BREAKDOWN =====
+      rows.push({
+        "Transaction ID": "TRANSACTION BREAKDOWN",
+        "Reference No": "",
+        "Date & Time": "",
+        "User": "",
+        "Payment Method": "",
+        "Subtotal (No VAT)": "",
+        "VAT Amount": "",
+        "Total (With VAT)": "",
+        "PWD/Senior": "",
+        "Cash Received": "",
+        "Change": "",
+      });
+      rows.push({
+        "Transaction ID": "Transaction ID",
+        "Reference No": "Reference No",
+        "Date & Time": "Date & Time",
+        "User": "User",
+        "Payment Method": "Payment Method",
+        "Subtotal (No VAT)": "Subtotal (No VAT)",
+        "VAT Amount": "VAT Amount",
+        "Total (With VAT)": "Total (With VAT)",
+        "PWD/Senior": "PWD/Senior",
+        "Cash Received": "Cash Received",
+        "Change": "Change",
+      });
+
+      transactions
+        .sort((a, b) => new Date(a.OrderDateTime).getTime() - new Date(b.OrderDateTime).getTime())
+        .forEach((txn) => {
+          const txnDate = new Date(txn.OrderDateTime);
+          const dateTimeStr = txnDate.toLocaleString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+          const userFullName = txn.User
+            ? `${txn.User.FirstName} ${txn.User.LastName}`
+            : "Unknown";
+          const subtotal = (txn.Total || 0) - (txn.VATAmount || 0);
+
+          rows.push({
+            "Transaction ID": txn.TransactionID,
+            "Reference No": txn.ReferenceNo || "",
+            "Date & Time": dateTimeStr,
+            "User": userFullName,
+            "Payment Method": txn.PaymentMethod || "",
+            "Subtotal (No VAT)": formatCurrency(subtotal),
+            "VAT Amount": formatCurrency(txn.VATAmount || 0),
+            "Total (With VAT)": formatCurrency(txn.Total || 0),
+            "PWD/Senior": txn.SeniorPWDID ? "Yes" : "No",
+            "Cash Received": txn.CashReceived ? formatCurrency(Number(txn.CashReceived)) : "",
+            "Change": txn.PaymentChange ? formatCurrency(Number(txn.PaymentChange)) : "",
+          });
+        });
+
+      // Add empty row for spacing
+      rows.push({
+        "Transaction ID": "",
+        "Reference No": "",
+        "Date & Time": "",
+        "User": "",
+        "Payment Method": "",
+        "Subtotal (No VAT)": "",
+        "VAT Amount": "",
+        "Total (With VAT)": "",
+        "PWD/Senior": "",
+        "Cash Received": "",
+        "Change": "",
+      });
+      rows.push({
+        "Transaction ID": "",
+        "Reference No": "",
+        "Date & Time": "",
+        "User": "",
+        "Payment Method": "",
+        "Subtotal (No VAT)": "",
+        "VAT Amount": "",
+        "Total (With VAT)": "",
+        "PWD/Senior": "",
+        "Cash Received": "",
+        "Change": "",
+      });
+
+      // ===== ITEM BREAKDOWN =====
+      rows.push({
+        "Transaction ID": "ITEM BREAKDOWN",
+        "Reference No": "",
+        "Product Name": "",
+        "Category": "",
+        "Brand": "",
+        "Quantity": "",
+        "Unit Price": "",
+        "Discount %": "",
+        "Subtotal": "",
+      });
+      rows.push({
+        "Transaction ID": "Transaction ID",
+        "Reference No": "Reference No",
+        "Product Name": "Product Name",
+        "Category": "Category",
+        "Brand": "Brand",
+        "Quantity": "Quantity",
+        "Unit Price": "Unit Price",
+        "Discount %": "Discount %",
+        "Subtotal": "Subtotal",
+      });
+
+      // Group items by transaction for better organization
+      const itemsByTransaction = new Map<string, any[]>();
+      allItems.forEach((item) => {
+        const txnId = item.TransactionID;
+        if (!itemsByTransaction.has(txnId)) {
+          itemsByTransaction.set(txnId, []);
+        }
+        itemsByTransaction.get(txnId)!.push(item);
+      });
+
+      // Sort transactions by date
+      const sortedTransactions = [...transactions].sort(
+        (a, b) => new Date(a.OrderDateTime).getTime() - new Date(b.OrderDateTime).getTime()
+      );
+
+      sortedTransactions.forEach((txn) => {
+        const items = itemsByTransaction.get(txn.TransactionID) || [];
+        items.forEach((item) => {
+          const product = item.Product || {};
+          const discount = item.Discount || {};
+          const unitPrice = product.SellingPrice || 0;
+          const discountPercent = discount.DiscountPercent || 0;
+
+          rows.push({
+            "Transaction ID": txn.TransactionID,
+            "Reference No": txn.ReferenceNo || "",
+            "Product Name": product.Name || "",
+            "Category": product.Category || "",
+            "Brand": product.Brand || "",
+            "Quantity": formatNumber(item.Quantity || 0),
+            "Unit Price": formatCurrency(unitPrice),
+            "Discount %": discountPercent > 0 ? `${discountPercent}%` : "0%",
+            "Subtotal": formatCurrency(item.Subtotal || 0),
+          });
+        });
+      });
+
+      // Generate filename
+      const dateStr = params.date.replace(/-/g, "");
+      const userStr = params.userId ? `_${userName.replace(/\s+/g, "_")}` : "_AllUsers";
+      const filename = `end_of_day_settlement_${dateStr}${userStr}.csv`;
+
+      setEndOfDayPreviewData({
+        rows,
+        filename,
+        isOpen: true,
+      });
+      setLoadingEndOfDayPreview(false);
+      toast.success("End of day settlement generated successfully!");
+    } catch (error: any) {
+      console.error("Failed to generate end of day settlement:", error);
+      toast.error(error?.response?.data?.message || "Failed to generate end of day settlement");
+      setLoadingEndOfDayPreview(false);
+    }
+  };
+
+  // Confirm and download end of day settlement
+  const confirmDownloadEndOfDayReport = () => {
+    if (endOfDayPreviewData.rows.length === 0) {
+      toast.warning("No settlement data to download.");
+      return;
+    }
+    
+    try {
+      downloadCSV(endOfDayPreviewData.filename, endOfDayPreviewData.rows);
+      toast.success("Settlement downloaded successfully!");
+      setEndOfDayPreviewData({ rows: [], filename: "", isOpen: false });
+    } catch (error) {
+      console.error("Failed to download settlement:", error);
+      toast.error("Failed to download settlement. Please try again.");
+    }
+  };
+
+  // Close end of day preview
+  const closeEndOfDayPreview = () => {
+    setEndOfDayPreviewData({ rows: [], filename: "", isOpen: false });
+  };
+
+  // Open end of day modal
+  const openEndOfDayModal = () => {
+    setEndOfDayModalOpen(true);
+  };
+
+  // Close end of day modal
+  const closeEndOfDayModal = () => {
+    setEndOfDayModalOpen(false);
+  };
+
+  // ===============================
   //  RETURN
   // ===============================
   return {
@@ -824,5 +1260,15 @@ export function useDashboard(opts: UseDashboardOptions = {}) {
     salesReportModalOpen,
     openSalesReportModal,
     closeSalesReportModal,
+
+    // End of Day Settlement
+    endOfDayModalOpen,
+    openEndOfDayModal,
+    closeEndOfDayModal,
+    generateEndOfDayReport,
+    endOfDayPreviewData,
+    loadingEndOfDayPreview,
+    confirmDownloadEndOfDayReport,
+    closeEndOfDayPreview,
   } as const;
 }

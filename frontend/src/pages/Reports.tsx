@@ -877,7 +877,7 @@ export default function Reports() {
                               {suggestedReorderQty > 0 ? `${suggestedReorderQty} units` : "No reorder needed"}
                             </span>
                           </td>
-                        </tr>
+                      </tr>
                       );
                     })
                   )}
