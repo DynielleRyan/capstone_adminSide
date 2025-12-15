@@ -1005,7 +1005,7 @@ function EndOfDaySettlementModal({
                   name="userFilter"
                   value="all"
                   checked={userFilter === "all"}
-                  onChange={(e) => {
+                  onChange={() => {
                     setUserFilter("all");
                     setSelectedUserId("");
                   }}
@@ -1019,7 +1019,7 @@ function EndOfDaySettlementModal({
                   name="userFilter"
                   value="specific"
                   checked={userFilter === "specific"}
-                  onChange={(e) => setUserFilter("specific")}
+                  onChange={() => setUserFilter("specific")}
                   className="mr-2"
                 />
                 <span>Specific User</span>

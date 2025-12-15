@@ -23,7 +23,7 @@ import {
   ExpiringRow,
 } from "../types/dashboard.api";
 import { fetchTransactions, fetchTransactionWithItems } from "../services/transactionService";
-import { userService, UserResponse } from "../services/userService";
+import { userService } from "../services/userService";
 import { toast } from "react-toastify";
 
 // ===============================
