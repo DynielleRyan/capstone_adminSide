@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDashboard } from "../../hooks/dashboard_hooks";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Copy, Check } from "lucide-react";
 
 const PharmacistDashboard = () => {
   const {
@@ -15,28 +15,49 @@ const PharmacistDashboard = () => {
     openExpModal,
     open,
     setOpen,
-    downloadLowCSV,
-    downloadExpCSV,
+    generateLowReport,
+    generateExpReport,
+    lowStockPreviewData,
+    confirmDownloadLowReport,
+    closeLowStockPreview,
+    expiringPreviewData,
+    confirmDownloadExpReport,
+    closeExpiringPreview,
   } = useDashboard({ preloadLists: true });
 
-  const [_modalTitle, setModalTitle] = useState("");
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
 
   // 🧩 Handlers
   const handleOpenLow = async () => {
-    setModalTitle("Low on Stock");
     await openLowModal();
   };
 
   const handleOpenExp = async () => {
-    setModalTitle("Expiring Products");
     await openExpModal();
   };
 
   const handleClose = () => setOpen(null);
 
-  const handleDownload = () => {
-    if (open === "low") downloadLowCSV();
-    if (open === "exp") downloadExpCSV();
+  const handleGenerateReport = () => {
+    if (open === "low") generateLowReport();
+    if (open === "exp") generateExpReport();
+  };
+
+  // Copy ID to clipboard
+  const copyId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedIds(prev => new Set(prev).add(id));
+      setTimeout(() => {
+        setCopiedIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   //  Limit visible rows in dashboard only
@@ -65,7 +86,7 @@ const PharmacistDashboard = () => {
             className="text-blue-600 font-semibold hover:underline"
             onClick={handleOpenExp}
           >
-            VIEW MORE &gt;&gt;
+            Generate Report
           </button>
         </div>
 
@@ -105,7 +126,25 @@ const PharmacistDashboard = () => {
                   <tr
                     key={r.productItemId}
                   >
-                    <td className="px-6 py-4 text-gray-700 border border-white">{r.productId}</td>
+                    <td className="px-6 py-4 text-gray-700 border border-white text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{r.productId}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyId(r.productId);
+                          }}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="Copy Product ID"
+                        >
+                          {copiedIds.has(r.productId) ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.productName}</td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.category}</td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">{r.brand}</td>
@@ -142,7 +181,7 @@ const PharmacistDashboard = () => {
             className="text-blue-600 font-semibold hover:underline"
             onClick={handleOpenLow}
           >
-            VIEW MORE &gt;&gt;
+            Generate Report
           </button>
         </div>
 
@@ -183,7 +222,25 @@ const PharmacistDashboard = () => {
                   <tr
                     key={r.productId}
                   >
-                    <td className="px-6 py-4 text-gray-700 border border-white">{r.productId}</td>
+                    <td className="px-6 py-4 text-gray-700 border border-white text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{r.productId}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyId(r.productId);
+                          }}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="Copy Product ID"
+                        >
+                          {copiedIds.has(r.productId) ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <div className="flex items-center text-center gap-2">
                         {r.image && (
@@ -235,10 +292,10 @@ const PharmacistDashboard = () => {
                 </h2> */}
 
                 <button
-                  onClick={handleDownload}
+                  onClick={handleGenerateReport}
                   className="text-blue-700 font-semibold text-sm hover:underline px-3"
                 >
-                  DOWNLOAD CSV &gt;&gt;
+                  Generate Report
                 </button>
               </div>
 
@@ -312,8 +369,23 @@ const PharmacistDashboard = () => {
                                 }`}
                               >
                                 <td className="px-6 py-3 text-gray-700">
-                                  {/* {String(i + 1).padStart(2, "0")} */}
-                                  {r.productId}
+                                  <div className="flex items-center gap-2">
+                                    <span>{r.productId}</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyId(r.productId);
+                                      }}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Copy Product ID"
+                                    >
+                                      {copiedIds.has(r.productId) ? (
+                                        <Check className="w-3 h-3 text-green-600" />
+                                      ) : (
+                                        <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                                      )}
+                                    </button>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-3 text-gray-700">
                                   {r.name}
@@ -390,7 +462,23 @@ const PharmacistDashboard = () => {
                                 } hover:bg-blue-50`}
                               >
                                 <td className="px-6 py-3 text-gray-700 max-w-[140px] truncate">
-                                  {r.productId}
+                                  <div className="flex items-center gap-2">
+                                    <span>{r.productId}</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyId(r.productId);
+                                      }}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                                      title="Copy Product ID"
+                                    >
+                                      {copiedIds.has(r.productId) ? (
+                                        <Check className="w-3 h-3 text-green-600" />
+                                      ) : (
+                                        <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                                      )}
+                                    </button>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-3 text-gray-700">
                                   {r.productName}
@@ -428,8 +516,130 @@ const PharmacistDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Low Stock Report Preview Modal */}
+      <ReportPreviewModal
+        isOpen={lowStockPreviewData.isOpen}
+        onClose={closeLowStockPreview}
+        onConfirm={confirmDownloadLowReport}
+        data={lowStockPreviewData.rows}
+        filename={lowStockPreviewData.filename}
+        title="Low Stock Report Preview"
+      />
+
+      {/* Expiring Products Report Preview Modal */}
+      <ReportPreviewModal
+        isOpen={expiringPreviewData.isOpen}
+        onClose={closeExpiringPreview}
+        onConfirm={confirmDownloadExpReport}
+        data={expiringPreviewData.rows}
+        filename={expiringPreviewData.filename}
+        title="Expiring Products Report Preview"
+      />
     </div>
   );
 };
+
+// Report Preview Modal Component
+function ReportPreviewModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  data,
+  filename,
+  title,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  data: any[];
+  filename: string;
+  title: string;
+}) {
+  if (!isOpen) return null;
+
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
+  const previewRows = data.slice(0, 50);
+  const hasMore = data.length > 50;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {filename} ({data.length} rows)
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-6 min-h-0">
+          {data.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">No data to preview</div>
+            </div>
+          ) : (
+            <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+              <table className="table table-zebra w-full text-sm min-w-full">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    {headers.map((header) => (
+                      <th key={header} className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      {headers.map((header) => (
+                        <td key={header} className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                          {row[header] !== null && row[header] !== undefined
+                            ? String(row[header])
+                            : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {hasMore && (
+                <div className="mt-4 text-center text-sm text-gray-500">
+                  Showing first 50 of {data.length} rows. Full data will be included in download.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+            onClick={onConfirm}
+            disabled={data.length === 0}
+          >
+            Download Report
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default PharmacistDashboard;

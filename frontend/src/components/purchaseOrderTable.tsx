@@ -247,9 +247,9 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
                 </td>
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">{order.Quantity}</td>
                 <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{order.TotalPurchaseCost.toFixed(2)}</td>
-                <td className="px-4 py-4 border border-white">
+                <td className="px-4 py-4 text-center border border-white">
                   <button
-                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700"
+                    className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700 mx-auto"
                     onClick={() => navigate(`/purchase-orders/${order.PurchaseOrderID}`)}
                     title="Edit Purchase Order Details"
                   >

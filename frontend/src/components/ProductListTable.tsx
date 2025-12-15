@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { ProductItem } from '../types/productItem';
 import { fetchProductItemByID, deleteProductItemByID } from '../services/productListService';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X, Loader2  } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X, Loader2, Copy, Check  } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface Props {
@@ -29,6 +29,12 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   const itemsPerPage = 5;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
+  const [previewData, setPreviewData] = useState<{
+    rows: any[];
+    filename: string;
+    isOpen: boolean;
+  } | null>(null);
   
   // Separate state for item page (server-side pagination) vs currentPage (group pagination)
   const [itemPage, setItemPage] = useState(pagination?.page || 1);
@@ -209,19 +215,25 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     return '';
   };
   
-  // Prepare CSV headers for all Product List table columns
-  const handleDownloadCSV = () => {
-    const headers = [
-      'ProductItemID', 
-      'ProductID', 
-      'Stock', 
-      'ExpiryDate',
-      'Name', 
-      'Category', 
-      'Brand', 
-      'SellingPrice'
-    ];
-  
+  // Copy ID to clipboard
+  const copyId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedIds(prev => new Set(prev).add(id));
+      setTimeout(() => {
+        setCopiedIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // Generate report with preview
+  const handleGenerateReport = () => {
     // Prepare CSV data with all Product List table fields
     const rows = productList.map(item => {
       const row: Record<string, string | number | boolean> = {
@@ -237,27 +249,78 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       return row;
     });
     
+    const filename = `product_list_${new Date().toISOString().split("T")[0]}.csv`;
+    setPreviewData({
+      rows,
+      filename,
+      isOpen: true,
+    });
+  };
+
+  // Download CSV helper
+  const downloadCSV = (filename: string, rows: Record<string, any>[]) => {
+    if (!rows?.length) return;
     
-    // Combine headers and data
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => headers.map(h => `"${row[h]}"`).join(','))
-    ].join('\n');
-  
+    const validRows = rows.filter(row => {
+      if (!row || typeof row !== 'object') return false;
+      const keys = Object.keys(row);
+      return keys.length > 0 && keys.some(key => row[key] !== undefined && row[key] !== null && row[key] !== "");
+    });
     
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `product_list_${new Date().toISOString().split("T")[0]}.csv`
-    );
-    link.style.visibility = "hidden"
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (validRows.length === 0) {
+      toast.warning("No valid rows to export");
+      return;
+    }
+    
+    const allHeaders = new Set<string>();
+    validRows.forEach(row => {
+      Object.keys(row).forEach(key => {
+        if (key !== "") allHeaders.add(key);
+      });
+    });
+    
+    const headers = Array.from(allHeaders);
+    if (headers.length === 0) {
+      toast.warning("No headers found");
+      return;
+    }
+    
+    const csv = [
+      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+      ...validRows.map((r) => 
+        headers.map((h) => {
+          const value = r[h];
+          if (value === null || value === undefined || value === "") return "";
+          const stringValue = String(value);
+          if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+          }
+          return stringValue;
+        }).join(",")
+      ),
+    ].join("\n");
+    
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  };
+
+  // Confirm and download report
+  const confirmDownloadReport = () => {
+    if (!previewData || previewData.rows.length === 0) {
+      toast.warning("No report data to download.");
+      return;
+    }
+    downloadCSV(previewData.filename, previewData.rows);
+    toast.success("Report downloaded successfully!");
+    setPreviewData(null);
+  };
+
+  // Close preview
+  const closePreview = () => {
+    setPreviewData(null);
   };
   
   // Group product items based on their ProductID (client-side grouping for display)
@@ -380,13 +443,13 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
               </div>
             </div>
         </div>
-             {/* Download CSV Button */}
+             {/* Generate Report Button */}
              <div className="flex justify-end gap-2"> 
               <button
                 className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-500 transition-colors flex items-center gap-2"
-                onClick={handleDownloadCSV}
+                onClick={handleGenerateReport}
               >
-                DOWNLOAD CSV 
+                Generate Report 
               </button>
             </div>
           
@@ -437,7 +500,25 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
               onClick={() => rest.length > 0 && toggleGroup(productId)}
               className={rest.length > 0 ? 'cursor-pointer hover:bg-blue-100' : ''}
             >
-              <td className="px-4 py-4 text-gray-700 border border-white">{String(primary.ProductID).padStart(2, '0')}</td>
+              <td className="px-4 py-4 text-gray-700 border border-white text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <span>{String(primary.ProductID).padStart(2, '0')}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyId(String(primary.ProductID));
+                    }}
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    title="Copy Product ID"
+                  >
+                    {copiedIds.has(String(primary.ProductID)) ? (
+                      <Check className="w-3 h-3 text-green-600" />
+                    ) : (
+                      <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                    )}
+                  </button>
+                </div>
+              </td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">
                 <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
@@ -477,8 +558,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
                 {new Date(primary.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>              
-              <td className="px-2 py-4 border border-white">
-                <div className="flex gap-2">
+              <td className="px-2 py-4 text-center border border-white">
+                <div className="flex gap-2 justify-center">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
                     onClick={() => handleView(primary.ProductItemID)}
@@ -543,8 +624,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
                 {new Date(item.ExpiryDate).toLocaleDateString('en-US')}
                 </span>
               </td>
-              <td className="px-2 py-4">
-                <div className="flex gap-2">
+              <td className="px-2 py-4 text-center">
+                <div className="flex gap-2 justify-center">
                   <button
                     className="bg-transparent border-none cursor-pointer p-2 rounded flex items-center justify-center hover:bg-gray-200 text-gray-700" 
                     onClick={() => handleView(item.ProductItemID)}
@@ -735,6 +816,88 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
           </div>
         </div>
       </dialog>
+
+      {/* Report Preview Modal */}
+      {previewData && (
+        <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Product List Report Preview
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {previewData.filename} ({previewData.rows.length} rows)
+                </p>
+              </div>
+              <button
+                onClick={closePreview}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 min-h-0">
+              {previewData.rows.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">No data to preview</div>
+                </div>
+              ) : (
+                <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+                  <table className="table table-zebra w-full text-sm min-w-full">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        {Object.keys(previewData.rows[0] || {}).map((header) => (
+                          <th key={header} className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.rows.slice(0, 50).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          {Object.keys(previewData.rows[0] || {}).map((header) => (
+                            <td key={header} className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
+                              {row[header] !== null && row[header] !== undefined
+                                ? String(row[header])
+                                : ""}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {previewData.rows.length > 50 && (
+                    <div className="mt-4 text-center text-sm text-gray-500">
+                      Showing first 50 of {previewData.rows.length} rows. Full data will be included in download.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+              <button
+                className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                onClick={closePreview}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+                onClick={confirmDownloadReport}
+                disabled={!previewData || previewData.rows.length === 0}
+              >
+                Download Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
