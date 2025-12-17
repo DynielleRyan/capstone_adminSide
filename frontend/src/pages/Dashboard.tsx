@@ -13,9 +13,30 @@ import {
 import { useMemo, useState, useEffect } from "react"; // 🆕 to memoize chart data
 import { toast } from "react-toastify";
 import { userService, UserResponse } from "../services/userService";
+import { Copy, Check } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
+  
+  const copyProductId = async (productId: string) => {
+    try {
+      await navigator.clipboard.writeText(productId);
+      setCopiedIds(prev => new Set(prev).add(productId));
+      setTimeout(() => {
+        setCopiedIds(prev => {
+          const next = new Set(prev);
+          next.delete(productId);
+          return next;
+        });
+      }, 2000);
+      toast.success("Product ID copied to clipboard!");
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error("Failed to copy Product ID");
+    }
+  };
+
   const {
     lowCount,
     expiringTotal,
@@ -31,8 +52,6 @@ export default function Dashboard() {
     expRows,
     loadingLow,
     loadingExp,
-    generateLowReport,
-    generateExpReport,
     chartData,
     chartView, // 🆕 from hook
     setChartView, // 🆕 from hook
@@ -55,6 +74,13 @@ export default function Dashboard() {
     loadingEndOfDayPreview,
     confirmDownloadEndOfDayReport,
     closeEndOfDayPreview,
+    // Low Stock and Expiring Reports
+    lowStockPreviewData,
+    confirmDownloadLowReport,
+    closeLowStockPreview,
+    expiringPreviewData,
+    confirmDownloadExpReport,
+    closeExpiringPreview,
   } = useDashboard();
 
   // 🧠 Optimize chart performance
@@ -203,13 +229,70 @@ export default function Dashboard() {
         <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Low on Stock (≤ 20)
-                </h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Low on Stock (≤ 20)
+                  </h3>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
+                      <span className="inline-block w-5 h-5 rounded-full bg-red-500 shadow-sm border-2 border-red-600" />
+                      <span className="font-medium text-red-900">&lt; 5</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <span className="inline-block w-5 h-5 rounded-full bg-yellow-400 shadow-sm border-2 border-yellow-500" />
+                      <span className="font-medium text-yellow-900">5-9</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="inline-block w-5 h-5 rounded-full bg-green-500 shadow-sm border-2 border-green-600" />
+                      <span className="font-medium text-green-900">10-19</span>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
                     className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={() => generateLowReport()}
+                    onClick={() => {
+                      const rows = (Array.isArray(lowRows) ? lowRows : [])
+                        .slice()
+                        .sort((a, b) => (a.qty ?? 0) - (b.qty ?? 0))
+                        .map((r) => ({
+                          "Product ID": r.productId,
+                          Product: r.name,
+                          Category: r.category,
+                          Brand: r.brand,
+                          Price: `₱${Number(r.price ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                          Expiry: r.expiry ?? "",
+                          Qty: r.qty,
+                        }));
+                      const filename = `low_on_stock_${new Date().toISOString().split("T")[0]}.csv`;
+                      if (rows.length === 0) {
+                        toast.warning("No data to download.");
+                        return;
+                      }
+                      // Direct download without preview
+                      const headers = Object.keys(rows[0]);
+                      const csvContent = [
+                        headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+                        ...rows.map(row => 
+                          headers.map(header => {
+                            const value = (row as Record<string, any>)[header];
+                            if (value === null || value === undefined || value === "") return "";
+                            const stringValue = String(value);
+                            if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
+                              return `"${stringValue.replace(/"/g, '""')}"`;
+                            }
+                            return stringValue;
+                          }).join(",")
+                        ),
+                      ].join("\n");
+                      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                      const a = document.createElement("a");
+                      a.href = URL.createObjectURL(blob);
+                      a.download = filename;
+                      a.click();
+                      toast.success("Report downloaded successfully!");
+                      setOpen(null);
+                    }}
                   >
                   Generate Report
                   </button>
@@ -227,22 +310,25 @@ export default function Dashboard() {
                 <table className="w-full text-sm border-collapse min-w-full">
                   <thead className="bg-blue-800 text-white sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
+                          ID
+                        </th>
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Product
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Category
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Brand
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Price
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Expiry
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold whitespace-nowrap">
                           Qty
                         </th>
                       </tr>
@@ -251,7 +337,7 @@ export default function Dashboard() {
                       {loadingLow ? (
                         <tr>
                           <td
-                          colSpan={6}
+                          colSpan={7}
                             className="px-6 py-8 text-center text-gray-500"
                           >
                             Loading…
@@ -261,52 +347,93 @@ export default function Dashboard() {
                         0 ? (
                         <tr>
                           <td
-                          colSpan={6}
+                          colSpan={7}
                             className="px-6 py-8 text-center text-gray-500"
                           >
                             No low stock
                           </td>
                         </tr>
                       ) : (
-                        (Array.isArray(lowRows) ? lowRows : []).map(
-                          (r, index) => (
-                            <tr
-                              key={r.productId}
-                              className={`${
-                                index % 2 === 0 ? "bg-blue-50" : "bg-white"
-                              } hover:bg-blue-100 transition-colors`}
-                            >
-                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                                <div className="flex items-center gap-2">
-                                  {r.image && (
-                                    <img
-                                      src={r.image}
-                                      alt={r.name}
-                                      className="w-8 h-8 object-cover rounded"
-                                    />
-                                  )}
-                                  <span>{r.name}</span>
-                                </div>
-                              </td>
-                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                                {r.category}
-                              </td>
-                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                                {r.brand}
-                              </td>
-                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                                {currency}
-                                {(r.price ?? 0).toFixed(2)}
-                              </td>
-                            <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
-                                {r.expiry ?? "—"}
-                              </td>
-                            <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
-                                {r.qty ?? 0}
-                              </td>
-                            </tr>
+                        (Array.isArray(lowRows) ? lowRows : [])
+                          .slice()
+                          .sort((a, b) => (a.qty ?? 0) - (b.qty ?? 0))
+                          .map(
+                            (r, index) => {
+                              const qty = r.qty ?? 0;
+                              let qtyColorClass = "";
+                              let qtyBgClass = "";
+                              
+                              if (qty < 5) {
+                                qtyColorClass = "text-red-800";
+                                qtyBgClass = "bg-red-100";
+                              } else if (qty < 10) {
+                                qtyColorClass = "text-yellow-800";
+                                qtyBgClass = "bg-yellow-100";
+                              } else if (qty < 20) {
+                                qtyColorClass = "text-green-800";
+                                qtyBgClass = "bg-green-100";
+                              }
+                              
+                              return (
+                                <tr
+                                  key={r.productId}
+                                  className={`${
+                                    index % 2 === 0 ? "bg-blue-50" : "bg-white"
+                                  } hover:bg-blue-100 transition-colors`}
+                                >
+                                <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span>{r.productId}</span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          copyProductId(r.productId);
+                                        }}
+                                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                        title="Copy Product ID"
+                                      >
+                                        {copiedIds.has(r.productId) ? (
+                                          <Check className="w-3 h-3 text-green-600" />
+                                        ) : (
+                                          <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+                                <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      {r.image && (
+                                        <img
+                                          src={r.image}
+                                          alt={r.name}
+                                          className="w-8 h-8 object-cover rounded"
+                                        />
+                                      )}
+                                      <span>{r.name}</span>
+                                    </div>
+                                  </td>
+                                <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                                    {r.category}
+                                  </td>
+                                <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                                    {r.brand}
+                                  </td>
+                                <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                                    {currency}
+                                    {(r.price ?? 0).toFixed(2)}
+                                  </td>
+                                <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                                    {r.expiry ?? "—"}
+                                  </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${qtyBgClass} ${qtyColorClass}`}>
+                                      {qty}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            }
                           )
-                        )
                       )}
                     </tbody>
                   </table>
@@ -339,7 +466,48 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button
                     className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  onClick={() => generateExpReport()}
+                    onClick={() => {
+                      const rowsToUse = Array.isArray(expRows) ? expRows : [];
+                      const validRows = rowsToUse.filter((r) => Number(r.daysLeft) >= 0);
+                      const rows = validRows.map((r) => ({
+                        ID: r.productId,
+                        Product: r.productName,
+                        Category: r.category,
+                        Brand: r.brand,
+                        Expiry: r.expiryDate,
+                        "Days Left": r.daysLeft,
+                        Qty: r.qty,
+                        Level: r.expiryLevel,
+                      }));
+                      const filename = `expiring_batches_${new Date().toISOString().split("T")[0]}.csv`;
+                      if (rows.length === 0) {
+                        toast.warning("No data to download.");
+                        return;
+                      }
+                      // Direct download without preview
+                      const headers = Object.keys(rows[0]);
+                      const csvContent = [
+                        headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+                        ...rows.map(row => 
+                          headers.map(header => {
+                            const value = (row as Record<string, any>)[header];
+                            if (value === null || value === undefined || value === "") return "";
+                            const stringValue = String(value);
+                            if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
+                              return `"${stringValue.replace(/"/g, '""')}"`;
+                            }
+                            return stringValue;
+                          }).join(",")
+                        ),
+                      ].join("\n");
+                      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                      const a = document.createElement("a");
+                      a.href = URL.createObjectURL(blob);
+                      a.download = filename;
+                      a.click();
+                      toast.success("Report downloaded successfully!");
+                      setOpen(null);
+                    }}
                   >
                   Generate Report
                   </button>
@@ -357,22 +525,22 @@ export default function Dashboard() {
                 <table className="w-full text-sm border-collapse min-w-full">
                   <thead className="bg-blue-800 text-white sticky top-0 z-10">
                       <tr>
-                      <th className="px-6 py-3 text-left font-semibold w-[20%] whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold w-[20%] border-r border-white/20 whitespace-nowrap">
                           ID
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Product
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Category
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Brand
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold border-r border-white/20 whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold border-r border-white/20 whitespace-nowrap">
                           Expiry
                         </th>
-                      <th className="px-6 py-3 text-left font-semibold whitespace-nowrap">
+                      <th className="px-6 py-3 text-center font-semibold whitespace-nowrap">
                           Qty
                         </th>
                       </tr>
@@ -405,19 +573,35 @@ export default function Dashboard() {
                               i % 2 === 0 ? "bg-blue-50" : "bg-white"
                             } hover:bg-blue-100 transition-colors`}
                           >
-                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
-                              {r.productId}
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <span>{r.productId}</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyProductId(r.productId);
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                  title="Copy Product ID"
+                                >
+                                  {copiedIds.has(r.productId) ? (
+                                    <Check className="w-3 h-3 text-green-600" />
+                                  ) : (
+                                    <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                                  )}
+                                </button>
+                              </div>
                             </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
                               {r.productName}
                             </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
                               {r.category}
                             </td>
-                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                          <td className="px-6 py-4 text-gray-700 border-r border-gray-200 whitespace-nowrap text-center">
                               {r.brand}
                             </td>
-                          <td className="px-6 py-4 border-r border-gray-200 whitespace-nowrap">
+                          <td className="px-6 py-4 border-r border-gray-200 whitespace-nowrap text-center">
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${
                                   r.expiryLevel === "danger"
@@ -428,7 +612,7 @@ export default function Dashboard() {
                                 {r.expiryDate}
                               </span>
                             </td>
-                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
+                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap text-center">
                               {r.qty ?? 0}
                             </td>
                           </tr>
@@ -474,6 +658,28 @@ export default function Dashboard() {
         data={endOfDayPreviewData.rows}
         filename={endOfDayPreviewData.filename}
         loading={loadingEndOfDayPreview}
+      />
+
+      {/* LOW STOCK REPORT PREVIEW MODAL */}
+      <ReportPreviewModal
+        isOpen={lowStockPreviewData.isOpen}
+        onClose={closeLowStockPreview}
+        onConfirm={confirmDownloadLowReport}
+        data={lowStockPreviewData.rows}
+        filename={lowStockPreviewData.filename}
+        title="Low Stock Report Preview"
+        productIdColumn="Product ID"
+      />
+
+      {/* EXPIRING PRODUCTS REPORT PREVIEW MODAL */}
+      <ReportPreviewModal
+        isOpen={expiringPreviewData.isOpen}
+        onClose={closeExpiringPreview}
+        onConfirm={confirmDownloadExpReport}
+        data={expiringPreviewData.rows}
+        filename={expiringPreviewData.filename}
+        title="Expiring Products Report Preview"
+        productIdColumn="ID"
       />
 
     </div>
@@ -902,6 +1108,160 @@ function SalesReportPreviewModal({
             className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
             onClick={onConfirm}
             disabled={loading || data.length === 0}
+          >
+            Download Report
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportPreviewModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  data,
+  filename,
+  title,
+  productIdColumn,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  data: any[];
+  filename: string;
+  title: string;
+  productIdColumn?: string;
+}) {
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
+
+  const copyProductId = async (productId: string) => {
+    try {
+      await navigator.clipboard.writeText(productId);
+      setCopiedIds(prev => new Set(prev).add(productId));
+      setTimeout(() => {
+        setCopiedIds(prev => {
+          const next = new Set(prev);
+          next.delete(productId);
+          return next;
+        });
+      }, 2000);
+      toast.success("Product ID copied to clipboard!");
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error("Failed to copy Product ID");
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
+  const previewRows = data.slice(0, 50);
+  const hasMore = data.length > 50;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[1000] bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full h-[95vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {filename} ({data.length} rows)
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-6 min-h-0">
+          {data.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">No data to preview</div>
+            </div>
+          ) : (
+            <div className="preview-scroll-container overflow-x-auto overflow-y-auto h-full">
+              <table className="table table-zebra w-full text-sm min-w-full">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    {headers.map((header) => (
+                      <th 
+                        key={header} 
+                        className="px-4 py-2 font-semibold text-gray-700 whitespace-nowrap text-center"
+                      >
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      {headers.map((header) => {
+                        const isProductId = productIdColumn && header === productIdColumn;
+                        const cellValue = row[header] !== null && row[header] !== undefined
+                          ? String(row[header])
+                          : "";
+                        
+                        return (
+                          <td 
+                            key={header} 
+                            className="px-4 py-2 border-b border-gray-200 whitespace-nowrap text-center"
+                          >
+                            {isProductId ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <span>{cellValue}</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyProductId(cellValue);
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                  title="Copy Product ID"
+                                >
+                                  {copiedIds.has(cellValue) ? (
+                                    <Check className="w-3 h-3 text-green-600" />
+                                  ) : (
+                                    <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                                  )}
+                                </button>
+                              </div>
+                            ) : (
+                              cellValue
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {hasMore && (
+                <div className="mt-4 text-center text-sm text-gray-500">
+                  Showing first 50 of {data.length} rows. Full data will be included in download.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+            onClick={onConfirm}
+            disabled={data.length === 0}
           >
             Download Report
           </button>
