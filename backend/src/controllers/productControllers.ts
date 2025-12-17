@@ -535,7 +535,14 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
     }
 
     // Apply pagination - fetch more if complex sorting needed
-    query = query.range(0, fetchLimit - 1);
+    // For simple sorting, use offset. For complex sorting, fetch more and slice later
+    if (sortBy === 'SupplierName' || sortBy === 'LastPurchaseDate') {
+      // Fetch more items for complex sorting (will be sliced after processing)
+      query = query.range(0, fetchLimit - 1);
+    } else {
+      // For simple sorting or no sort, use proper offset
+      query = query.range(offset, offset + limitNum - 1);
+    }
 
     // Execute main query
     const { data: products, error } = await query;
