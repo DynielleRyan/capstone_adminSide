@@ -154,7 +154,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       toast.error('Failed to delete product');
     }
   };
-   
+  
   // View product details
   const handleView = async (id: string) => {
     const result = await fetchProductItemByID(id);
