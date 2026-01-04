@@ -7,7 +7,7 @@ export const getProductList: RequestHandler = async (req, res) => {
     try {
         const { 
             page = '1', 
-            limit = '50', 
+            limit = '5', 
             search, 
             category, 
             brand,
@@ -211,17 +211,10 @@ export const getProductList: RequestHandler = async (req, res) => {
         // This ensures we get all products for the product list
         let data: any[];
         
-        if (limitNum >= 1000) {
-            // Fetch all products (no range limit)
-            const { data: allData, error } = await query;
-            if (error) throw error;
-            data = allData || [];
-        } else {
-            // Normal pagination for other use cases
-            const { data: queryData, error } = await query.range(offset, offset + limitNum - 1);
+        const { data: queryData, error } = await query.range(offset, offset + limitNum - 1);
             if (error) throw error;
             data = queryData || [];
-        }
+        
 
         // No client-side filtering needed - search is handled at database level
         let filteredData = data;
