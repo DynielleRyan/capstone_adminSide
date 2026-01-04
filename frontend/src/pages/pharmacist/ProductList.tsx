@@ -21,18 +21,17 @@ export const ProductList = () => {
   // Use ref to prevent duplicate requests
   const isLoadingRef = useRef(false);
 
-  const loadProductList = useCallback(async (_page: number = 1, search?: string, sortBy?: string, sortOrder?: string) => {
+  const loadProductList = useCallback(async (page: number = 1, search?: string, sortBy?: string, sortOrder?: string) => {
     // Prevent multiple simultaneous requests
     if (isLoadingRef.current) return;
     
     isLoadingRef.current = true;
     setLoading(true);
     try {
-      // Fetch ALL products - no limit, get everything
-      // Page parameter is ignored since we fetch all products at once
-      const response: ProductListResponse = await fetchProductList({
-        page: 1, // Always fetch from page 1 to get all products
-        limit: 10000, // Very high limit to fetch all products
+      // Fetch first page with limit 100 for faster initial load
+      const firstPageResponse: ProductListResponse = await fetchProductList({
+        page: 1,
+        limit: 100, // Fetch 100 items per page
         search,
         sortBy: sortBy as 'Name' | 'Stock' | 'ExpiryDate' | undefined,
         sortOrder: sortOrder as 'asc' | 'desc' | undefined,
@@ -40,12 +39,57 @@ export const ProductList = () => {
       });
       
       // Only update state if component is still mounted
-      if (isMountedRef.current) {
-        setproductList(response.data);
-        setPagination(response.pagination);
+      if (!isMountedRef.current) {
+        isLoadingRef.current = false;
+        return;
+      }
+      
+      // Show first page immediately for better perceived performance
+      setproductList(firstPageResponse.data);
+      setPagination(firstPageResponse.pagination);
+      setLoading(false); // Allow UI to show first batch
+      
+      // If there are more pages, fetch them sequentially
+      const totalPages = firstPageResponse.pagination.totalPages;
+      if (totalPages > 1) {
+        const allProducts: ProductItem[] = [...firstPageResponse.data];
+        
+        // Fetch remaining pages sequentially
+        for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
+          // Check if component is still mounted before each request
+          if (!isMountedRef.current) break;
+          
+          const pageResponse: ProductListResponse = await fetchProductList({
+            page: currentPage,
+            limit: 100,
+            search,
+            sortBy: sortBy as 'Name' | 'Stock' | 'ExpiryDate' | undefined,
+            sortOrder: sortOrder as 'asc' | 'desc' | undefined,
+            onlyActive: true
+          });
+          
+          // Only update if still mounted
+          if (isMountedRef.current) {
+            allProducts.push(...pageResponse.data);
+            // Update state progressively as we load more pages
+            setproductList([...allProducts]);
+          }
+        }
+        
+        // Final update with all products
+        if (isMountedRef.current) {
+          setproductList(allProducts);
+          setPagination({
+            ...firstPageResponse.pagination,
+            total: allProducts.length
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading products:', error);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     } finally {
       isLoadingRef.current = false;
       if (isMountedRef.current) {

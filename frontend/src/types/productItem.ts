@@ -4,6 +4,7 @@ export interface ProductItem {
     Stock: number;
     ExpiryDate: string;
     IsActive: boolean;
+    LastPurchaseDate: string | null;
     Product: {
         Name: string;
         GenericName: string;
