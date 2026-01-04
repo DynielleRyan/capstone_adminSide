@@ -183,9 +183,6 @@ const Suppliers = () => {
           <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-center font-semibold border-r border-white">
-                  SUPPLIER ID
-                </th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">
                   CONTACT PERSON
@@ -201,7 +198,7 @@ const Suppliers = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Loading suppliers...
@@ -210,7 +207,7 @@ const Suppliers = () => {
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-red-500"
                   >
                     Error: {error}
@@ -219,7 +216,7 @@ const Suppliers = () => {
               ) : filteredSuppliers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No suppliers found
@@ -230,9 +227,6 @@ const Suppliers = () => {
                   <tr
                     key={supplier.SupplierID}
                   >
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
-                      {formatSupplierId(supplier.SupplierID!)}
-                    </td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">{supplier.Name}</td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       {supplier.ContactPerson || "N/A"}

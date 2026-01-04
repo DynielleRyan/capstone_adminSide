@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { supplierService, UpdateSupplier } from '../services/supplierService'
 import loadingService from '../services/loadingService'
 
@@ -58,13 +59,40 @@ const EditSupplier = () => {
     e.preventDefault()
     
     if (!supplier) {
-      loadingService.error('edit-supplier', 'No supplier selected for editing')
+      toast.error('No supplier selected for editing')
+      return
+    }
+    
+    // Validate required fields
+    if (!formData.name.trim()) {
+      toast.error('Supplier name is required')
+      return
+    }
+    
+    if (!formData.contactPerson.trim()) {
+      toast.error('Contact person is required')
+      return
+    }
+    
+    if (!formData.contactNumber.trim()) {
+      toast.error('Contact number is required')
+      return
+    }
+    
+    if (!formData.address.trim()) {
+      toast.error('Address is required')
       return
     }
     
     // Validate status selection
     if (formData.status === '--SELECT--') {
-      loadingService.error('edit-supplier', 'Please select a status')
+      toast.error('Please select a status')
+      return
+    }
+    
+    // Validate email format if provided
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error('Please enter a valid email address')
       return
     }
     
@@ -121,7 +149,9 @@ const EditSupplier = () => {
             {/* Row 1: NAME and CONTACT PERSON */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">NAME:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  NAME: <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.name}
@@ -132,12 +162,15 @@ const EditSupplier = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">CONTACT PERSON:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  CONTACT PERSON: <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.contactPerson}
                   onChange={(e) => handleInputChange('contactPerson', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
             </div>
@@ -145,12 +178,15 @@ const EditSupplier = () => {
             {/* Row 2: CONTACT NUMBER and EMAIL ADDRESS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">CONTACT NUMBER:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  CONTACT NUMBER: <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="tel"
                   value={formData.contactNumber}
                   onChange={(e) => handleInputChange('contactNumber', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
               
@@ -168,7 +204,9 @@ const EditSupplier = () => {
             {/* Row 3: STATUS and ADDRESS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">STATUS:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  STATUS: <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={formData.status}
                   onChange={(e) => handleInputChange('status', e.target.value)}
@@ -182,12 +220,15 @@ const EditSupplier = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">ADDRESS:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  ADDRESS: <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
             </div>

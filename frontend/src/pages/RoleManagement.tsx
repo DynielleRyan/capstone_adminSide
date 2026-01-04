@@ -14,7 +14,7 @@ const RoleManagement = () => {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("none");
+  const [sortBy, setSortBy] = useState("status"); // Default to sorting by status (active first)
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ const RoleManagement = () => {
 
   // Fetch users from API
   const fetchUsers = useCallback(
-    async (page = 1, search?: string) => {
+    async (page = 1, search?: string, sort?: string) => {
       try {
         setLoading(true);
         setError(null);
@@ -34,6 +34,7 @@ const RoleManagement = () => {
           page,
           limit: 10, // Display 10 items per page
           search: search || undefined,
+          sortBy: sort || sortBy, // Pass current sort option to backend
         };
 
         const response = await userService.getUsers(filters);
@@ -53,7 +54,7 @@ const RoleManagement = () => {
         setLoading(false);
       }
     },
-    []
+    [sortBy]
   );
 
   // Load users on component mount
@@ -66,13 +67,13 @@ const RoleManagement = () => {
     const timeoutId = setTimeout(() => {
       // If search term is empty, fetch all users
       // Otherwise, fetch with search term
-      fetchUsers(1, searchTerm || undefined);
+      fetchUsers(1, searchTerm || undefined, sortBy);
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, fetchUsers]);
+  }, [searchTerm, sortBy, fetchUsers]);
 
-  // Filter and sort users based on search term and sort criteria
+  // Filter users based on search term (sorting is handled by backend)
   const filteredUsers = useMemo(() => {
     let filtered = users.filter((user) => {
       const fullName = `${user.FirstName} ${user.LastName}`.toLowerCase();
@@ -91,33 +92,9 @@ const RoleManagement = () => {
       );
     });
 
-    if (sortBy !== "none") {
-      filtered = filtered.sort((a, b) => {
-        switch (sortBy) {
-          case "name":
-            const nameA = `${a.FirstName} ${a.MiddleInitial || ""} ${
-              a.LastName
-            }`
-              .trim()
-              .toLowerCase();
-            const nameB = `${b.FirstName} ${b.MiddleInitial || ""} ${
-              b.LastName
-            }`
-              .trim()
-              .toLowerCase();
-            return nameA.localeCompare(nameB);
-
-          case "role":
-            return a.Roles.localeCompare(b.Roles);
-
-          default:
-            return 0;
-        }
-      });
-    }
-
+    // Backend handles the sorting based on sortBy parameter
     return filtered;
-  }, [users, searchTerm, sortBy]);
+  }, [users, searchTerm]);
 
   // Copy user ID to clipboard
   const copyUserID = async (userID: string) => {
@@ -157,7 +134,8 @@ const RoleManagement = () => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="none">None</option>
+                <option value="status">Status (Active First)</option>
+                <option value="status-inactive">Status (Inactive First)</option>
                 <option value="name">Name</option>
                 <option value="role">Role</option>
               </select>
@@ -240,11 +218,11 @@ const RoleManagement = () => {
           <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-center font-semibold border-r border-white">USER ID</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">NAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">USERNAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">ROLE</th>
+                <th className="px-6 py-4 text-center font-semibold border-r border-white">STATUS</th>
               </tr>
             </thead>
             <tbody className=" bg-blue-50">
@@ -279,33 +257,15 @@ const RoleManagement = () => {
                 filteredUsers.map((user) => (
                   <tr
                     key={user.UserID}
+                    className={user.IsActive === false ? 'bg-gray-100 opacity-70' : ''}
                   >
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white font-mono text-sm">
-                      <div className="flex items-center justify-center gap-2">
-                        <span>{user.UserID}</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyUserID(user.UserID || '');
-                          }}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
-                          title="Copy User ID"
-                        >
-                          {copiedUserIDs.has(user.UserID || '') ? (
-                            <Check className="w-3 h-3 text-green-600" />
-                          ) : (
-                            <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                    <td className={`px-6 py-4 text-center border border-white ${user.IsActive === false ? 'text-gray-500' : 'text-gray-700'}`}>
                       {user.FirstName} {user.MiddleInitial} {user.LastName}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                    <td className={`px-6 py-4 text-center border border-white ${user.IsActive === false ? 'text-gray-500' : 'text-gray-700'}`}>
                       {user.ContactNumber || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">{user.Username}</td>
+                    <td className={`px-6 py-4 text-center border border-white ${user.IsActive === false ? 'text-gray-500' : 'text-gray-700'}`}>{user.Username}</td>
                     <td className="px-6 py-4 text-gray-700 text-center border border-white">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -315,6 +275,17 @@ const RoleManagement = () => {
                         }`}
                       >
                         {user.Roles.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center border border-white">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          user.IsActive !== false
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {user.IsActive !== false ? "ACTIVE" : "INACTIVE"}
                       </span>
                     </td>
                   </tr>

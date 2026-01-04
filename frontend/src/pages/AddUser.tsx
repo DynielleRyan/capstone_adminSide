@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "react-toastify";
 import { userService, CreateUser, UserRole } from "../services/userService";
 import loadingService from "../services/loadingService";
 import { Permissions } from "../utils/permissions";
-import alertService from "../services/alertService";
 
 interface UserFormData {
   firstName: string;
@@ -35,7 +35,7 @@ const AddUser = () => {
   // Check permissions on mount
   useEffect(() => {
     if (!Permissions.canCreateUser()) {
-      alertService.error("You do not have permission to create users");
+      toast.error("You do not have permission to create users");
       navigate("/role-management");
     }
   }, [navigate]);
@@ -69,15 +69,68 @@ const AddUser = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate contact number - must be numeric
-    if (formData.contactNumber && !/^\d+$/.test(formData.contactNumber)) {
-      alertService.error('Contact number must contain only numbers');
+    // Validate required fields
+    if (!formData.firstName.trim()) {
+      toast.error('First name is required');
       return;
     }
 
-    // Validate minimum length (optional - adjust as needed)
+    if (!formData.lastName.trim()) {
+      toast.error('Last name is required');
+      return;
+    }
+
+    if (!formData.username.trim()) {
+      toast.error('Username is required');
+      return;
+    }
+
+    if (!formData.password.trim()) {
+      toast.error('Password is required');
+      return;
+    }
+
+    // Validate password strength
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error('Email is required');
+      return;
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!formData.contactNumber.trim()) {
+      toast.error('Contact number is required');
+      return;
+    }
+
+    // Validate contact number - must be numeric
+    if (formData.contactNumber && !/^\d+$/.test(formData.contactNumber)) {
+      toast.error('Contact number must contain only numbers');
+      return;
+    }
+
+    // Validate minimum length
     if (formData.contactNumber && formData.contactNumber.length < 10) {
-      alertService.error('Contact number must be at least 10 digits');
+      toast.error('Contact number must be at least 10 digits');
+      return;
+    }
+
+    if (!formData.address.trim()) {
+      toast.error('Address is required');
+      return;
+    }
+
+    if (!formData.role || formData.role === '') {
+      toast.error('Please select a role');
       return;
     }
 
@@ -146,7 +199,7 @@ const AddUser = () => {
             {/* Name Fields */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">
-                NAME
+                NAME <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-4">
                 <div className="flex-1">
@@ -161,7 +214,7 @@ const AddUser = () => {
                     required
                   />
                   <label className="block text-xs text-gray-500 mt-1">
-                    FIRST
+                    FIRST <span className="text-red-500">*</span>
                   </label>
                 </div>
                 <div className="w-24">
@@ -191,7 +244,7 @@ const AddUser = () => {
                     required
                   />
                   <label className="block text-xs text-gray-500 mt-1">
-                    LAST
+                    LAST <span className="text-red-500">*</span>
                   </label>
                 </div>
               </div>
@@ -201,7 +254,7 @@ const AddUser = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">
-                  USERNAME
+                  USERNAME <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -216,7 +269,7 @@ const AddUser = () => {
 
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">
-                  PASSWORD
+                  PASSWORD <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
@@ -234,7 +287,7 @@ const AddUser = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">
-                  EMAIL
+                  EMAIL <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -247,7 +300,7 @@ const AddUser = () => {
 
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">
-                  CONTACT NUMBER
+                  CONTACT NUMBER <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -268,7 +321,7 @@ const AddUser = () => {
             {/* Address */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">
-                ADDRESS
+                ADDRESS <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -282,7 +335,7 @@ const AddUser = () => {
             {/* Role */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">
-                ROLE
+                ROLE <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.role}

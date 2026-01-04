@@ -762,14 +762,48 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
       pharmacistYN,
       role,
       page = 1,
-      limit = 10
+      limit = 10,
+      sortBy = 'status'
     }: UserFilters = req.query;
 
     let query = supabase
       .from('User')
       .select('*', { count: 'exact' })
-      .neq('Roles', 'Admin') // Exclude Admin users from results
-      .eq('IsActive', true); // Only show active users
+      .neq('Roles', 'Admin'); // Exclude Admin users from results
+      // Show both active and inactive users for management purposes
+    
+    // Apply sorting based on sortBy parameter
+    switch (sortBy) {
+      case 'status':
+        // Active users first
+        query = query
+          .order('IsActive', { ascending: false, nullsFirst: false })
+          .order('FirstName', { ascending: true });
+        break;
+      case 'status-inactive':
+        // Inactive users first
+        query = query
+          .order('IsActive', { ascending: true, nullsFirst: false })
+          .order('FirstName', { ascending: true });
+        break;
+      case 'name':
+        // Sort by name
+        query = query
+          .order('FirstName', { ascending: true })
+          .order('LastName', { ascending: true });
+        break;
+      case 'role':
+        // Sort by role
+        query = query
+          .order('Roles', { ascending: true })
+          .order('FirstName', { ascending: true });
+        break;
+      default:
+        // Default to active first
+        query = query
+          .order('IsActive', { ascending: false, nullsFirst: false })
+          .order('FirstName', { ascending: true });
+    }
 
     // Apply filters
     if (search) {

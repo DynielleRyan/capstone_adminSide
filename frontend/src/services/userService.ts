@@ -44,6 +44,7 @@ export interface UpdateUser {
   ContactNumber?: string
   DateTimeLastLoggedIn?: Date
   Roles?: UserRole
+  IsActive?: boolean
   UpdatedAt?: Date
 }
 
@@ -91,6 +92,7 @@ export interface UserFilters {
   role?: UserRole // New role-based filtering (Admin excluded)
   page?: number
   limit?: number
+  sortBy?: string // Sorting option: 'status', 'status-inactive', 'name', 'role'
 }
 
 export interface PaginatedUsers {
@@ -130,6 +132,7 @@ export const userService = {
       if (filters?.pharmacistYN !== undefined) params.append('pharmacistYN', String(filters.pharmacistYN))
       if (filters?.page) params.append('page', String(filters.page))
       if (filters?.limit) params.append('limit', String(filters.limit))
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy)
 
       const response = await api.get(`/users?${params.toString()}`)
       return response.data

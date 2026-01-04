@@ -44,6 +44,7 @@ export interface UpdateUser {
   ContactNumber?: string;
   DateTimeLastLoggedIn?: Date;
   Roles?: UserRole;
+  IsActive?: boolean;
   UpdatedAt?: Date;
 }
 
@@ -114,6 +115,7 @@ export interface UserFilters {
   role?: UserRole; // New role-based filtering
   page?: number;
   limit?: number;
+  sortBy?: string; // Sorting option: 'status', 'status-inactive', 'name', 'role'
 }
 
 export interface PaginatedUsers {
