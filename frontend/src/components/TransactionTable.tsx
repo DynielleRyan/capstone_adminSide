@@ -861,7 +861,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                   <table className="table table-zebra w-full text-sm min-w-full">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Transaction ID</th>
                         <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Clerk</th>
                         <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Total</th>
                         <th className="px-4 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Payment Method</th>
@@ -882,7 +881,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
                         
                         return (
                           <tr key={tx.TransactionID} className="hover:bg-gray-50">
-                            <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">{tx.TransactionID}</td>
                             <td className="px-4 py-2 border-b border-gray-200 whitespace-nowrap">
                               {tx.User.FirstName} {tx.User.LastName}
                             </td>
