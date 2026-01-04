@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { ProductItem } from '../types/productItem';
 import { fetchProductItemByID, deleteProductItemByID } from '../services/productListService';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Eye, ChevronDown, PenSquare, Trash2, X, Loader2, Copy, Check  } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, PenSquare, Trash2, X, Loader2,   } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface Props {
@@ -29,7 +29,6 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   const itemsPerPage = 5;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [DeleteItem, setDeleteItem] = useState<ProductItem | null>(null);
-  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
   const [previewData, setPreviewData] = useState<{
     rows: any[];
     filename: string;
@@ -81,8 +80,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     }
   }, [pagination?.page, itemPage]);
   
-  // Trigger refresh when sort changes or when itemPage is explicitly changed by user
-  // Note: Search is now handled client-side since we fetch all products
+  // Trigger refresh when sort, search, or page changes
+  // Search and pagination are now handled at the backend level
   useEffect(() => {
     if (!onRefresh) return;
     
@@ -102,25 +101,27 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       return;
     }
     
-    // Only fetch if sort or itemPage changed (search is now client-side)
+    // Check if anything changed
     const sortChanged = prevSortRef.current !== `${sortBy}-${sortOrder}`;
     const itemPageChanged = prevItemPageForFetchRef.current !== itemPage;
+    const searchChanged = prevSearchRef.current !== debouncedSearchTerm;
     
-    if (!sortChanged && !itemPageChanged) {
+    if (!sortChanged && !itemPageChanged && !searchChanged) {
       return; // No changes, skip fetch
     }
     
     // Update refs
     prevSortRef.current = `${sortBy}-${sortOrder}`;
     prevItemPageForFetchRef.current = itemPage;
+    prevSearchRef.current = debouncedSearchTerm;
     
     let isCancelled = false;
     const sortByValue = sortBy === 'none' ? 'Name' : sortBy;
     
     const fetchData = async () => {
       if (!isCancelled) {
-        // Don't pass search term since we filter client-side now
-        await onRefresh(itemPage, undefined, sortByValue, sortOrder);
+        // Pass search term to backend for server-side filtering
+        await onRefresh(itemPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
       }
     };
     
@@ -130,7 +131,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortBy, sortOrder, itemPage]); // Removed debouncedSearchTerm - search is client-side now
+  }, [sortBy, sortOrder, itemPage, debouncedSearchTerm]); // Include debouncedSearchTerm - search is now server-side
 
   // Delete product item from list
   const handleDeleteConfirmed = async () => {
@@ -145,8 +146,8 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       // Auto-refresh the product list
       if (onRefresh) {
         const sortByValue = sortBy === 'none' ? 'Name' : sortBy;
-        // Don't pass search term since we filter client-side now
-        await onRefresh(currentPage, undefined, sortByValue, sortOrder);
+        // Pass search term to backend
+        await onRefresh(itemPage, debouncedSearchTerm || undefined, sortByValue, sortOrder);
       }
     } catch (error) {
       console.error(error);
@@ -158,7 +159,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   const handleView = async (id: string) => {
     const result = await fetchProductItemByID(id);
     if (!result) {
-      setErrorMessage('Transaction not found or failed to load.');
+      setErrorMessage('Product not found or failed to load.');
       setSelectedProductItem(null);
     } else {
       setSelectedProductItem(result);
@@ -167,16 +168,10 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     
     
 
-    const modal = document.getElementById('transaction_modal') as HTMLDialogElement;
+    const modal = document.getElementById('product_modal') as HTMLDialogElement;
     modal?.showModal();
   };
 
-  const toggleGroup = (productId: string) => {
-    setOpenGroups(prev => ({
-      ...prev,
-      [productId]: !prev[productId]
-    }));
-  };
 
   // Handle sort change
   const handleSortChange = (newSortBy: string) => {
@@ -216,33 +211,14 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     return '';
   };
   
-  // Copy ID to clipboard
-  const copyId = async (id: string) => {
-    try {
-      await navigator.clipboard.writeText(id);
-      setCopiedIds(prev => new Set(prev).add(id));
-      setTimeout(() => {
-        setCopiedIds(prev => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
   // Generate report with preview
   const handleGenerateReport = () => {
     // Prepare CSV data with all Product List table fields
     const rows = productList.map(item => {
       const row: Record<string, string | number | boolean> = {
-        ProductItemID: item.ProductItemID,
-        ProductID: item.ProductID,
+        Name: item.Product.Name,
         Stock: item.Stock,
         ExpiryDate: item.ExpiryDate,
-        Name: item.Product.Name,
         Category: item.Product.Category,
         Brand: item.Product.Brand,
         SellingPrice: item.Product.SellingPrice,
@@ -325,28 +301,14 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
   };
   
   // Group product items based on their ProductID (client-side grouping for display)
+  // Note: Search filtering is now done at the backend level
   const groupedProducts = useMemo(() => {
     // Product item will only be displayed if it satisfies the condition
     let validItems = productList.filter(
       item => item.IsActive === true && item.Stock > 0
     );
 
-    // Apply search filter if search term exists
-    if (debouncedSearchTerm) {
-      const searchTerm = debouncedSearchTerm.toLowerCase();
-      validItems = validItems.filter(item => {
-        const product = item.Product;
-        if (!product) return false;
-        return (
-          product.Name?.toLowerCase().includes(searchTerm) ||
-          product.GenericName?.toLowerCase().includes(searchTerm) ||
-          product.Category?.toLowerCase().includes(searchTerm) ||
-          product.Brand?.toLowerCase().includes(searchTerm) ||
-          item.ProductID?.toLowerCase().includes(searchTerm) ||
-          item.ProductItemID?.toLowerCase().includes(searchTerm)
-        );
-      });
-    }
+    // No need for client-side search filtering - it's handled by the backend
 
     // Groups product items based on their ProductID
     const grouped: Record<string, ProductItem[]> = {};
@@ -363,7 +325,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
     });
 
     return grouped;
-  }, [productList, debouncedSearchTerm]);
+  }, [productList]); // Removed debouncedSearchTerm - search is now server-side
 
   // Client-side pagination for grouped products (since we're grouping on the frontend)
   const currentGroupCount = Object.keys(groupedProducts).length;
@@ -479,12 +441,12 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       <table className="w-full border-collapse">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-4 py-4 text-center font-semibold border-r border-white">ID</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">CATEGORY</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">BRAND</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">PRICE</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">QUANTITY</th>
+              <th className="px-2 py-4 text-center font-semibold border-r border-white">LAST PURCHASE DATE</th>
               <th className="px-2 py-4 text-center font-semibold border-r border-white">EXPIRY</th>
               <th className="px-2 py-4 text-center font-semibold">ACTION</th>
             </tr>
@@ -514,29 +476,11 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
             return [
             <tr 
               key={primary.ProductItemID}
-              onClick={() => rest.length > 0 && toggleGroup(productId)}
+              onMouseEnter={() => rest.length > 0 && setOpenGroups(prev => ({ ...prev, [productId]: true }))}
+              onMouseLeave={() => rest.length > 0 && setOpenGroups(prev => ({ ...prev, [productId]: false }))}
               className={rest.length > 0 ? 'cursor-pointer hover:bg-blue-100' : ''}
             >
-              <td className="px-4 py-4 text-gray-700 border border-white text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <span>{String(primary.ProductID).padStart(2, '0')}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyId(String(primary.ProductID));
-                    }}
-                    className="p-1 hover:bg-gray-200 rounded transition-colors"
-                    title="Copy Product ID"
-                  >
-                    {copiedIds.has(String(primary.ProductID)) ? (
-                      <Check className="w-3 h-3 text-green-600" />
-                    ) : (
-                      <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
-                    )}
-                  </button>
-                </div>
-              </td>
-              <td className="px-4 py-4 text-gray-700 text-center border border-white">
+              <td className="px-4 py-4 text-gray-700 text-left border border-white">
                 <div className="flex items-center gap-3">
                         {primary.Product.Image ? (
                           <img
@@ -553,23 +497,18 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
                         )}
                         <span className="font-medium">
                         {primary.Product.Name}
-
                         </span>
-                        {rest.length > 0 && (
-                        <button
-                          onClick={() => toggleGroup(productId)}
-                          className="text-blue-600 hover:text-blue-800"
-                          aria-label="Toggle group"
-                        >
-                          <ChevronDown className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        )}
                 </div>
               </td>
               <td className="px-2 py-4 text-gray-700 text-center border border-white">{primary.Product.Category}</td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">{primary.Product.Brand}</td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">₱{primary.Product.SellingPrice.toFixed(2)}</td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">{primary.Stock}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">
+              {primary.LastPurchaseDate
+                ? new Date(primary.LastPurchaseDate).toLocaleDateString()
+                : "N/A"}
+              </td>
               <td className="px-4 py-4 text-gray-700 text-center border border-white">
                 <span className={`px-2 py-1 rounded-full font-medium ${getExpiryColor(primary.ExpiryDate)}`}>
                 {new Date(primary.ExpiryDate).toLocaleDateString('en-US')}
@@ -609,9 +548,9 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
             <tr 
               key={item.ProductItemID} 
               className="bg-white cursor-pointer hover:bg-gray-50"
-              onClick={() => toggleGroup(productId)}
+              onMouseEnter={() => setOpenGroups(prev => ({ ...prev, [productId]: true }))}
+              onMouseLeave={() => setOpenGroups(prev => ({ ...prev, [productId]: false }))}
             >
-              <td className="px-2 py-4 text-gray-700 text-center"> </td>
               <td className="px-4 py-4 text-gray-700 text-center">
                 <div className="flex items-center gap-3">
                         {item.Product.Image ? (
@@ -636,6 +575,11 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
               <td className="px-4 py-4 text-gray-700 text-center">{item.Product.Brand}</td>
               <td className="px-4 py-4 text-gray-700 text-center">₱{item.Product.SellingPrice.toFixed(2)}</td>
               <td className="px-4 py-4 text-gray-700 text-center">{item.Stock}</td>
+              <td className="px-4 py-4 text-gray-700 text-center border border-white">
+              {item.LastPurchaseDate
+                ? new Date(item.LastPurchaseDate).toLocaleDateString()
+                : "N/A"}
+              </td>
               <td className="px-4 py-4 text-gray-700 text-center">
                 <span className={`px-2 py-1 rounded-full font-medium ${getExpiryColor(item.ExpiryDate)}`}>
                 {new Date(item.ExpiryDate).toLocaleDateString('en-US')}
@@ -685,9 +629,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       {/* Pagination */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-700">
-          Showing {groupedEntries.length} of {Object.keys(groupedProducts).length} product groups
-          {pagination && ` (${pagination.total} total items)`}
-          {pagination && pagination.totalPages > 1 && ` - Item page ${pagination.page}/${pagination.totalPages}`}
+          Showing {groupedEntries.length} of {Object.keys(groupedProducts).length} products
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -710,7 +652,6 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
           </button>
           <span className="px-4 py-2 text-sm">
             Page {currentPage} of {totalPages || 1}
-            {pagination && pagination.totalPages > 1 && ` (${pagination.total} items, page ${pagination.page}/${pagination.totalPages})`}
           </span>
           <button 
             onClick={() => {
@@ -734,7 +675,7 @@ export const ProductListTable : React.FC<Props> = ({ productList, onRefresh, pag
       </div>
 
       {/* Product Details Modal */}
-      <dialog id="transaction_modal" className="modal">
+      <dialog id="product_modal" className="modal">
         <div className="modal-box bg-white rounded-lg w-full max-w-3xl max-h-[90vh] p-0 text-black flex flex-col">
           {errorMessage ? (
             <div className="p-6">

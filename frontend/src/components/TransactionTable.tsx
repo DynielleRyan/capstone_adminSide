@@ -242,7 +242,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
       const isPWDSenior = tx.SeniorPWDID ? "Yes" : "No";
       
       return [
-      tx.TransactionID,
       tx.User.FirstName + " " + tx.User.LastName,
         `₱${tx.Total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       tx.PaymentMethod,
@@ -421,8 +420,7 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
         <table className="w-full border-collapse">
           <thead className="bg-blue-900 text-white">
             <tr>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">TXN ID</th>
-              <th className="px-6 py-4 text-center font-semibold border-r border-white">DATE ORDERED</th>
+              <th className="px-6 py-4 text-center font-semibold border-r border-white">TRANSACTION DATE</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">STAFF</th>
               <th className="px-6 py-4 text-center font-semibold border-r border-white">PAYMENT METHOD</th>
               <th className="px-4 py-4 text-center font-semibold border-r border-white">QTY</th>
@@ -433,25 +431,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
           <tbody className=" bg-blue-50">
             {paginatedData.map((tx => (
               <tr key={tx.TransactionID} >
-                <td className="px-4 py-4 text-gray-700 text-center border border-white">
-                  <div className="flex items-center justify-center gap-2">
-                    <span>{String(tx.TransactionID).padStart(2, '0')}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyTransactionID(tx.TransactionID);
-                      }}
-                      className="p-1 hover:bg-gray-200 rounded transition-colors"
-                      title="Copy Transaction ID"
-                    >
-                      {copiedTransactionIDs.has(tx.TransactionID) ? (
-                        <Check className="w-3 h-3 text-green-600" />
-                      ) : (
-                        <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
-                      )}
-                    </button>
-                  </div>
-                </td>
                 <td className="px-2 py-4 text-gray-700 text-center border border-white">
                   <div>
                     {new Date(tx.OrderDateTime).toLocaleDateString('en-US', { 

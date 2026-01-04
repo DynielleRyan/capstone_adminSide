@@ -206,6 +206,7 @@ export const PurchaseOrderForm = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.orderDate}
+                  min={new Date().toISOString().split("T")[0]} // prevents past dates from being selected
                   onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
                   required
                 />
@@ -218,6 +219,7 @@ export const PurchaseOrderForm = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.ETA}
+                  min={formData.orderDate || new Date().toISOString().split("T")[0]} // prevents past dates from being selected
                   onChange={(e) => setFormData({ ...formData, ETA: e.target.value })}
                   required
                 />
@@ -232,6 +234,7 @@ export const PurchaseOrderForm = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.orderArrival}
+                  min={formData.orderDate || new Date().toISOString().split("T")[0]} // prevents past dates from being selected
                   onChange={(e) => setFormData({ ...formData, orderArrival: e.target.value })}
                 />
               </div>
@@ -243,7 +246,7 @@ export const PurchaseOrderForm = () => {
                 <label htmlFor="quantity" className="block text-sm font-bold text-gray-700 mb-2">QUANTITY:</label>
                 <input
                   id="quantity"
-                  type="text"
+                  type="number"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
@@ -255,7 +258,7 @@ export const PurchaseOrderForm = () => {
                 <label htmlFor="baseprice" className="block text-sm font-bold text-gray-700 mb-2">BASE PRICE:</label>
                 <input
                   id="baseprice"
-                  type="text"
+                  type="number"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.basePrice}
                   onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
@@ -267,11 +270,10 @@ export const PurchaseOrderForm = () => {
                 <label htmlFor="totalcost" className="block text-sm font-bold text-gray-700 mb-2">TOTAL COST:</label>
                 <input
                   id="totalcost"
-                  type="text"
+                  type="number"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={formData.totalCost}
-                  onChange={(e) => setFormData({ ...formData, totalCost: e.target.value })}
-                  required
+                  value={(Number(formData.basePrice || 0) * Number(formData.quantity || 0)).toFixed(2)}
+                  readOnly 
                 />
               </div>
             </div>

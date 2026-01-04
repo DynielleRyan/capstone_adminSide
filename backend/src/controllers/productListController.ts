@@ -7,7 +7,7 @@ export const getProductList: RequestHandler = async (req, res) => {
     try {
         const { 
             page = '1', 
-            limit = '50', 
+            limit = '5', 
             search, 
             category, 
             brand,
@@ -122,7 +122,7 @@ export const getProductList: RequestHandler = async (req, res) => {
         // Build query with database-side filtering for better performance
         let query = supabase
             .from('Product_Item')
-            .select('*, Product (Name, GenericName, Category, Brand, SellingPrice, Image, IsVATExemptYN)');
+            .select('*, Product (Name, GenericName, Category, Brand, SellingPrice, Image, IsVATExemptYN, Purchase_Order(OrderPlacedDateTime))');
 
         // Filter by active status
         if (onlyActive === 'true') {
@@ -142,6 +142,61 @@ export const getProductList: RequestHandler = async (req, res) => {
             query = query.lte('Stock', parseInt(maxStock as string));
         }
 
+        // Apply search filtering at database level
+        // Note: Supabase doesn't support direct text search on nested relations,
+        // so we need to filter by ProductID if search is provided
+        let matchingProductIds: string[] | undefined = undefined;
+        if (search) {
+            const searchTerm = (search as string).toLowerCase();
+            // First, get ProductIDs that match the search term
+            const productSearchQuery = supabase
+                .from('Product')
+                .select('ProductID')
+                .eq('IsActive', true)
+                .or(`Name.ilike.%${searchTerm}%,GenericName.ilike.%${searchTerm}%,Category.ilike.%${searchTerm}%,Brand.ilike.%${searchTerm}%`);
+            
+            const { data: matchingProducts } = await productSearchQuery;
+            matchingProductIds = matchingProducts?.map(p => p.ProductID) || [];
+            
+            if (matchingProductIds.length > 0) {
+                // Filter Product_Items by matching ProductIDs
+                if (productIdsToFilter && productIdsToFilter.length > 0) {
+                    // Intersect with existing productIdsToFilter
+                    const intersection = productIdsToFilter.filter(id => matchingProductIds!.includes(id));
+                    if (intersection.length > 0) {
+                        query = query.in('ProductID', intersection);
+                        matchingProductIds = intersection; // Update for count calculation
+                    } else {
+                        // No matches, return empty result
+                        res.status(200).json({
+                            data: [],
+                            pagination: {
+                                page: pageNum,
+                                limit: limitNum,
+                                total: 0,
+                                totalPages: 0
+                            }
+                        });
+                        return;
+                    }
+                } else {
+                    query = query.in('ProductID', matchingProductIds);
+                }
+            } else {
+                // No matching products, return empty result
+                res.status(200).json({
+                    data: [],
+                    pagination: {
+                        page: pageNum,
+                        limit: limitNum,
+                        total: 0,
+                        totalPages: 0
+                    }
+                });
+                return;
+            }
+        }
+
         // Apply sorting - for Name sorting, we'll need to handle it differently
         if (sortBy === 'Stock') {
             query = query.order('Stock', { ascending: sortOrder === 'asc' });
@@ -156,36 +211,34 @@ export const getProductList: RequestHandler = async (req, res) => {
         // This ensures we get all products for the product list
         let data: any[];
         
-        if (limitNum >= 10000) {
-            // Fetch all products (no range limit)
-            const { data: allData, error } = await query;
+        const { data: queryData, error } = await query.range(offset, offset + limitNum - 1);
             if (error) throw error;
-            data = allData || [];
-        } else {
-            // Normal pagination for other use cases
-            const { data: paginatedData, error } = await query.range(offset, offset + limitNum - 1);
-            if (error) throw error;
-            data = paginatedData || [];
-        }
-
-        // Apply client-side filtering for search (works across all fetched products)
-        let filteredData = data || [];
+            data = queryData || [];
         
-        if (search) {
-            const searchTerm = (search as string).toLowerCase();
-            filteredData = filteredData.filter((item: any) => {
-                const product = item.Product;
-                if (!product) return false;
-                return (
-                    product.Name?.toLowerCase().includes(searchTerm) ||
-                    product.GenericName?.toLowerCase().includes(searchTerm) ||
-                    product.Category?.toLowerCase().includes(searchTerm) ||
-                    product.Brand?.toLowerCase().includes(searchTerm)
-                );
-            });
-        }
 
-        // Apply Product Name sorting if needed (client-side for now)
+        // No client-side filtering needed - search is handled at database level
+        let filteredData = data;
+
+
+        filteredData = filteredData.map((item: any) => {
+        const purchaseOrders = Array.isArray(item.Product?.Purchase_Order)
+            ? item.Product.Purchase_Order
+            : [];
+
+        const lastPurchase = purchaseOrders.length > 0
+            ? purchaseOrders.sort((a: any, b: any) =>
+                new Date(b.OrderPlacedDateTime).getTime() -
+                new Date(a.OrderPlacedDateTime).getTime()
+            )[0]
+            : null;
+
+        return {
+            ...item,
+            LastPurchaseDate: lastPurchase?.OrderPlacedDateTime || null
+            };
+        });
+
+        // Apply Product Name sorting if needed (client-side for now since we can't sort by nested field in Supabase)
         if (sortBy === 'Name') {
             filteredData.sort((a: any, b: any) => {
                 const nameA = a.Product?.Name || '';
@@ -210,20 +263,32 @@ export const getProductList: RequestHandler = async (req, res) => {
             }
         } else {
             // For paginated requests, use database count
-            if (search) {
-                // Estimate based on filter ratio
-                if (data && data.length > 0 && totalDbCount) {
-                    const filterRatio = filteredData.length / data.length;
-                    totalCount = Math.max(filteredData.length, Math.ceil(totalDbCount * filterRatio));
-                } else {
-                    totalCount = filteredData.length;
+            // If search was applied, we need to recalculate the count based on matching products
+            if (search && matchingProductIds) {
+                // We already have matchingProductIds from the search query above
+                // Count Product_Items that match those ProductIDs
+                let searchCountQuery = supabase
+                    .from('Product_Item')
+                    .select('ProductItemID', { count: 'exact', head: true })
+                    .eq('IsActive', true)
+                    .in('ProductID', matchingProductIds);
+                
+                // Apply additional filters
+                if (minStock !== undefined) {
+                    searchCountQuery = searchCountQuery.gte('Stock', parseInt(minStock as string));
                 }
+                if (maxStock !== undefined) {
+                    searchCountQuery = searchCountQuery.lte('Stock', parseInt(maxStock as string));
+                }
+                
+                const { count: searchCount } = await searchCountQuery;
+                totalCount = searchCount || 0;
             } else if (!totalDbCount && filteredData.length > 0) {
                 totalCount = filteredData.length;
             }
         }
         
-        // Use filtered data (no pagination when fetching all)
+        // Use filtered data
         const paginatedData = filteredData;
         
         res.status(200).json({

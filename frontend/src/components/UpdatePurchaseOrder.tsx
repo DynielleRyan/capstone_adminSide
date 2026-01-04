@@ -270,6 +270,7 @@ export const UpdatePurchaseOrderForm = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.orderDate ?? ''}
+                  min={new Date().toISOString().split("T")[0]} // prevents past dates from being selected
                   onChange={e => setFormData({ ...formData, orderDate: e.target.value })}
                   required
                 />
@@ -282,6 +283,7 @@ export const UpdatePurchaseOrderForm = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.ETA ?? ''}
+                  min={formData.orderDate || new Date().toISOString().split("T")[0]}
                   onChange={e => setFormData({ ...formData, ETA: e.target.value })}
                   required
                 />
@@ -296,6 +298,7 @@ export const UpdatePurchaseOrderForm = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.orderArrival}
+                  min={formData.orderDate || new Date().toISOString().split("T")[0]}
                   onChange={e => setFormData({ ...formData, orderArrival: e.target.value })}
                 />
               </div>
@@ -333,9 +336,8 @@ export const UpdatePurchaseOrderForm = () => {
                   id="totalcost"
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={formData.totalCost}
-                  onChange={e => setFormData({ ...formData, totalCost: e.target.value })}
-                  required
+                  value={(Number(formData.basePrice || 0) * Number(formData.quantity || 0)).toFixed(2)}
+                  readOnly
                 />
               </div>
             </div>
