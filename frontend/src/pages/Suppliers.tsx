@@ -111,14 +111,6 @@ const Suppliers = () => {
     return filtered;
   }, [suppliers, searchTerm, sortBy]);
 
-  // Format supplier ID to show a shortened version of the UUID
-  const formatSupplierId = (supplierId: string) => {
-    if (!supplierId) return "N/A";
-    // Take the first 8 characters of the UUID and format as S-XXXX
-    const shortId = supplierId.substring(0, 8).toUpperCase();
-    return `S-${shortId}`;
-  };
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Blue background div */}

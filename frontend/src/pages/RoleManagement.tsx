@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Edit3, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { Search, Plus, Edit3, ChevronLeft, ChevronRight } from "lucide-react";
 import alertService from "../services/alertService";
 import {
   userService,
@@ -21,7 +21,6 @@ const RoleManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [copiedUserIDs, setCopiedUserIDs] = useState<Set<string>>(new Set());
 
   // Fetch users from API
   const fetchUsers = useCallback(
@@ -95,23 +94,6 @@ const RoleManagement = () => {
     // Backend handles the sorting based on sortBy parameter
     return filtered;
   }, [users, searchTerm]);
-
-  // Copy user ID to clipboard
-  const copyUserID = async (userID: string) => {
-    try {
-      await navigator.clipboard.writeText(userID);
-      setCopiedUserIDs(prev => new Set(prev).add(userID));
-      setTimeout(() => {
-        setCopiedUserIDs(prev => {
-          const next = new Set(prev);
-          next.delete(userID);
-          return next;
-        });
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
