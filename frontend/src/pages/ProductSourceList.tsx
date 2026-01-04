@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, ChevronLeft, ChevronRight, Copy, Check, X } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import alertService from '../services/alertService'
 import { productService, ProductSourceItem, ProductSourceListParams } from '../services/productService'
 import { supplierService, SupplierResponse } from '../services/supplierService'
@@ -15,7 +15,6 @@ const ProductSourceList = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalProducts, setTotalProducts] = useState(0)
-  const [copiedProductIDs, setCopiedProductIDs] = useState<Set<string>>(new Set())
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
   const [suppliers, setSuppliers] = useState<SupplierResponse[]>([])
   const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set())
@@ -108,23 +107,6 @@ const ProductSourceList = () => {
       year: 'numeric' 
     })
   }
-
-  // Copy product ID to clipboard
-  const copyProductID = async (productID: string) => {
-    try {
-      await navigator.clipboard.writeText(productID);
-      setCopiedProductIDs(prev => new Set(prev).add(productID));
-      setTimeout(() => {
-        setCopiedProductIDs(prev => {
-          const next = new Set(prev);
-          next.delete(productID);
-          return next;
-        });
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
 
   // Open supplier selection modal
   const handleGenerateReport = () => {
