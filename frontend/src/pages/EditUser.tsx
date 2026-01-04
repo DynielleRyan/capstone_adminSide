@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trash2, Loader2, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import alertService from '../services/alertService'
 import loadingService from '../services/loadingService'
 import { userService, UserResponse, UpdateUser, UserFilters, UserRole } from '../services/userService'
@@ -12,7 +12,7 @@ interface User {
   username: string
   password: string
   role: 'PHARMACIST' | 'CLERK'
-  markedForDeletion?: boolean // Track if user is marked for deletion
+  isActive: boolean
 }
 
 type SortField = 'name' | 'contact' | 'username' | 'role'
@@ -52,7 +52,8 @@ const EditUser = () => {
     contact: user.ContactNumber || '',
     username: user.Username,
     password: '',
-    role: mapRoleToOldFormat(user.Roles)
+    role: mapRoleToOldFormat(user.Roles),
+    isActive: user.IsActive !== false // Default to true if undefined
   })
 
   // Fetch all users for editing
@@ -93,59 +94,75 @@ const EditUser = () => {
     )
   }
 
+  const handleActiveStatusChange = (userId: string, newStatus: boolean) => {
+    setEditedUsers(prev => 
+      prev.map(user => 
+        user.userId === userId 
+          ? { ...user, isActive: newStatus }
+          : user
+      )
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Find users marked for deletion
-    const usersToDelete = editedUsers.filter(user => user.markedForDeletion)
-    
-    // Find users with role changes (excluding those marked for deletion)
+    // Find users with changes (role or active status)
     const changedUsers = editedUsers.filter(editedUser => {
-      if (editedUser.markedForDeletion) return false // Skip deleted users
       const originalUser = originalUsers.find(u => u.userId === editedUser.userId)
-      return originalUser && originalUser.role !== editedUser.role
+      return originalUser && (
+        originalUser.role !== editedUser.role || 
+        originalUser.isActive !== editedUser.isActive
+      )
     })
 
-    if (changedUsers.length === 0 && usersToDelete.length === 0) {
+    if (changedUsers.length === 0) {
       alertService.info('No changes detected')
       return
     }
     
-    const totalChanges = changedUsers.length + usersToDelete.length
-    loadingService.start('edit-user', `Processing ${totalChanges} change(s)...`)
+    loadingService.start('edit-user', `Processing ${changedUsers.length} change(s)...`)
     
     try {
       const promises: Promise<any>[] = []
       
-      // Add update promises
+      // Add update promises for all changed users
       changedUsers.forEach(user => {
+        const originalUser = originalUsers.find(u => u.userId === user.userId)!
         const updateData: UpdateUser = {
           UserID: user.userId,
-          Roles: mapStringToRole(user.role)
         }
+        
+        // Only include changed fields
+        if (originalUser.role !== user.role) {
+          updateData.Roles = mapStringToRole(user.role)
+        }
+        if (originalUser.isActive !== user.isActive) {
+          updateData.IsActive = user.isActive
+        }
+        
         promises.push(userService.updateUser(user.userId, updateData))
-      })
-      
-      // Add delete promises
-      usersToDelete.forEach(user => {
-        promises.push(userService.deleteUser(user.userId))
       })
 
       await Promise.all(promises)
       
       // Create detailed success message
+      const roleChanges = changedUsers.filter(u => {
+        const orig = originalUsers.find(o => o.userId === u.userId)
+        return orig && orig.role !== u.role
+      }).length
+      
+      const statusChanges = changedUsers.filter(u => {
+        const orig = originalUsers.find(o => o.userId === u.userId)
+        return orig && orig.isActive !== u.isActive
+      }).length
+      
       const messages: string[] = []
-      
-      if (changedUsers.length === 1) {
-        messages.push(`Updated role for ${changedUsers[0].name}`)
-      } else if (changedUsers.length > 1) {
-        messages.push(`Updated ${changedUsers.length} user roles`)
+      if (roleChanges > 0) {
+        messages.push(`Updated ${roleChanges} user role${roleChanges > 1 ? 's' : ''}`)
       }
-      
-      if (usersToDelete.length === 1) {
-        messages.push(`Deleted ${usersToDelete[0].name}`)
-      } else if (usersToDelete.length > 1) {
-        messages.push(`Deleted ${usersToDelete.length} users`)
+      if (statusChanges > 0) {
+        messages.push(`Updated ${statusChanges} user status${statusChanges > 1 ? 'es' : ''}`)
       }
       
       const message = messages.join(' and ')
@@ -159,24 +176,6 @@ const EditUser = () => {
 
   const handleCancel = () => {
     navigate('/role-management')
-  }
-
-  const handleDelete = (userId: string, userName: string) => {
-    setEditedUsers(prev => 
-      prev.map(user => {
-        if (user.userId === userId) {
-          // Toggle deletion mark
-          const newMarkedState = !user.markedForDeletion
-          if (newMarkedState) {
-            alertService.info(`${userName} marked for deletion. Click CONFIRM to apply.`)
-          } else {
-            alertService.info(`${userName} unmarked for deletion.`)
-          }
-          return { ...user, markedForDeletion: newMarkedState }
-        }
-        return user
-      })
-    )
   }
 
   // Handle sorting
@@ -321,7 +320,6 @@ const EditUser = () => {
             <table className="w-full">
               <thead className="bg-blue-900 text-white">
                 <tr>
-                  <th className="px-4 py-4 text-center font-semibold w-16 border-r border-white">DELETE</th>
                   <th 
                     className="px-6 py-4 text-center font-semibold border-r border-white cursor-pointer hover:bg-blue-800 transition-colors"
                     onClick={() => handleSort('name')}
@@ -358,6 +356,7 @@ const EditUser = () => {
                       {renderSortIcon('role')}
                     </div>
                   </th>
+                  <th className="px-6 py-4 text-center font-semibold border-r border-white">STATUS</th>
                 </tr>
               </thead>
               <tbody className=" bg-blue-50">
@@ -386,42 +385,39 @@ const EditUser = () => {
                   filteredUsers.map((user => (
                     <tr
                       key={user.userId}
-                      className={user.markedForDeletion ? 'bg-red-50 opacity-60' : ''}
+                      className={!user.isActive ? 'bg-gray-100 opacity-70' : ''}
                       >
-                      <td className="px-4 py-4 text-center border border-white">
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(user.userId, user.name)}
-                          className={user.markedForDeletion 
-                            ? "text-gray-500 hover:text-gray-700 transition-colors" 
-                            : "text-red-500 hover:text-red-700 transition-colors"
-                          }
-                          title={user.markedForDeletion ? "Undo delete" : "Mark for deletion"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${user.markedForDeletion ? 'line-through' : ''}`}>
+                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${!user.isActive ? 'text-gray-500' : ''}`}>
                         {user.name}
-                        {user.markedForDeletion && <span className="ml-2 text-xs text-red-600 font-semibold">(TO BE DELETED)</span>}
                       </td>
-                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${user.markedForDeletion ? 'line-through' : ''}`}>{user.contact}</td>
-                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${user.markedForDeletion ? 'line-through' : ''}`}>{user.username}</td>
+                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${!user.isActive ? 'text-gray-500' : ''}`}>{user.contact}</td>
+                      <td className={`px-6 py-4 text-gray-700 text-center border border-white ${!user.isActive ? 'text-gray-500' : ''}`}>{user.username}</td>
                       <td className="px-6 py-4 text-center border border-white">
                         <select 
                           value={user.role}
                           onChange={(e) => handleRoleChange(user.userId, e.target.value)}
-                          disabled={user.markedForDeletion}
                           className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
-                            user.markedForDeletion 
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : user.role === 'PHARMACIST' 
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-blue-100 text-blue-800'
+                            user.role === 'PHARMACIST' 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
                           }`}
                         >
                           <option value="PHARMACIST">PHARMACIST</option>
                           <option value="CLERK">CLERK</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-center border border-white">
+                        <select 
+                          value={user.isActive ? 'ACTIVE' : 'INACTIVE'}
+                          onChange={(e) => handleActiveStatusChange(user.userId, e.target.value === 'ACTIVE')}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
+                            user.isActive 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          <option value="ACTIVE">ACTIVE</option>
+                          <option value="INACTIVE">INACTIVE</option>
                         </select>
                       </td>
                     </tr>

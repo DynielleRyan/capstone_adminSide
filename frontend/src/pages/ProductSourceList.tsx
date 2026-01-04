@@ -8,7 +8,6 @@ import { toast } from 'react-toastify'
 
 const ProductSourceList = () => {
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'ProductName' | 'SupplierName' | 'LastPurchaseDate' | 'none'>('none')
   const [products, setProducts] = useState<ProductSourceItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,69 +25,60 @@ const ProductSourceList = () => {
     filename: string
   } | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
-  
-  // Use refs to prevent duplicate requests and track mount status
-  const isMountedRef = useRef(true)
-  const isLoadingRef = useRef(false)
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm)
-      setCurrentPage(1) // Reset to first page on search
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [searchTerm])
+  const hasMountedRef = useRef(false)
 
   // Fetch products from API
-  const fetchProducts = useCallback(async (page = 1, search?: string, sort?: 'ProductName' | 'SupplierName' | 'LastPurchaseDate' | 'none') => {
-    // Prevent multiple simultaneous requests
-    if (isLoadingRef.current) return
-    
-    isLoadingRef.current = true
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const params: ProductSourceListParams = {
-        page,
-        limit: 10, // Display 10 items per page
-        search: search || undefined,
-        sortBy: sort && sort !== 'none' ? sort : undefined
-      }
-      
-      const response = await productService.getProductSourceList(params)
-      
-      // Only update state if component is still mounted
-      if (isMountedRef.current) {
+  const fetchProducts = useCallback(
+    async (page = 1, search?: string, sort?: 'ProductName' | 'SupplierName' | 'LastPurchaseDate' | 'none') => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const params: ProductSourceListParams = {
+          page,
+          limit: 10,
+          search: search || undefined,
+          sortBy: sort && sort !== 'none' ? sort : undefined
+        }
+        
+        const response = await productService.getProductSourceList(params)
+        
         setProducts(response.products)
         setCurrentPage(response.page)
         setTotalPages(response.totalPages)
         setTotalProducts(response.total)
-      }
-    } catch (err) {
-      console.error('Error fetching products:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products'
-      if (isMountedRef.current) {
+      } catch (err) {
+        console.error('Error fetching products:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products'
         setError(errorMessage)
         alertService.error(errorMessage)
-        setProducts([])
-      }
-    } finally {
-      isLoadingRef.current = false
-      if (isMountedRef.current) {
+      } finally {
         setLoading(false)
       }
-    }
-  }, []) // Empty deps - function is stable
+    },
+    []
+  )
 
   // Load products on component mount
   useEffect(() => {
-    isMountedRef.current = true
-    fetchProducts(1, debouncedSearchTerm, sortBy)
-    
-    // Fetch suppliers for report generation
+    fetchProducts()
+    hasMountedRef.current = true
+  }, [fetchProducts])
+
+  // Debounced search effect - refetch from page 1 when search or sort changes
+  useEffect(() => {
+    // Skip on first render since we already fetch on mount
+    if (!hasMountedRef.current) return
+
+    const timeoutId = setTimeout(() => {
+      fetchProducts(1, searchTerm || undefined, sortBy)
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm, sortBy, fetchProducts])
+
+  // Load suppliers on mount
+  useEffect(() => {
     const loadSuppliers = async () => {
       try {
         const response = await supplierService.getSuppliers({ limit: 1000, isActive: true })
@@ -100,31 +90,7 @@ const ProductSourceList = () => {
       }
     }
     loadSuppliers()
-    
-    return () => {
-      isMountedRef.current = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run once on mount
-
-  // Trigger refresh when search, sort, or page changes
-  useEffect(() => {
-    if (!isMountedRef.current) return
-    
-    let isCancelled = false
-    const fetchData = async () => {
-      if (!isCancelled) {
-        await fetchProducts(currentPage, debouncedSearchTerm || undefined, sortBy)
-      }
-    }
-    
-    fetchData()
-    
-    return () => {
-      isCancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearchTerm, sortBy]) // Removed fetchProducts from deps
+  }, [])
 
   // Handle sort change
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -355,7 +321,6 @@ const ProductSourceList = () => {
           <table className="w-full border-collapse">
             <thead className="bg-blue-900 text-white">
               <tr>
-                <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT ID</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">PRODUCT</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">SUPPLIER NAME</th>
                 <th className="px-6 py-4 text-center font-semibold border-r border-white">CONTACT NUMBER</th>
@@ -365,19 +330,19 @@ const ProductSourceList = () => {
             <tbody className=" bg-blue-50">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     Loading products...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-red-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-red-500">
                     Error: {error}
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     No products found
                   </td>
                 </tr>
@@ -386,35 +351,16 @@ const ProductSourceList = () => {
                   <tr
                     key={product.ProductID}
                   >
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                    <td className="px-6 py-3 text-gray-700 border border-white">
                       <div className="flex items-center justify-center gap-2">
-                        <span>{product.ProductID}</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyProductID(product.ProductID);
-                          }}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
-                          title="Copy Product ID"
-                        >
-                          {copiedProductIDs.has(product.ProductID) ? (
-                            <Check className="w-3 h-3 text-green-600" />
-                          ) : (
-                            <Copy className="w-3 h-3 text-gray-600 hover:text-blue-600" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
-                      <div className="flex items-center gap-3">
                         {product.ProductImage ? (
                           <img
                             src={product.ProductImage}
                             alt={product.ProductName}
-                            className="w-12 h-12 object-cover rounded"
+                            className="w-10 h-10 object-cover rounded flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center">
+                          <div className="w-10 h-10 bg-blue-200 rounded flex items-center justify-center flex-shrink-0">
                             <span className="text-blue-600 font-bold text-sm">
                               {product.ProductName.charAt(0)}
                             </span>
@@ -425,13 +371,13 @@ const ProductSourceList = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                    <td className="px-6 py-3 text-gray-700 text-center border border-white">
                       {product.SupplierName}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                    <td className="px-6 py-3 text-gray-700 text-center border border-white">
                       {product.ContactNumber || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 text-center border border-white">
+                    <td className="px-6 py-3 text-gray-700 text-center border border-white">
                       {formatDate(product.LastPurchaseDate)}
                     </td>
                   </tr>
@@ -450,7 +396,7 @@ const ProductSourceList = () => {
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            onClick={() => fetchProducts(currentPage - 1, searchTerm || undefined, sortBy)}
             disabled={currentPage <= 1 || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -460,7 +406,7 @@ const ProductSourceList = () => {
             Page {currentPage} of {totalPages}
           </span>
           <button 
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            onClick={() => fetchProducts(currentPage + 1, searchTerm || undefined, sortBy)}
             disabled={currentPage >= totalPages || loading}
             className="p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

@@ -520,22 +520,16 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
       query = query.ilike('Name', `%${search}%`);
     }
 
-    // For complex sorting (SupplierName, LastPurchaseDate), we need to fetch more items,
-    // process them, sort, then paginate. For ProductName, we can sort at DB level.
-    const fetchLimit = (sortBy === 'SupplierName' || sortBy === 'LastPurchaseDate') 
-      ? limitNum * 3  // Fetch 3x for complex sorting
-      : limitNum;     // Normal fetch for simple sorting
-
-    // Apply sorting at database level if possible (for better performance)
+    // Apply sorting at database level
     if (sortBy === 'ProductName') {
       query = query.order('Name', { ascending: true });
     } else {
-      // Default order for complex sorts (will be sorted after processing)
+      // Default order for other sorts
       query = query.order('ProductID', { ascending: true });
     }
 
-    // Apply pagination - fetch more if complex sorting needed
-    query = query.range(0, fetchLimit - 1);
+    // Apply pagination
+    query = query.range(offset, offset + limitNum - 1);
 
     // Execute main query
     const { data: products, error } = await query;
@@ -604,15 +598,8 @@ export const getProductSourceList = async (req: Request, res: Response): Promise
     // Total count from database query (already filtered)
     const total = count || 0;
 
-    // Apply pagination after sorting (for complex sorts) or use already paginated data
-    let paginatedList: ProductSourceItem[];
-    if (sortBy === 'SupplierName' || sortBy === 'LastPurchaseDate') {
-      // For complex sorting, slice after sorting
-      paginatedList = productSourceList.slice(offset, offset + limitNum);
-    } else {
-      // For simple sorting or no sort, data is already paginated
-      paginatedList = productSourceList;
-    }
+    // Data is already paginated from the database query
+    let paginatedList: ProductSourceItem[] = productSourceList;
 
     const response: PaginatedProductSource = {
       products: paginatedList,
