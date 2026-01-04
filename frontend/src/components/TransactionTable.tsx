@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Transaction } from '../types/transactions';
 import { TransactionItem } from '../types/transactionItems';
 import { fetchTransactionWithItems, fetchTransactionQtyMap } from '../services/transactionService';
-import { Search, Eye, ChevronLeft, ChevronRight, X, Copy, Check } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, X} from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface Props {
@@ -31,7 +31,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
   } | null>(null);
   const [transactionItemsMap, setTransactionItemsMap] = useState<Map<string, TransactionItem[]>>(new Map());
   const [loadingItems, setLoadingItems] = useState(false);
-  const [copiedTransactionIDs, setCopiedTransactionIDs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!transactions.length) return;
@@ -69,22 +68,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     }, 0);
   };
 
-  // Copy transaction ID to clipboard
-  const copyTransactionID = async (transactionID: string) => {
-    try {
-      await navigator.clipboard.writeText(transactionID);
-      setCopiedTransactionIDs(prev => new Set(prev).add(transactionID));
-      setTimeout(() => {
-        setCopiedTransactionIDs(prev => {
-          const next = new Set(prev);
-          next.delete(transactionID);
-          return next;
-        });
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
 
   // Get unique staff members and payment methods from transactions
   const uniqueStaff = useMemo(() => {
@@ -220,7 +203,6 @@ export const TransactionTable: React.FC<Props> = ({ transactions }) => {
     }
 
     const headers = [
-      "TransactionID",
       "Clerk",
       "Total",
       "Payment Method",

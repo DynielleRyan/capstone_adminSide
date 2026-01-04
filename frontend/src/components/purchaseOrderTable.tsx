@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { PurchaseOrder } from "../types/purchaseOrder";
-import { Search, PenSquare, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { Search, PenSquare, ChevronLeft, ChevronRight} from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 
 interface Props {
@@ -13,7 +13,6 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders }) => {
   const [sortBy, setSortBy] = useState("none");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
-  const [copiedPurchaseOrderIDs, setCopiedPurchaseOrderIDs] = useState<Set<string>>(new Set());
 
   // 🔍 Search function
   function filterPurchaseOrders(

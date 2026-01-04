@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { ProductItem } from '../types/productItem';
 import { fetchProductItemByID, deleteProductItemByID } from '../services/productListService';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Eye, PenSquare, Trash2, X, Loader2,   } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, PenSquare, Trash2, X, Loader2} from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface Props {
